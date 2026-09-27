@@ -19,7 +19,9 @@
     "format:check": "prettier --check .",
     "test:integration": "turbo run test:integration",
     "docs:build": "node scripts/build-docs.mjs",
-    "docs:check": "node scripts/build-docs.mjs --check"
+    "docs:check": "node scripts/build-docs.mjs --check",
+    "acceptance": "node scripts/acceptance.mjs",
+    "acceptance:vite": "node scripts/acceptance-vite.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

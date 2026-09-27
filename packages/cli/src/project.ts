@@ -12,11 +12,14 @@ export interface SupabaseConnection {
   local: boolean;
 }
 
-export type Framework = 'next-app';
+export type Framework = 'next-app' | 'vite-react';
 
 export interface ProjectInfo {
   framework: Framework;
+  /** Next.js: app/ or src/app/. Vite: src/. */
   appDir: string;
+  /** Prefix for copied storefront components: '' (components/sellbase) or 'src/'. */
+  componentsBase: string;
   packageManager: 'pnpm' | 'npm' | 'yarn' | 'bun';
 }
 
@@ -26,19 +29,6 @@ export async function detectProject(cwd: string): Promise<ProjectInfo> {
     devDependencies?: Record<string, string>;
   }>(join(cwd, 'package.json'), {});
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-  if (!deps.next) {
-    throw cliError(
-      'This version of `sellbase init` supports Next.js (App Router) projects.',
-      'Run it in the root of a Next.js project. Vite support arrives in the next release.',
-    );
-  }
-  const appDir = existsSync(join(cwd, 'src/app')) ? 'src/app' : 'app';
-  if (!existsSync(join(cwd, appDir))) {
-    throw cliError(
-      'No app/ directory found.',
-      'Sellbase needs the Next.js App Router (app/ or src/app/).',
-    );
-  }
   const packageManager = existsSync(join(cwd, 'pnpm-lock.yaml'))
     ? 'pnpm'
     : existsSync(join(cwd, 'yarn.lock'))
@@ -46,7 +36,24 @@ export async function detectProject(cwd: string): Promise<ProjectInfo> {
       : existsSync(join(cwd, 'bun.lockb')) || existsSync(join(cwd, 'bun.lock'))
         ? 'bun'
         : 'npm';
-  return { framework: 'next-app', appDir, packageManager };
+  if (deps.next) {
+    const appDir = existsSync(join(cwd, 'src/app')) ? 'src/app' : 'app';
+    if (!existsSync(join(cwd, appDir))) {
+      throw cliError(
+        'No app/ directory found.',
+        'Sellbase needs the Next.js App Router (app/ or src/app/).',
+      );
+    }
+    return { framework: 'next-app', appDir, componentsBase: '', packageManager };
+  }
+  if (deps.vite && deps.react) {
+    // Lovable, Bolt and most AI app builders produce Vite + React projects.
+    return { framework: 'vite-react', appDir: 'src', componentsBase: 'src/', packageManager };
+  }
+  throw cliError(
+    'Sellbase supports Next.js (App Router) and Vite + React projects.',
+    'Run it in the root of one of those projects (the folder with package.json).',
+  );
 }
 
 /**

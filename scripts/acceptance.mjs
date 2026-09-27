@@ -19,6 +19,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { packSellbase } from './lib/pack.mjs';
 
 const repo = resolve(import.meta.dirname, '..');
 const supabaseBin = join(repo, 'node_modules/.bin/supabase');
@@ -48,20 +49,8 @@ if (!env.STRIPE_SECRET_KEY?.startsWith('sk_test_') || !env.STRIPE_WEBHOOK_SECRET
 }
 
 // 1. Package tarballs, as they would come from npm.
-const packs = await mkdtemp(join(tmpdir(), 'sellbase-packs-'));
-const publishable = ['core', 'sdk', 'react', 'admin', 'mcp', 'cli'];
 say('Building and packing Sellbase packages…');
-sh('pnpm', ['--filter', '@sellbase/api', 'build'], repo, { quiet: true });
-for (const name of publishable) {
-  const filter = name === 'cli' ? 'sellbase' : `@sellbase/${name}`;
-  sh('pnpm', ['--filter', filter, 'build'], repo, { quiet: true });
-  sh('pnpm', ['pack', '--pack-destination', packs], join(repo, 'packages', name), { quiet: true });
-}
-const tarball = (prefix) =>
-  join(
-    packs,
-    readdirSync(packs).find((f) => f.startsWith(prefix)),
-  );
+const { packs, overrides } = await packSellbase(repo);
 
 // 2. A clean Next.js project with its own supabase/ folder.
 const app = await mkdtemp(join(tmpdir(), 'sellbase-accept-'));
@@ -81,15 +70,7 @@ await writeFile(
         '@types/node': '^24.0.0',
       },
       // Unpublished packages resolve to the local tarballs.
-      pnpm: {
-        overrides: {
-          '@sellbase/core': tarball('sellbase-core'),
-          '@sellbase/sdk': tarball('sellbase-sdk'),
-          '@sellbase/mcp': tarball('sellbase-mcp'),
-          '@sellbase/react': tarball('sellbase-react'),
-          '@sellbase/admin': tarball('sellbase-admin'),
-        },
-      },
+      pnpm: { overrides },
     },
     null,
     2,

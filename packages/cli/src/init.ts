@@ -4,6 +4,7 @@ import { cp, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { addComponents } from './add.js';
 import { readManifest, trackFiles, writeManifest } from './manifest.js';
+import { seed } from './seed.js';
 import { VERSION } from './version.js';
 import { printDoctor } from './doctor.js';
 import {
@@ -44,6 +45,8 @@ export interface InitOptions {
   skipInstall: boolean;
   /** Folder with Sellbase package tarballs to install instead of the npm registry. */
   packagesFrom?: string;
+  /** Example catalog to load after installing (`sellbase seed`). */
+  seed?: string;
 }
 
 export const FUNCTIONS = ['sellbase-api', 'sellbase-webhooks', 'sellbase-jobs'] as const;
@@ -184,28 +187,26 @@ export async function writeAgentFiles(cwd: string) {
 }
 
 async function writeFrontendFiles(cwd: string, project: ProjectInfo) {
+  const vite = project.framework === 'vite-react';
   await addComponents(
     cwd,
     ['theme', 'product-card', 'product-grid', 'product-detail', 'cart-drawer', 'checkout'],
-    { quiet: true },
+    { quiet: true, base: project.componentsBase },
   );
-  const provider = 'components/sellbase/provider.tsx';
-  const adminPage = `${project.appDir}/admin/[[...path]]/page.tsx`;
+  const files: [target: string, template: string][] = vite
+    ? [
+        ['src/components/sellbase/provider.tsx', 'templates/provider.vite.tsx'],
+        ['src/sellbase/admin-page.tsx', 'templates/admin-page.vite.tsx'],
+      ]
+    : [
+        ['components/sellbase/provider.tsx', 'templates/provider.tsx'],
+        [`${project.appDir}/admin/[[...path]]/page.tsx`, 'templates/admin-page.tsx'],
+      ];
   const written: string[] = [];
-  if (
-    await writeIfMissing(
-      join(cwd, provider),
-      await readFile(join(assetsDir, 'templates/provider.tsx'), 'utf8'),
-    )
-  )
-    written.push(provider);
-  if (
-    await writeIfMissing(
-      join(cwd, adminPage),
-      await readFile(join(assetsDir, 'templates/admin-page.tsx'), 'utf8'),
-    )
-  )
-    written.push(adminPage);
+  for (const [target, template] of files) {
+    if (await writeIfMissing(join(cwd, target), await readFile(join(assetsDir, template), 'utf8')))
+      written.push(target);
+  }
   await trackFiles(cwd, written);
 }
 
@@ -214,7 +215,11 @@ export async function init(cwd: string, options: InitOptions) {
   console.log(bold(`\n${BRAND.name} init\n`));
 
   const project = await detectProject(cwd);
-  log.step(`Next.js project (${project.appDir}/, ${project.packageManager})`);
+  log.step(
+    project.framework === 'vite-react'
+      ? `Vite + React project (${project.packageManager})`
+      : `Next.js project (${project.appDir}/, ${project.packageManager})`,
+  );
 
   const conn = await resolveSupabase(cwd, options);
   log.step(`Supabase ${conn.local ? 'local stack' : 'project'} at ${conn.apiUrl}`);
@@ -274,10 +279,12 @@ export async function init(cwd: string, options: InitOptions) {
         '# Sellbase agent credentials (secret; used by `npx sellbase mcp`). Never commit this file.',
     },
   );
+  // Public values only: the browser gets the anon key, never the service role key.
+  const prefix = project.framework === 'vite-react' ? 'VITE_' : 'NEXT_PUBLIC_';
   await upsertEnvFile(join(cwd, '.env.local'), {
-    NEXT_PUBLIC_SUPABASE_URL: conn.apiUrl,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: conn.anonKey,
-    NEXT_PUBLIC_SELLBASE_URL: sellbaseUrl,
+    [`${prefix}SUPABASE_URL`]: conn.apiUrl,
+    [`${prefix}SUPABASE_ANON_KEY`]: conn.anonKey,
+    [`${prefix}SELLBASE_URL`]: sellbaseUrl,
   });
   await ensureGitignore(cwd, ['.env.sellbase', '.env.local']);
   log.step('Wrote .env.local (public keys) and .env.sellbase (agent token, gitignored)');
@@ -288,12 +295,22 @@ export async function init(cwd: string, options: InitOptions) {
   }
 
   await writeFrontendFiles(cwd, project);
-  log.step('Added storefront components (components/sellbase) and the admin (/admin)');
+  log.step(
+    project.framework === 'vite-react'
+      ? 'Added storefront components (src/components/sellbase) and the admin page (src/sellbase/admin-page.tsx)'
+      : 'Added storefront components (components/sellbase) and the admin (/admin)',
+  );
+  if (project.framework === 'vite-react')
+    log.info(
+      'Mount the admin at /admin: see the comment at the top of src/sellbase/admin-page.tsx (your agent can do it).',
+    );
 
   await writeAgentFiles(cwd);
   log.step(
     'Wrote CLAUDE.md and AGENTS.md sections, .claude/skills/sellbase, .cursor/rules, .mcp.json and .cursor/mcp.json',
   );
+
+  if (options.seed) await seed({ url: sellbaseUrl, token, anonKey: conn.anonKey }, options.seed);
 
   console.log('');
   await printDoctor({ url: sellbaseUrl, token, anonKey: conn.anonKey }, { exitOnFail: false });

@@ -18,7 +18,7 @@ interface RegistryItem {
 export async function addComponents(
   cwd: string,
   names: string[],
-  options: { overwrite?: boolean; quiet?: boolean } = {},
+  options: { overwrite?: boolean; quiet?: boolean; base?: string } = {},
 ) {
   const registry = JSON.parse(
     await readFile(join(assetsDir, 'registry/registry.json'), 'utf8'),
@@ -43,14 +43,15 @@ export async function addComponents(
   const written: string[] = [];
   const kept: string[] = [];
   for (const name of wanted) {
-    for (const file of byName.get(name)?.files ?? []) {
+    for (const source of byName.get(name)?.files ?? []) {
+      const file = `${options.base ?? ''}${source}`;
       const target = join(cwd, file);
       if (existsSync(target) && !options.overwrite) {
         kept.push(file);
         continue;
       }
       await mkdir(dirname(target), { recursive: true });
-      await cp(join(assetsDir, 'registry', file), target);
+      await cp(join(assetsDir, 'registry', source), target);
       written.push(file);
     }
   }

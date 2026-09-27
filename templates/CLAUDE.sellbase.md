@@ -15,8 +15,8 @@ You operate it through the **`sellbase` MCP server** (`.mcp.json`, `.cursor/mcp.
 ### Where things are
 
 - **Sellbase database migrations** (listed in `.sellbase/manifest.json`) and `supabase/functions/sellbase-*`: the backend. **Do not edit them**; `npx sellbase upgrade` replaces them.
-- **`components/sellbase/`**: storefront components copied into this repo. Edit them freely to match the site. `upgrade` never overwrites your edits; it leaves diffs in `.sellbase/updates/`.
-- **The admin at `/admin`** (`@sellbase/admin`): customize it through its `config` (theme, texts, slots, pages), never by editing the package.
+- **`components/sellbase/`** (`src/components/sellbase/` in Vite projects): storefront components copied into this repo. Edit them freely to match the site. `upgrade` never overwrites your edits; it leaves diffs in `.sellbase/updates/`.
+- **The admin at `/admin`** (`@sellbase/admin`; in Vite, `src/sellbase/admin-page.tsx` still has to be mounted, see `add-storefront`): customize it through its `config` (theme, texts, slots, pages), never by editing the package.
 - **`.env.sellbase`**: API URL and the agent token used by the MCP server. **Secret: never print or commit it.**
 
 ### Rules

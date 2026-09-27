@@ -4,7 +4,8 @@ import { Command } from 'commander';
 import { addComponents } from './add.js';
 import { printDoctor } from './doctor.js';
 import { init } from './init.js';
-import { createToken, readSellbaseEnv, resolveSupabase, withDb } from './project.js';
+import { PRESETS, seed } from './seed.js';
+import { createToken, detectProject, readSellbaseEnv, resolveSupabase, withDb } from './project.js';
 import { cliError, isCliError, log } from './util.js';
 import { VERSION } from './version.js';
 
@@ -14,7 +15,7 @@ const program = new Command(BRAND.cli)
 
 program
   .command('init')
-  .description('Install Sellbase into this Next.js + Supabase project')
+  .description('Install Sellbase into this Next.js or Vite + React project with Supabase')
   .option('-y, --yes', 'non-interactive, accept defaults (for agents)', false)
   .option('--store-name <name>', 'store name', 'Mi tienda')
   .option('--currency <code>', 'ISO 4217 currency', 'MXN')
@@ -29,6 +30,7 @@ program
   .option('--skip-migrations', 'copy files but do not apply migrations or restart Supabase', false)
   .option('--skip-install', 'do not install npm packages', false)
   .option('--packages-from <dir>', 'install Sellbase packages from local .tgz files (development)')
+  .option('--seed <giro>', `example catalog: ${Object.keys(PRESETS).join(', ')}`)
   .action((opts) => init(process.cwd(), opts));
 
 program
@@ -45,7 +47,19 @@ program
   .argument('<components...>', 'e.g. product-grid product-detail cart-drawer checkout')
   .option('--overwrite', 'replace files you already have', false)
   .action(async (names: string[], opts: { overwrite: boolean }) => {
-    await addComponents(process.cwd(), names, { overwrite: opts.overwrite });
+    const project = await detectProject(process.cwd()).catch(() => null);
+    await addComponents(process.cwd(), names, {
+      overwrite: opts.overwrite,
+      base: project?.componentsBase ?? '',
+    });
+  });
+
+program
+  .command('seed')
+  .description(`Add an example catalog: ${Object.keys(PRESETS).join(', ')}`)
+  .argument('<giro>', Object.keys(PRESETS).join(' | '))
+  .action(async (giro: string) => {
+    await seed(await readSellbaseEnv(process.cwd()), giro);
   });
 
 const token = program.command('token').description('Manage API tokens');

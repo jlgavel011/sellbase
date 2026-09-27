@@ -12,6 +12,7 @@
 - Stripe live mode: live keys need confirmation, automatic webhook endpoint with a pinned API version, account status in the doctor and the admin, and a real-money check (minimum charge refunded automatically). MCP: `payments_live_check`. Guide: `docs/guides/stripe-live.md`.
 - `webhooks:write` scope (migration 0008), opt-in for agent tokens; agents confirm each webhook.
 - Agent experience: MCP `docs_search` and `storefront_scaffold`; `sellbase init` also writes `AGENTS.md`, `.cursor/mcp.json` and `.sellbase/manifest.json`; new skills `configure-shipping` and `upgrade`; `sellbase token list|revoke`; `docs/llms.txt`, `llms-full.txt` and a generated API reference.
+- `sellbase seed <giro>` and `init --seed` (ropa, curso, consultorio, cafeteria). `sellbase init` supports Vite + React projects (VITE_ env vars, components under `src/`, an admin page to mount at `/admin`).
 
 ## 0.1.0 — Phase 1 (unreleased)
 

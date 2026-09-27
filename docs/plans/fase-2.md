@@ -69,7 +69,7 @@ El usuario pausó los evals. Antes se termina, en este orden:
      - Skills `configure-shipping` y `upgrade`.
      - `.cursor/mcp.json`.
      - `sellbase token list|revoke`.
-   - **2e-2. Giros y Vite**
+   - ✅ **2e-2. Giros y Vite**
      - `sellbase seed <giro>` y `init --seed` (ropa, curso digital, consultorio, cafetería).
      - `init` en proyectos Vite + React: variables `VITE_`, provider y página del admin para montar en `/admin`, con instrucciones al agente.
    - **2e-3. `sellbase upgrade`**

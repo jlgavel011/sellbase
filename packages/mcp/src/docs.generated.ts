@@ -99,7 +99,27 @@ export const DOCS: DocSection[] = [
   {
     source: 'skills/add-storefront/SKILL.md',
     title: 'Add the storefront',
-    text: '# Add the storefront\n\nComponents live in `components/sellbase/` (copied into this repo; edit them freely). They read everything from the API through `@sellbase/react`: never hardcode products or prices.\n\n1. **Provider**: wrap the site once in `SellbaseProvider` (`components/sellbase/provider.tsx` is ready: import it in `app/layout.tsx` around `{children}`).\n2. **Theme**: import `components/sellbase/theme.css` in the global CSS and set its variables to the site\'s colors, radius and fonts. If the components folder is gitignored, add `@source "../components/sellbase";` for Tailwind v4.\n3. **Pages** (Next.js App Router):\n   - Listing: `<ProductGrid />` (e.g. `app/page.tsx` or `app/shop/page.tsx`).\n   - Product: `app/products/[slug]/page.tsx` → `<ProductDetail slug={slug} />`.\n   - Cart: `<CartButton />` in the header and `<CartDrawer />` once in the layout.\n   - Checkout: `app/checkout/page.tsx` → `<Checkout successPath="/gracias" />`.\n   - Thank you: `app/gracias/page.tsx` that calls `useCart().clear()`.\n4. **Match the design**: adapt markup and classes to the site; keep data flows (hooks) and the availability/error states.\n5. Verify in the browser: browse → add to cart → checkout reaches Stripe. Then run `test_purchase`.\n\nMore components: `npx sellbase add product-card product-grid product-detail cart-drawer checkout`.',
+    text: '# Add the storefront\n\nStart with `storefront_scaffold` and the owner\'s intent (e.g. "tienda de playeras", "citas para mi consultorio"). It returns the components to add and the `npx sellbase add …` command.\n\nComponents are copied into this repo, and you can edit them freely:\n\n- Next.js: `components/sellbase/`\n- Vite: `src/components/sellbase/`\n\nThey read everything from the API through `@sellbase/react`. Never hardcode products or prices.',
+  },
+  {
+    source: 'skills/add-storefront/SKILL.md',
+    title: 'Add the storefront › 1. Provider and theme',
+    text: '## 1. Provider and theme\n\n- Wrap the site once in `SellbaseStoreProvider` (`…/components/sellbase/provider.tsx`):\n  - **Next.js:** in `app/layout.tsx`, around `{children}`.\n  - **Vite:** in `src/main.tsx`, around `<App />`.\n- Import `…/components/sellbase/theme.css` once in the global CSS. Set its variables to the site\'s colors, radius and fonts.\n- Tailwind v4: if the components folder is outside what Tailwind scans, add `@source "../components/sellbase";`.',
+  },
+  {
+    source: 'skills/add-storefront/SKILL.md',
+    title: 'Add the storefront › 2. Pages',
+    text: '## 2. Pages\n\n| Page      | Next.js (App Router)                                                | Vite (React Router)                                        |\n| --------- | ------------------------------------------------------------------- | ---------------------------------------------------------- |\n| Listing   | `app/page.tsx` or `app/productos/page.tsx` → `<ProductGrid />`      | `<Route path="/productos" element={<ProductGrid />} />`    |\n| Product   | `app/productos/[slug]/page.tsx` → `<ProductDetail slug={slug} />`   | `<Route path="/productos/:slug" …>` reading the slug param |\n| Cart      | `<CartButton />` in the header, `<CartDrawer />` once in the layout | same                                                       |\n| Checkout  | `app/checkout/page.tsx` → `<Checkout successPath="/gracias" />`     | `<Route path="/checkout" …>`                               |\n| Thank you | `app/gracias/page.tsx`                                              | `<Route path="/gracias" …>`                                |\n\n**Services** (appointments): `<ProductDetail />` already shows `booking-picker` for service products. The buyer picks a time in the store time zone, and it is held while they pay.\n\n**Thank you page:** the buyer can arrive before the payment webhook.\n\n1. Read `sellbase_checkout` from the query string.\n2. Poll `sellbase.checkout.status(id)` every 2–3 s while it says `pending`, and show "Confirmando tu pago…".\n3. When it says `paid`, show "Pedido #N confirmado" and call `useCart().clear()`.\n4. If it says `expired`, offer to go back to the cart.',
+  },
+  {
+    source: 'skills/add-storefront/SKILL.md',
+    title: 'Add the storefront › 3. Admin at /admin',
+    text: '## 3. Admin at /admin\n\n- **Next.js:** already mounted in `app/admin/[[...path]]/page.tsx`.\n- **Vite:** mount `src/sellbase/admin-page.tsx` for every path under `/admin`:\n  - with React Router, `<Route path="/admin/*" element={<SellbaseAdminPage />} />`;\n  - without a router, render it instead of `<App />` in `src/main.tsx` when `location.pathname.startsWith(\'/admin\')`.\n\n  The host must serve `index.html` for `/admin/*`: a SPA fallback, such as Vercel or Netlify rewrites.',
+  },
+  {
+    source: 'skills/add-storefront/SKILL.md',
+    title: 'Add the storefront › 4. Match the design and verify',
+    text: '## 4. Match the design and verify\n\n- Adapt markup and classes to the site. Keep the data flow (hooks) and the loading, error and out-of-stock states.\n- In the browser: browse → add to cart → checkout reaches Stripe. Then run `test_purchase`.',
   },
   {
     source: 'skills/configure-payments/SKILL.md',
