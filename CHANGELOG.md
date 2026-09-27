@@ -11,6 +11,7 @@
 - Settings: team invites and roles, API tokens with scopes and an AI agents activity log, outbound webhooks signed with HMAC and retried with backoff (migration 0007). MCP: `webhook_setup`.
 - Stripe live mode: live keys need confirmation, automatic webhook endpoint with a pinned API version, account status in the doctor and the admin, and a real-money check (minimum charge refunded automatically). MCP: `payments_live_check`. Guide: `docs/guides/stripe-live.md`.
 - `webhooks:write` scope (migration 0008), opt-in for agent tokens; agents confirm each webhook.
+- Agent experience: MCP `docs_search` and `storefront_scaffold`; `sellbase init` also writes `AGENTS.md`, `.cursor/mcp.json` and `.sellbase/manifest.json`; new skills `configure-shipping` and `upgrade`; `sellbase token list|revoke`; `docs/llms.txt`, `llms-full.txt` and a generated API reference.
 
 ## 0.1.0 — Phase 1 (unreleased)
 

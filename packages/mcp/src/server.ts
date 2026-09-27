@@ -17,6 +17,7 @@ import type { Sellbase } from '@sellbase/sdk';
 import { readFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { z } from 'zod';
+import { excerpt, scaffoldStorefront, searchDocs } from './docs.js';
 
 /**
  * Sellbase MCP server (SPEC §13). Few tools, named for what an agent wants to do, each
@@ -722,6 +723,46 @@ export function createSellbaseMcpServer(sellbase: Sellbase, options: { version?:
           ? sellbase.admin.webhooks.test(id)
           : sellbase.admin.webhooks.delete(id);
       }),
+  );
+
+  server.registerTool(
+    'docs_search',
+    {
+      title: 'Search the Sellbase docs',
+      description:
+        'Search guides, skills and the API reference bundled with Sellbase (e.g. "going live with Stripe", "shipping options", "refund scope"). Use it before guessing how a feature works.',
+      inputSchema: {
+        query: z.string().min(2).max(200),
+        limit: z.number().int().min(1).max(10).default(5),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    ({ query, limit }) =>
+      run(async () => {
+        const results = searchDocs(query, limit).map((d) => ({
+          title: d.title,
+          source: d.source,
+          text: excerpt(d.text, query),
+        }));
+        return results.length
+          ? { results }
+          : {
+              results,
+              hint: 'No match. Try other words, or read node_modules/sellbase/assets/docs/llms-full.txt.',
+            };
+      }),
+  );
+
+  server.registerTool(
+    'storefront_scaffold',
+    {
+      title: 'Plan the storefront',
+      description:
+        'Given what the owner wants to sell (e.g. "tienda de playeras", "agenda de citas para mi consultorio", "vender un curso"), returns which storefront components to add, the `npx sellbase add …` command, suggested pages and next steps. Run the command in the project, then follow the add-storefront skill.',
+      inputSchema: { intent: z.string().min(2).max(500) },
+      annotations: { readOnlyHint: true },
+    },
+    ({ intent }) => run(async () => scaffoldStorefront(intent)),
   );
 
   server.registerTool(

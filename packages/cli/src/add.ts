@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { cp, mkdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { trackFiles } from './manifest.js';
 import { assetsDir, cliError, log } from './util.js';
 
 interface RegistryItem {
@@ -53,6 +54,7 @@ export async function addComponents(
       written.push(file);
     }
   }
+  await trackFiles(cwd, written);
   if (!options.quiet) {
     written.forEach((f) => log.step(`Added ${f}`));
     kept.forEach((f) => log.info(`Kept your version of ${f} (use --overwrite to replace)`));

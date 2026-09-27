@@ -1,8 +1,10 @@
 import { BRAND } from '@sellbase/core';
 import { existsSync } from 'node:fs';
 import { cp, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { addComponents } from './add.js';
+import { readManifest, trackFiles, writeManifest } from './manifest.js';
+import { VERSION } from './version.js';
 import { printDoctor } from './doctor.js';
 import {
   apiUrlFor,
@@ -44,7 +46,7 @@ export interface InitOptions {
   packagesFrom?: string;
 }
 
-const FUNCTIONS = ['sellbase-api', 'sellbase-webhooks', 'sellbase-jobs'] as const;
+export const FUNCTIONS = ['sellbase-api', 'sellbase-webhooks', 'sellbase-jobs'] as const;
 
 async function copyBackendFiles(cwd: string) {
   const migrations = join(cwd, 'supabase/migrations');
@@ -58,6 +60,13 @@ async function copyBackendFiles(cwd: string) {
       join(cwd, 'supabase/functions', fn, 'index.js'),
     );
   }
+  const manifest = await readManifest(cwd);
+  await writeManifest(cwd, {
+    ...manifest,
+    version: VERSION,
+    migrations: [...new Set([...manifest.migrations, ...files])].sort(),
+    functions: [...FUNCTIONS],
+  });
   return files.length;
 }
 
@@ -127,17 +136,38 @@ async function installPackages(cwd: string, project: ProjectInfo, options: InitO
     await run(pm, [...add, pm === 'npm' ? '--save-dev' : '-D', ...devDeps], { cwd });
 }
 
-async function writeAgentFiles(cwd: string) {
-  const section = await readFile(join(assetsDir, 'templates/CLAUDE.sellbase.md'), 'utf8');
-  const claude = join(cwd, 'CLAUDE.md');
-  const current = existsSync(claude) ? await readFile(claude, 'utf8') : '';
+/** Writes or refreshes the managed Sellbase section of a markdown file (CLAUDE.md, AGENTS.md). */
+async function upsertManagedSection(path: string, section: string) {
+  const current = existsSync(path) ? await readFile(path, 'utf8') : '';
   const managed = /<!-- sellbase:start[\s\S]*?<!-- sellbase:end -->\n?/;
   await writeFile(
-    claude,
+    path,
     managed.test(current)
       ? current.replace(managed, section)
       : `${current}${current ? '\n' : ''}${section}`,
   );
+}
+
+/** Adds the sellbase server to an MCP client config, keeping the other servers. */
+async function registerMcp(path: string) {
+  const config = await readJson<{ mcpServers?: Record<string, unknown> }>(path, {});
+  config.mcpServers = {
+    ...config.mcpServers,
+    [BRAND.slug]: { command: 'npx', args: [BRAND.cli, 'mcp'] },
+  };
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, `${JSON.stringify(config, null, 2)}\n`);
+}
+
+/**
+ * Agent files (SPEC §13.3): CLAUDE.md and AGENTS.md sections, skills, Cursor rule and
+ * MCP configs. Always refreshed: these belong to Sellbase, not to the owner.
+ */
+export async function writeAgentFiles(cwd: string) {
+  const section = await readFile(join(assetsDir, 'templates/CLAUDE.sellbase.md'), 'utf8');
+  await upsertManagedSection(join(cwd, 'CLAUDE.md'), section);
+  // AGENTS.md is read by Codex, Cursor, Copilot, Gemini and others.
+  await upsertManagedSection(join(cwd, 'AGENTS.md'), section);
 
   for (const skill of await readdir(join(assetsDir, 'skills'))) {
     await mkdir(join(cwd, '.claude/skills/sellbase', skill), { recursive: true });
@@ -149,13 +179,8 @@ async function writeAgentFiles(cwd: string) {
   await mkdir(join(cwd, '.cursor/rules'), { recursive: true });
   await cp(join(assetsDir, 'templates/cursor-rule.mdc'), join(cwd, '.cursor/rules/sellbase.mdc'));
 
-  const mcpPath = join(cwd, '.mcp.json');
-  const mcp = await readJson<{ mcpServers?: Record<string, unknown> }>(mcpPath, {});
-  mcp.mcpServers = {
-    ...mcp.mcpServers,
-    [BRAND.slug]: { command: 'npx', args: [BRAND.cli, 'mcp'] },
-  };
-  await writeFile(mcpPath, `${JSON.stringify(mcp, null, 2)}\n`);
+  await registerMcp(join(cwd, '.mcp.json'));
+  await registerMcp(join(cwd, '.cursor/mcp.json'));
 }
 
 async function writeFrontendFiles(cwd: string, project: ProjectInfo) {
@@ -164,14 +189,24 @@ async function writeFrontendFiles(cwd: string, project: ProjectInfo) {
     ['theme', 'product-card', 'product-grid', 'product-detail', 'cart-drawer', 'checkout'],
     { quiet: true },
   );
-  await writeIfMissing(
-    join(cwd, 'components/sellbase/provider.tsx'),
-    await readFile(join(assetsDir, 'templates/provider.tsx'), 'utf8'),
-  );
-  await writeIfMissing(
-    join(cwd, project.appDir, 'admin/[[...path]]/page.tsx'),
-    await readFile(join(assetsDir, 'templates/admin-page.tsx'), 'utf8'),
-  );
+  const provider = 'components/sellbase/provider.tsx';
+  const adminPage = `${project.appDir}/admin/[[...path]]/page.tsx`;
+  const written: string[] = [];
+  if (
+    await writeIfMissing(
+      join(cwd, provider),
+      await readFile(join(assetsDir, 'templates/provider.tsx'), 'utf8'),
+    )
+  )
+    written.push(provider);
+  if (
+    await writeIfMissing(
+      join(cwd, adminPage),
+      await readFile(join(assetsDir, 'templates/admin-page.tsx'), 'utf8'),
+    )
+  )
+    written.push(adminPage);
+  await trackFiles(cwd, written);
 }
 
 export async function init(cwd: string, options: InitOptions) {
@@ -256,7 +291,9 @@ export async function init(cwd: string, options: InitOptions) {
   log.step('Added storefront components (components/sellbase) and the admin (/admin)');
 
   await writeAgentFiles(cwd);
-  log.step('Wrote CLAUDE.md section, .claude/skills/sellbase, .cursor/rules and .mcp.json');
+  log.step(
+    'Wrote CLAUDE.md and AGENTS.md sections, .claude/skills/sellbase, .cursor/rules, .mcp.json and .cursor/mcp.json',
+  );
 
   console.log('');
   await printDoctor({ url: sellbaseUrl, token, anonKey: conn.anonKey }, { exitOnFail: false });

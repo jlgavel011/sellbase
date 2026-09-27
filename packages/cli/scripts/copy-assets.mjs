@@ -18,6 +18,9 @@ const copies = [
   ['packages/registry/registry.json', 'registry/registry.json'],
   ['skills', 'skills'],
   ['templates', 'templates'],
+  ['docs/llms.txt', 'docs/llms.txt'],
+  ['docs/llms-full.txt', 'docs/llms-full.txt'],
+  ['CHANGELOG.md', 'CHANGELOG.md'],
 ];
 
 await rm(assets, { recursive: true, force: true });

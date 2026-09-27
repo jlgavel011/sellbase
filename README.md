@@ -10,7 +10,7 @@
 
 ```bash
 npx supabase start              # or use a hosted project with --supabase-url/--anon-key/--service-role-key/--db-url
-npx sellbase init --yes         # schema, Edge Functions, store, agent token, components, /admin, CLAUDE.md, skills, .mcp.json
+npx sellbase init --yes         # schema, Edge Functions, store, agent token, components, /admin, CLAUDE.md + AGENTS.md, skills, MCP config
 ```
 
 Then open your agent in the project and say: **"Configura mi tienda con Sellbase"**. It uses the `sellbase` MCP tools (`store_status`, `product_upsert`, `integration_connect`, `test_purchase`, …) until a test purchase succeeds.
@@ -18,6 +18,7 @@ Then open your agent in the project and say: **"Configura mi tienda con Sellbase
 - Admin: `/admin` (customize with `config`: theme, texts, slots, pages).
 - Storefront: `components/sellbase/*` (copied into your repo; edit freely) on top of `@sellbase/react`.
 - Checklist: `npx sellbase doctor`.
+- Docs for agents: [`docs/llms.txt`](docs/llms.txt), [`docs/llms-full.txt`](docs/llms-full.txt), [API reference](docs/reference/api.md). Guides: [primeros pasos](docs/guides/getting-started.md), [Stripe real](docs/guides/stripe-live.md).
 
 ## Development
 

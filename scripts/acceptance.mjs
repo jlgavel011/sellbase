@@ -160,6 +160,57 @@ try {
     app,
   );
 
+  // 4b. Files for the agent (SPEC §13.3), and a second init leaves them tidy.
+  sh(
+    'node',
+    [
+      join(repo, 'packages/cli/dist/cli.js'),
+      'init',
+      '--yes',
+      '--supabase-cli',
+      supabaseBin,
+      '--skip-migrations',
+      '--skip-install',
+    ],
+    app,
+    { quiet: true },
+  );
+  const expectFile = (path, test = () => true, why = 'missing') => {
+    const abs = join(app, path);
+    if (!existsSync(abs) || !test(readFileSync(abs, 'utf8'))) throw new Error(`${path}: ${why}`);
+  };
+  const oneSection = (text) => text.split('<!-- sellbase:start').length === 2;
+  expectFile('CLAUDE.md', oneSection, 'expected exactly one Sellbase section');
+  expectFile('AGENTS.md', oneSection, 'expected exactly one Sellbase section');
+  expectFile('.cursor/rules/sellbase.mdc');
+  expectFile('.cursor/mcp.json', (t) => Boolean(JSON.parse(t).mcpServers?.sellbase));
+  const skills = readdirSync(join(app, '.claude/skills/sellbase'));
+  for (const skill of [
+    'setup-store',
+    'add-storefront',
+    'manage-catalog',
+    'operate-orders',
+    'configure-payments',
+    'configure-shipping',
+    'services-and-bookings',
+    'upgrade',
+  ])
+    if (!skills.includes(skill)) throw new Error(`skill ${skill} was not installed`);
+  expectFile(
+    '.sellbase/manifest.json',
+    (t) => {
+      const m = JSON.parse(t);
+      return (
+        m.migrations.includes('0000_foundation.sql') &&
+        Object.keys(m.files).some((f) => f.startsWith('components/sellbase/'))
+      );
+    },
+    'manifest without migrations or components',
+  );
+  say(
+    `Agent files ok: CLAUDE.md, AGENTS.md, ${skills.length} skills, Cursor rule and MCP configs, manifest`,
+  );
+
   // 5. The agent, over the real stdio MCP server configured in .mcp.json.
   const mcpConfig = JSON.parse(await readFile(join(app, '.mcp.json'), 'utf8')).mcpServers.sellbase;
   say(`Agent connects: ${mcpConfig.command} ${mcpConfig.args.join(' ')}`);
@@ -178,6 +229,14 @@ try {
     if (res.isError) throw new Error(`${name} failed: ${JSON.stringify(data)}`);
     return data;
   };
+
+  const plan = await call('storefront_scaffold', {
+    intent: 'tienda de playeras y una guía digital',
+  });
+  const docs = await call('docs_search', { query: 'webhook de stripe en local' });
+  if (!plan.command.includes('checkout') || docs.results.length === 0)
+    throw new Error('storefront_scaffold or docs_search returned nothing useful');
+  say(`storefront_scaffold: ${plan.command}; docs_search: ${docs.results[0].title}`);
 
   const status = await call('store_status');
   say(

@@ -2,8 +2,11 @@
 description: Sellbase commerce rules
 alwaysApply: true
 ---
-This project sells with Sellbase. Use the `sellbase` MCP server; start with `store_status`.
-Money is integer minor units (19990 = $199.90). Never compute prices in the browser.
-Orders come only from payment webhooks; verify with `test_purchase`.
-Do not edit supabase/migrations/0000–0002_* or supabase/functions/sellbase-*; extend with `metadata`.
-Never expose the service role key or print `.env.sellbase`.
+This project sells with Sellbase. Use the `sellbase` MCP server. Start with `store_status`; use `docs_search` when unsure.
+
+- Money is an integer in minor units (19990 = $199.90). Never compute prices, totals or stock in the browser.
+- Orders come from payment webhooks, or from `order_create` for sales outside the site. Verify with `test_purchase` (test mode).
+- Do not edit the Sellbase migrations (see `.sellbase/manifest.json`) or `supabase/functions/sellbase-*`. Extend data with `metadata`.
+- Storefront components live in `components/sellbase/`: edit them freely. Customize the admin only through its `config`.
+- Never expose the service role key or print `.env.sellbase`.
+- Ask the owner, then send `confirm: true`, for: live keys, refunds, bulk price changes, paid manual orders and webhooks.

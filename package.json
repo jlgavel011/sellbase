@@ -17,7 +17,9 @@
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:integration": "turbo run test:integration"
+    "test:integration": "turbo run test:integration",
+    "docs:build": "node scripts/build-docs.mjs",
+    "docs:check": "node scripts/build-docs.mjs --check"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

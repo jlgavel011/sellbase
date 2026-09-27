@@ -1,37 +1,51 @@
-<!-- sellbase:start (managed by `sellbase init`; edit outside these markers) -->
+<!-- sellbase:start (managed by `sellbase init` / `sellbase upgrade`; edit outside these markers) -->
 
 ## Sellbase (commerce)
 
-This project sells with **Sellbase**: catalog, cart, checkout, orders, digital delivery and emails run in this project's Supabase. You operate the store through the **`sellbase` MCP server** (see `.mcp.json`).
+This project sells with **Sellbase**. The whole store runs in this project's Supabase:
 
-**Start every store task with the `store_status` tool.** It lists what is missing, with the next step for each item.
+- catalog, cart and checkout;
+- orders, digital delivery, bookings and emails;
+- discounts, customers and reports.
+
+You operate it through the **`sellbase` MCP server** (`.mcp.json`, `.cursor/mcp.json`).
+
+**Start every store task with the `store_status` tool.** It lists what is missing, with the next step for each item. When unsure how something works, use `docs_search`.
 
 ### Where things are
 
-- `supabase/migrations/0000–0002_*` and `supabase/functions/sellbase-*`: Sellbase schema and Edge Functions. **Do not edit them**; `sellbase upgrade` replaces them.
-- `components/sellbase/`: storefront components copied into this repo. Edit them freely to match the site.
-- `app/admin/[[...path]]/page.tsx`: the admin (`@sellbase/admin`), customizable through its `config` (theme, texts, slots, pages), never by editing the package.
-- `.env.sellbase`: API URL and the agent token used by the MCP server. **Secret: never print or commit it.**
+- **Sellbase database migrations** (listed in `.sellbase/manifest.json`) and `supabase/functions/sellbase-*`: the backend. **Do not edit them**; `npx sellbase upgrade` replaces them.
+- **`components/sellbase/`**: storefront components copied into this repo. Edit them freely to match the site. `upgrade` never overwrites your edits; it leaves diffs in `.sellbase/updates/`.
+- **The admin at `/admin`** (`@sellbase/admin`): customize it through its `config` (theme, texts, slots, pages), never by editing the package.
+- **`.env.sellbase`**: API URL and the agent token used by the MCP server. **Secret: never print or commit it.**
 
 ### Rules
 
 - Money is always an integer in minor units: $199.90 MXN is `19990`. Display it with `formatMoney`.
-- Never compute prices, totals or stock in the browser; read them from the API/hooks.
-- Orders are created only by the payment webhook. To verify the store end to end, run the `test_purchase` tool.
+- Never compute prices, totals or stock in the browser; read them from the API or hooks.
+- Orders come from the payment webhook, or from `order_create` for sales made outside the site. To verify the store end to end, run `test_purchase` (test mode only).
 - Extend data with `metadata` or tables in your own schema; never alter tables in the `sellbase` schema.
 - Never expose the Supabase service role key to the browser; the storefront uses the anon key only.
-- Use Stripe **test** keys until the owner explicitly asks to go live.
+- **Ask the owner first and send `confirm: true`** for anything that moves money or data:
+  - live Stripe keys and `payments_live_check`;
+  - refunds and cancellations with refund;
+  - bulk price changes;
+  - manual orders marked as paid;
+  - webhooks that send data to another URL.
+- Agent tokens do not have `refunds:write` or `webhooks:write` unless the owner granted them.
 
 ### Skills
 
-`.claude/skills/sellbase/`: `setup-store`, `add-storefront`, `manage-catalog`, `operate-orders`, `configure-payments`, `services-and-bookings`.
+`.claude/skills/sellbase/`: `setup-store`, `add-storefront`, `manage-catalog`, `operate-orders`, `configure-payments`, `configure-shipping`, `services-and-bookings`, `upgrade`.
 
 ### Commands
 
 ```bash
-npx sellbase doctor          # setup checklist
-npx sellbase add <component> # copy more storefront components
-npx sellbase token create    # new API token
+npx sellbase doctor              # setup checklist
+npx sellbase add <component>     # copy more storefront components
+npx sellbase seed <giro>         # example catalog: ropa, curso, consultorio, cafeteria
+npx sellbase token list|create|revoke
+npx sellbase upgrade --dry-run   # check an update before applying it
 ```
 
 <!-- sellbase:end -->

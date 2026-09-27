@@ -60,7 +60,26 @@ El usuario pausó los evals. Antes se termina, en este orden:
    - Verificación live (`POST /integrations/stripe/live-check`): un cobro real del monto mínimo (10 MXN / 0.50 USD), pagado por el dueño, que al llegar el webhook se reembolsa solo y deja la integración marcada como verificada.
    - Admin → Ajustes → Pagos: modo, cuenta, webhook y verificación. MCP: `payments_live_check`. Guía `docs/guides/stripe-live.md`.
    - Prueba real: con las llaves live del usuario, vía `stripe listen --live` en local o en la nube en 2g.
-2. **2e. `sellbase init` + MCP completo + archivos para el agente**: el init deja el proyecto listo, con el MCP conectado a todas las herramientas y las skills y `CLAUDE.md`/reglas copiadas al proyecto del usuario.
+2. **2e. `sellbase init` + MCP completo + archivos para el agente** (SPEC §13–14), en tres entregas:
+   - ✅ **2e-1. MCP y archivos del agente**
+     - Herramientas `storefront_scaffold` (componentes según la intención) y `docs_search` (guías, skills y referencia empaquetadas con el MCP).
+     - `docs/llms.txt` y `llms-full.txt` generados.
+     - `CLAUDE.md` actualizado.
+     - `AGENTS.md` para Codex, Cursor y otros.
+     - Skills `configure-shipping` y `upgrade`.
+     - `.cursor/mcp.json`.
+     - `sellbase token list|revoke`.
+   - **2e-2. Giros y Vite**
+     - `sellbase seed <giro>` y `init --seed` (ropa, curso digital, consultorio, cafetería).
+     - `init` en proyectos Vite + React: variables `VITE_`, provider y página del admin para montar en `/admin`, con instrucciones al agente.
+   - **2e-3. `sellbase upgrade`**
+     - Calcula migraciones pendientes con `schema_version`.
+     - Respaldo con `pg_dump` del schema `sellbase` si está disponible.
+     - Prueba en seco: aplica y hace rollback en una transacción.
+     - Aplica y redespliega las functions.
+     - Actualiza componentes solo si no fueron modificados (hashes en `.sellbase/manifest.json`); si lo fueron, deja un `.diff`.
+     - Refresca skills y reglas, y corre el doctor.
+   - Queda para 2g: la conexión OAuth con Supabase (Management API) y `--project-ref`.
 3. **2f. Componentes del storefront**: el set completo del registry, pulido y probado, incluida una página de regreso de pago que usa `GET /storefront/checkout/:id` (pendiente, pagado o expirado).
 4. **Antes de 2g, bloqueo de webhooks a redes privadas**: en producción los webhooks salientes rechazan destinos privados o internos. Eso incluye loopback, 10/8, 172.16/12, 192.168/16, link-local y metadata 169.254.169.254, CGNAT 100.64/10, IPv6 ULA y link-local, y nombres que resuelvan ahí, como `localhost` o `kong`. Se valida al crear o editar el endpoint y otra vez justo antes de cada envío, para cubrir cambios de DNS. No se siguen redirecciones. Solo se permiten destinos privados con la variable `SELLBASE_WEBHOOKS_ALLOW_PRIVATE=true`, pensada para el stack local; `sellbase init` no la pone en la nube. Tendrá tests y actualización del ADR 0010.
 5. **2g. Instalación en un Supabase en la nube**: `sellbase init` contra un proyecto real (migraciones, functions, secretos, cron) y compra de prueba.

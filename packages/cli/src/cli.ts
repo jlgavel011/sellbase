@@ -6,8 +6,8 @@ import { printDoctor } from './doctor.js';
 import { init } from './init.js';
 import { createToken, readSellbaseEnv, resolveSupabase, withDb } from './project.js';
 import { cliError, isCliError, log } from './util.js';
+import { VERSION } from './version.js';
 
-const VERSION = '0.1.0';
 const program = new Command(BRAND.cli)
   .description(`${BRAND.name}: commerce for apps built with AI`)
   .version(VERSION);
@@ -72,6 +72,79 @@ token
       return createToken(sql, store.id, opts.name, scopes);
     });
     console.log(value);
+  });
+
+token
+  .command('list')
+  .description('List API tokens (never their secret)')
+  .option('--db-url <url>', 'database URL (defaults to the local stack)')
+  .option('--supabase-cli <cmd>', 'how to run the Supabase CLI', 'npx supabase')
+  .option('--json', 'machine-readable output', false)
+  .action(async (opts: { dbUrl?: string; supabaseCli: string; json: boolean }) => {
+    const dbUrl =
+      opts.dbUrl ?? (await resolveSupabase(process.cwd(), { supabaseCli: opts.supabaseCli })).dbUrl;
+    const rows = await withDb(
+      dbUrl,
+      (sql) => sql<
+        {
+          id: string;
+          name: string;
+          prefix: string;
+          scopes: string[];
+          last_used_at: Date | null;
+          revoked_at: Date | null;
+          expires_at: Date | null;
+        }[]
+      >`
+        select id, name, prefix, scopes, last_used_at, revoked_at, expires_at from sellbase.api_tokens
+         where store_id = sellbase.current_store_id() order by revoked_at is not null, created_at desc`,
+    );
+    if (opts.json) {
+      console.log(JSON.stringify(rows, null, 2));
+      return;
+    }
+    if (rows.length === 0) log.info('No tokens yet. Create one with `sellbase token create`.');
+    for (const t of rows) {
+      const state = t.revoked_at
+        ? 'revoked'
+        : t.expires_at && t.expires_at < new Date()
+          ? 'expired'
+          : `last used ${t.last_used_at?.toISOString() ?? 'never'}`;
+      console.log(`${t.id}  ${t.prefix}…  ${t.name}  [${state}]\n    ${t.scopes.join(', ')}`);
+    }
+  });
+
+token
+  .command('revoke')
+  .description('Revoke an API token right away (by id or by its sb_live_ prefix)')
+  .argument('<id-or-prefix>')
+  .option('--db-url <url>', 'database URL (defaults to the local stack)')
+  .option('--supabase-cli <cmd>', 'how to run the Supabase CLI', 'npx supabase')
+  .action(async (ref: string, opts: { dbUrl?: string; supabaseCli: string }) => {
+    const dbUrl =
+      opts.dbUrl ?? (await resolveSupabase(process.cwd(), { supabaseCli: opts.supabaseCli })).dbUrl;
+    const isId = /^[0-9a-f-]{36}$/i.test(ref);
+    const revoked = await withDb(dbUrl, async (sql) => {
+      const matches = await sql<{ id: string; name: string }[]>`
+        select id, name from sellbase.api_tokens
+         where store_id = sellbase.current_store_id() and revoked_at is null
+           and ${isId ? sql`id = ${ref}::uuid` : sql`prefix like ${`${ref.replace(/…$/, '')}%`}`}`;
+      if (matches.length !== 1) {
+        throw cliError(
+          matches.length
+            ? `"${ref}" matches ${matches.length} tokens.`
+            : `No active token matches "${ref}".`,
+          'Use the full id from `sellbase token list`.',
+        );
+      }
+      const [match] = matches;
+      await sql`update sellbase.api_tokens set revoked_at = now() where id = ${match?.id ?? ''}`;
+      await sql`
+        insert into sellbase.audit_log (store_id, actor_type, actor_id, action, entity, entity_id)
+        values (sellbase.current_store_id(), 'system', 'cli', 'token.revoke', 'api_token', ${match?.id ?? ''})`;
+      return match;
+    });
+    log.step(`Revoked "${revoked?.name}" (${revoked?.id}). It stops working immediately.`);
   });
 
 program
