@@ -1,0 +1,26 @@
+{
+  "name": "@sellbase/sdk",
+  "version": "0.0.0",
+  "description": "Typed client for the Sellbase API (browser and server).",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sellbase/core": "workspace:*",
+    "zod": "^4.6.5"
+  }
+}

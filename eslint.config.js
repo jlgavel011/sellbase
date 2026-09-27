@@ -27,9 +27,13 @@ export default tseslint.config(
     },
   },
   {
-    // Tests read loosely typed JSON responses; production code never uses `any`.
-    files: ['**/test/**/*.ts'],
-    rules: { '@typescript-eslint/no-explicit-any': 'off' },
+    // Tests read loosely typed JSON and assert on known fixtures; production code never
+    // uses `any` or non-null assertions.
+    files: ['**/test/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
   },
   prettier,
 );

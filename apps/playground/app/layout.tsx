@@ -1,14 +1,30 @@
 import type { ReactNode } from 'react';
+import { CartButton, CartDrawer } from '../components/sellbase/cart-drawer';
+import './globals.css';
+import { Providers } from './providers';
 
 export const metadata = {
   title: 'Sellbase Playground',
-  description: 'Demo site used for Sellbase end-to-end tests.',
+  description: 'Demo store used for Sellbase end-to-end tests.',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
-      <body style={{ fontFamily: 'system-ui, sans-serif', margin: '2rem' }}>{children}</body>
+      <body className="font-sans antialiased">
+        <Providers>
+          <header className="border-b border-[var(--sb-border)]">
+            <nav className="mx-auto flex max-w-6xl items-center justify-between p-4">
+              <a href="/" className="text-lg font-semibold">
+                Sellbase Playground
+              </a>
+              <CartButton />
+            </nav>
+          </header>
+          <main className="mx-auto max-w-6xl p-4 md:p-8">{children}</main>
+          <CartDrawer />
+        </Providers>
+      </body>
     </html>
   );
 }

@@ -8,17 +8,24 @@
     "build": "next build",
     "start": "next start --port 3100",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "sync-registry": "node scripts/sync-registry.mjs",
+    "predev": "node scripts/sync-registry.mjs",
+    "prebuild": "node scripts/sync-registry.mjs",
+    "pretypecheck": "node scripts/sync-registry.mjs"
   },
   "dependencies": {
     "@sellbase/core": "workspace:*",
     "next": "^16.3.6",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "@sellbase/react": "workspace:*"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0"
+    "@types/react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.3",
+    "@tailwindcss/postcss": "^4.3.3"
   }
 }

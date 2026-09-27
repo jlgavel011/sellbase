@@ -1,0 +1,47 @@
+{
+  "$comment": "Components that `sellbase add <name>` copies into components/sellbase/. registryDependencies are added too.",
+  "components": [
+    {
+      "name": "theme",
+      "description": "CSS variables every component uses. Import it once in your global CSS.",
+      "files": ["components/sellbase/theme.css"],
+      "dependencies": [],
+      "registryDependencies": []
+    },
+    {
+      "name": "product-card",
+      "description": "One product tile with image, title and price.",
+      "files": ["components/sellbase/product-card.tsx"],
+      "dependencies": ["@sellbase/react"],
+      "registryDependencies": ["theme"]
+    },
+    {
+      "name": "product-grid",
+      "description": "Responsive grid of active products, optionally one collection.",
+      "files": ["components/sellbase/product-grid.tsx"],
+      "dependencies": ["@sellbase/react"],
+      "registryDependencies": ["product-card"]
+    },
+    {
+      "name": "product-detail",
+      "description": "Product page: gallery, variant picker, availability and add to cart.",
+      "files": ["components/sellbase/product-detail.tsx"],
+      "dependencies": ["@sellbase/react"],
+      "registryDependencies": ["theme"]
+    },
+    {
+      "name": "cart-drawer",
+      "description": "Cart button with count and a side panel with lines, discount code and totals.",
+      "files": ["components/sellbase/cart-drawer.tsx"],
+      "dependencies": ["@sellbase/react"],
+      "registryDependencies": ["theme"]
+    },
+    {
+      "name": "checkout",
+      "description": "Checkout form: email, address, shipping option, summary and redirect to pay.",
+      "files": ["components/sellbase/checkout.tsx"],
+      "dependencies": ["@sellbase/react"],
+      "registryDependencies": ["theme"]
+    }
+  ]
+}

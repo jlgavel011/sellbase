@@ -1,0 +1,7 @@
+@import 'tailwindcss';
+@import '../components/sellbase/theme.css';
+
+body {
+  background: var(--sb-bg);
+  color: var(--sb-fg);
+}
