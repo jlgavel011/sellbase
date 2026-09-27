@@ -29,6 +29,7 @@ const SCOPES = [
   'settings:write',
   'integrations:write',
   'refunds:write',
+  'webhooks:write',
 ] as const;
 type Scope = (typeof SCOPES)[number];
 
@@ -238,7 +239,9 @@ export function AgentsPage() {
     queryFn: () => sellbase.admin.tokens.list(),
   });
   const [name, setName] = useState('');
-  const [scopes, setScopes] = useState<Scope[]>(SCOPES.filter((s) => s !== 'refunds:write'));
+  const [scopes, setScopes] = useState<Scope[]>(
+    SCOPES.filter((s) => s !== 'refunds:write' && s !== 'webhooks:write'),
+  );
   const [expires, setExpires] = useState('');
   const [revoking, setRevoking] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
@@ -337,6 +340,7 @@ export function AgentsPage() {
               </div>
             </fieldset>
             {scopes.includes('refunds:write') && <Alert tone="amber">{a.refundsWarning}</Alert>}
+            {scopes.includes('webhooks:write') && <Alert tone="amber">{a.webhooksWarning}</Alert>}
             <ErrorAlert error={create.error} />
             {create.data && (
               <div className="sb:flex sb:flex-col sb:gap-2" data-testid="new-token">

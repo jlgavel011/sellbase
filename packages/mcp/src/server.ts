@@ -667,7 +667,7 @@ export function createSellbaseMcpServer(sellbase: Sellbase, options: { version?:
     'webhook_setup',
     {
       title: 'Outbound webhooks',
-      description: `Send store events (orders, refunds, shipments, bookings, products) to another system such as an ERP, a sheet or an automation tool. action "list" shows endpoints and delivery health; "create" returns the signing secret ONCE (give it to the owner to store in the receiving system, never print it again); "test" sends a signed webhook.test now; "delete" removes one. Receivers verify the ${BRAND.name}-Signature header: t=<unix>,v1=HMAC-SHA256(secret, "<t>.<body>"). Events: ${WEBHOOK_EVENTS.join(', ')}.`,
+      description: `Send store events (orders, refunds, shipments, bookings, products) to another system such as an ERP, a sheet or an automation tool. action "list" shows endpoints and delivery health; "create" needs the webhooks:write scope (agent tokens do not have it unless the owner granted it) and confirm: true after the owner approved the URL and events, since customer and order data will be sent there; it returns the signing secret ONCE (give it to the owner to store in the receiving system, never print it again); "test" sends a signed webhook.test now; "delete" removes one. Receivers verify the ${BRAND.name}-Signature header: t=<unix>,v1=HMAC-SHA256(secret, "<t>.<body>"). Events: ${WEBHOOK_EVENTS.join(', ')}.`,
       inputSchema: {
         action: z.enum(['list', 'create', 'test', 'delete']),
         id: z.uuid().optional().describe('Endpoint id for test and delete.'),
@@ -677,9 +677,13 @@ export function createSellbaseMcpServer(sellbase: Sellbase, options: { version?:
           .optional()
           .describe('Empty or omitted = every event.'),
         description: z.string().max(200).optional(),
+        confirm: z
+          .boolean()
+          .optional()
+          .describe('create only: true after the owner approved sending data to this URL.'),
       },
     },
-    ({ action, id, url, events, description }) =>
+    ({ action, id, url, events, description, confirm }) =>
       run(async () => {
         if (action === 'list') return sellbase.admin.webhooks.list();
         if (action === 'create') {
@@ -688,6 +692,7 @@ export function createSellbaseMcpServer(sellbase: Sellbase, options: { version?:
             url,
             events: events ?? [],
             description: description ?? '',
+            ...(confirm !== undefined ? { confirm } : {}),
           });
         }
         if (!id) throw new Error('Pass the endpoint id (see action "list").');

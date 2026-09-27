@@ -80,6 +80,7 @@ describe('api tokens and agent activity', () => {
     expect(created.status, JSON.stringify(created.body)).toBe(200);
     expect(created.body.token).toMatch(/^sb_live_/);
     expect(created.body.scopes).not.toContain('refunds:write');
+    expect(created.body.scopes).not.toContain('webhooks:write');
     expect(created.body.expires_at).not.toBeNull();
 
     await s.request('POST', '/products', {
@@ -189,6 +190,45 @@ describe('outbound webhooks', () => {
       token: owner,
     });
     expect(deliveries.body.data[0]).toMatchObject({ status: 'failed', attempts: 6 });
+  });
+
+  it('needs webhooks:write and an explicit confirmation from agents', async () => {
+    const agent = await s.token();
+    const denied = await s.request('POST', '/webhooks', {
+      token: agent,
+      body: { url: 'https://agente.test/hooks' },
+    });
+    expect(denied.status).toBe(403);
+    expect(denied.body.error.details.required_scope).toBe('webhooks:write');
+
+    const allowed = await s.token(['webhooks:write']);
+    const unconfirmed = await s.request('POST', '/webhooks', {
+      token: allowed,
+      body: { url: 'https://agente.test/hooks' },
+    });
+    expect(unconfirmed.status).toBe(400);
+    expect(unconfirmed.body.error.message).toContain('https://agente.test/hooks');
+    expect(unconfirmed.body.error.hint).toContain('confirm: true');
+
+    const created = await s.request('POST', '/webhooks', {
+      token: allowed,
+      body: { url: 'https://agente.test/hooks', confirm: true },
+    });
+    expect(created.status).toBe(200);
+    const edit = await s.request('PATCH', `/webhooks/${created.body.id}`, {
+      token: allowed,
+      body: { url: 'https://otro.test/hooks' },
+    });
+    expect(edit.status).toBe(400);
+    const edited = await s.request('PATCH', `/webhooks/${created.body.id}`, {
+      token: allowed,
+      body: { url: 'https://otro.test/hooks', confirm: true },
+    });
+    expect(edited.body.url).toBe('https://otro.test/hooks');
+
+    const staff = await s.staff('staff');
+    const staffDenied = await s.request('GET', '/webhooks', { token: staff });
+    expect(staffDenied.status).toBe(403);
   });
 
   it('pauses, edits and deletes endpoints with their secret', async () => {

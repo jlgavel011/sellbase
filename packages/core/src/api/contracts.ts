@@ -1326,7 +1326,7 @@ export const routes = {
     path: '/tokens',
     summary: 'Create an API token; the full token is shown only in this response',
     description:
-      'Defaults to the agent scopes (everything except refunds:write). A token can only create tokens with scopes it has.',
+      'Defaults to the agent scopes (everything except refunds:write and webhooks:write). A token can only create tokens with scopes it has.',
     tag: 'team',
     auth: staff('settings:write'),
     body: z.object({
@@ -1367,7 +1367,7 @@ export const routes = {
     path: '/webhooks',
     summary: 'Outbound webhook endpoints with delivery stats',
     tag: 'webhooks',
-    auth: staff('settings:write'),
+    auth: staff('webhooks:write'),
     response: z.object({ data: z.array(webhookEndpointView), events: z.array(z.string()) }),
   },
   webhookCreate: {
@@ -1376,13 +1376,17 @@ export const routes = {
     path: '/webhooks',
     summary: 'Subscribe a URL to store events; the signing secret is shown only here',
     description:
-      'Each POST carries Sellbase-Signature: t=<unix>,v1=<hex HMAC-SHA256 of "<t>.<body>">. Failed deliveries retry for about a day.',
+      'Needs webhooks:write; API tokens must also send confirm=true. Each POST carries Sellbase-Signature: t=<unix>,v1=<hex HMAC-SHA256 of "<t>.<body>">. Failed deliveries retry for about a day.',
     tag: 'webhooks',
-    auth: staff('settings:write'),
+    auth: staff('webhooks:write'),
     body: z.object({
       url: z.url(),
       events: z.array(webhookEvent).default([]).describe('Empty = every event.'),
       description: z.string().max(200).default(''),
+      confirm: z
+        .boolean()
+        .optional()
+        .describe('Required (true) for API tokens: the endpoint receives customer and order data.'),
     }),
     response: webhookEndpointView.extend({ secret: z.string() }),
   },
@@ -1392,13 +1396,17 @@ export const routes = {
     path: '/webhooks/:id',
     summary: 'Change the URL, events or pause an endpoint',
     tag: 'webhooks',
-    auth: staff('settings:write'),
+    auth: staff('webhooks:write'),
     params: z.object({ id }),
     body: z.object({
       url: z.url().optional(),
       events: z.array(webhookEvent).optional(),
       description: z.string().max(200).optional(),
       enabled: z.boolean().optional(),
+      confirm: z
+        .boolean()
+        .optional()
+        .describe('Required (true) for API tokens: the endpoint receives customer and order data.'),
     }),
     response: webhookEndpointView,
   },
@@ -1408,7 +1416,7 @@ export const routes = {
     path: '/webhooks/:id',
     summary: 'Delete an endpoint and its secret',
     tag: 'webhooks',
-    auth: staff('settings:write'),
+    auth: staff('webhooks:write'),
     params: z.object({ id }),
     response: z.object({ id, deleted: z.literal(true) }),
   },
@@ -1418,7 +1426,7 @@ export const routes = {
     path: '/webhooks/:id/test',
     summary: 'Send a signed webhook.test event now and report the response',
     tag: 'webhooks',
-    auth: staff('settings:write'),
+    auth: staff('webhooks:write'),
     params: z.object({ id }),
     response: webhookDeliveryView,
   },
@@ -1428,7 +1436,7 @@ export const routes = {
     path: '/webhooks/:id/deliveries',
     summary: 'Last 50 deliveries of an endpoint',
     tag: 'webhooks',
-    auth: staff('settings:write'),
+    auth: staff('webhooks:write'),
     params: z.object({ id }),
     response: z.object({ data: z.array(webhookDeliveryView) }),
   },

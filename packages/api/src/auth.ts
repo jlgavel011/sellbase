@@ -81,7 +81,12 @@ export async function resolveActor(
 }
 
 /** Scopes that staff members need owner/admin for. */
-const ADMIN_SCOPES: readonly ApiScope[] = ['refunds:write', 'settings:write', 'integrations:write'];
+const ADMIN_SCOPES: readonly ApiScope[] = [
+  'refunds:write',
+  'settings:write',
+  'integrations:write',
+  'webhooks:write',
+];
 
 export function authorize(actor: Actor | null, auth: RouteAuth): Actor | null {
   if (auth.kind === 'public') return actor;

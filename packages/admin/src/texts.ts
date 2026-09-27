@@ -470,8 +470,11 @@ const es = {
       'discounts:write': 'Descuentos',
       'settings:write': 'Ajustes',
       'integrations:write': 'Integraciones',
+      'webhooks:write': 'Webhooks (enviar datos)',
     } as Record<string, string>,
     refundsWarning: 'Reembolsar mueve dinero real. Dáselo solo a agentes en los que confíes.',
+    webhooksWarning:
+      'Con webhooks el agente puede mandar datos de clientes y pedidos a otra URL. Aun así te pedirá confirmar cada una.',
     expires: 'Vence en (días, opcional)',
     create: 'Crear token',
     copyNow: 'Copia el token ahora: no se volverá a mostrar.',
@@ -996,8 +999,11 @@ const en: Texts = {
       'discounts:write': 'Discounts',
       'settings:write': 'Settings',
       'integrations:write': 'Integrations',
+      'webhooks:write': 'Webhooks (send data out)',
     } as Record<string, string>,
     refundsWarning: 'Refunds move real money. Only give this to agents you trust.',
+    webhooksWarning:
+      'With webhooks the agent can send customer and order data to another URL. It still has to confirm each one with you.',
     expires: 'Expires in (days, optional)',
     create: 'Create token',
     copyNow: 'Copy the token now: it will not be shown again.',

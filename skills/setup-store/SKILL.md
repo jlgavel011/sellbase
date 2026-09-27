@@ -15,4 +15,4 @@ Goal: a successful `test_purchase` (order + email + download) with as few questi
 6. **Storefront**: follow `add-storefront` so the site can sell.
 7. Finish by summarizing to the owner: what is live, what is in test mode, and what remains (e.g. switching Stripe to live keys, connecting Resend).
 
-- **Connect other systems** (ERP, sheets, Zapier/Make/n8n): `webhook_setup` with `action: "create"`, the receiving URL and the events it needs. Give the owner the signing secret once so they store it in the receiver, then run `action: "test"`.
+- **Connect other systems** (ERP, sheets, Zapier/Make/n8n): `webhook_setup` with `action: "create"`, the receiving URL and the events it needs. It needs the `webhooks:write` scope, which agent tokens only have if the owner granted it, and `confirm: true` after the owner approved that URL: customer and order data will be sent there. Give the owner the signing secret once so they store it in the receiver, then run `action: "test"`.

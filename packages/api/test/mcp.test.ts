@@ -250,18 +250,16 @@ describe('mcp', () => {
     expect(sale.data.order).toMatchObject({ total_amount: 12000, channel: 'agent' });
   });
 
-  it('sets up and tests an outbound webhook', async () => {
+  it('cannot send data out through webhooks without the scope', async () => {
     const created = await call('webhook_setup', {
       action: 'create',
       url: 'https://hooks.test/erp',
       events: ['order.paid'],
+      confirm: true,
     });
-    expect(created.isError, JSON.stringify(created.data)).toBe(false);
-    expect(created.data.secret).toMatch(/^whsec_/);
-    const test = await call('webhook_setup', { action: 'test', id: created.data.id });
-    expect(test.data).toMatchObject({ status: 'succeeded', event_type: 'webhook.test' });
-    const missing = await call('webhook_setup', { action: 'test' });
-    expect(missing.isError).toBe(true);
+    expect(created.isError).toBe(true);
+    expect(created.data.code).toBe('FORBIDDEN');
+    expect(created.data.hint).toContain('webhooks:write');
   });
 
   it('returns API errors with a hint the agent can act on', async () => {

@@ -14,12 +14,17 @@ export const apiScope = z.enum([
   'discounts:write',
   'settings:write',
   'integrations:write',
+  'webhooks:write',
 ]);
 export type ApiScope = z.infer<typeof apiScope>;
 
-/** Agent tokens never get `refunds:write` unless the owner grants it explicitly. */
+/**
+ * Agent tokens never get money or data-export scopes unless the owner grants them
+ * explicitly: `refunds:write` moves money, `webhooks:write` sends store data out.
+ */
+export const OPT_IN_SCOPES: readonly ApiScope[] = ['refunds:write', 'webhooks:write'];
 export const DEFAULT_AGENT_SCOPES: readonly ApiScope[] = apiScope.options.filter(
-  (s) => s !== 'refunds:write',
+  (s) => !OPT_IN_SCOPES.includes(s),
 );
 
 export const taxSettings = z.object({

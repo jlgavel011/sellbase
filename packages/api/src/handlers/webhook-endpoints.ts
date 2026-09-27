@@ -1,4 +1,4 @@
-import { routes, WEBHOOK_EVENTS } from '@sellbase/core';
+import { routes, sellbaseError, WEBHOOK_EVENTS } from '@sellbase/core';
 import type { Hono } from 'hono';
 import type { Sql, TransactionSql } from 'postgres';
 import { actorRef, randomToken, type Actor } from '../auth.js';
@@ -43,6 +43,22 @@ async function audit(
     values (${storeId}, ${actor_type}, ${actor_id}, ${action}, 'webhook_endpoint', ${id}, ${db.json(diff as never)})`;
 }
 
+/**
+ * An agent (API token) must confirm explicitly before data starts flowing to a URL: the
+ * owner should see where customer and order data will go. Staff confirm in the admin.
+ */
+function assertConfirmed(actor: Actor | null, confirm: boolean | undefined, url: string | null) {
+  if (actor?.type !== 'token' || confirm === true) return;
+  throw sellbaseError(
+    'VALIDATION_ERROR',
+    url
+      ? `This webhook will send customer and order data to ${url}.`
+      : 'This change affects where customer and order data is sent.',
+    'Show the owner the URL and events, and repeat the request with confirm: true once they approve.',
+    { requires_confirmation: true },
+  );
+}
+
 export function registerWebhookEndpoints(app: Hono, deps: Deps, options: AppOptions) {
   const { sql } = deps;
 
@@ -54,6 +70,7 @@ export function registerWebhookEndpoints(app: Hono, deps: Deps, options: AppOpti
   });
 
   register(app, deps, options, routes.webhookCreate, async ({ storeId, actor, body }) => {
+    assertConfirmed(actor, body.confirm, body.url);
     const secret = `whsec_${randomToken(24)}`;
     const id = await sql.begin(async (tx) => {
       const [row] = await tx<{ id: string }[]>`
@@ -74,6 +91,7 @@ export function registerWebhookEndpoints(app: Hono, deps: Deps, options: AppOpti
   });
 
   register(app, deps, options, routes.webhookUpdate, async ({ storeId, actor, params, body }) => {
+    assertConfirmed(actor, body.confirm, body.url ?? null);
     const patch = {
       ...(body.url !== undefined ? { url: body.url } : {}),
       ...(body.description !== undefined ? { description: body.description } : {}),

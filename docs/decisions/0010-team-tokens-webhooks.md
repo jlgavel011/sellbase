@@ -21,4 +21,5 @@
 - **Firma:** `Sellbase-Signature: t=<unix>,v1=<hex HMAC-SHA256(secreto, "<t>.<cuerpo>")>`, como Stripe. `verifyWebhookSignature` se exporta para los receptores.
 - **Envío:** con arrendamiento (`next_attempt_at` +2 min) y `skip locked`, para que dos corridas no dupliquen. Timeout de 10 s. Una respuesta 2xx cuenta como entregada. Si falla, se reintenta a los 1, 5, 30, 120 y 720 min, y después queda `failed`.
 - RLS: endpoints y entregas solo son visibles para dueños y administradores, porque los payloads traen datos de clientes.
-- Las URLs las configura el dueño o un token con `settings:write`. No se bloquean redes internas, porque en local el receptor suele ser `host.docker.internal`. Se revisará antes de ofrecer hosting compartido.
+- Scope propio `webhooks:write` (migración 0008), fuera de los scopes por defecto de agente, igual que `refunds:write`. El rol `staff` no lo tiene. Un token, además, debe mandar `confirm: true` al crear o cambiar un endpoint, porque ahí salen datos de clientes y pedidos.
+- Las URLs las configura el dueño, un administrador o un token con `webhooks:write`. Hoy no se bloquean redes internas, porque en local el receptor suele ser `host.docker.internal`. **Pendiente antes de instalar en la nube (plan fase 2):** bloquear destinos privados en producción y permitirlos solo con `SELLBASE_WEBHOOKS_ALLOW_PRIVATE=true` en local.
