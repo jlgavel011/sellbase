@@ -25,6 +25,17 @@ export interface DownloadLink {
 }
 
 /**
+ * Email link for a download: the store's own page when `settings.download_page_url` is
+ * set (e.g. https://tienda.com/descargas/{token}, rendered by the download-page
+ * component), otherwise the API link that redirects straight to the file.
+ */
+function downloadUrl(deps: Deps, pageTemplate: string | null, token: string) {
+  return pageTemplate?.includes('{token}')
+    ? pageTemplate.replace('{token}', encodeURIComponent(token))
+    : `${deps.publicApiUrl}/v1/storefront/downloads/${token}`;
+}
+
+/**
  * Digital delivery (SPEC §9): one grant per purchased asset with its own token, expiry
  * and download limit. The plain token only leaves this function inside the email link.
  */
@@ -49,6 +60,9 @@ export async function fulfillDigital(
   if (items.length === 0) return [];
 
   const storeId = items[0]?.store_id ?? '';
+  const [store] = await tx<{ settings: { download_page_url?: string } }[]>`
+    select settings from sellbase.stores where id = ${storeId}`;
+  const pageTemplate = store?.settings.download_page_url ?? null;
   const [fulfillment] = await tx<{ id: string }[]>`
     insert into sellbase.fulfillments (store_id, order_id, type, status, items)
     values (${storeId}, ${orderId}, 'digital', 'fulfilled',
@@ -70,7 +84,7 @@ export async function fulfillDigital(
                 ${await sha256Hex(token)}, ${asset.download_limit}, ${expiresAt})`;
       links.push({
         file_name: asset.file_name,
-        url: `${deps.publicApiUrl}/v1/storefront/downloads/${token}`,
+        url: downloadUrl(deps, pageTemplate, token),
         expires_at: expiresAt,
       });
     }

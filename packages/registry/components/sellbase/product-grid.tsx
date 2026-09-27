@@ -4,7 +4,7 @@
  * Sellbase · product-grid
  * Responsive grid of active products, loaded from the Sellbase API.
  * Props: `collection` (slug) to show one collection, `limit`, and `hrefFor` to match your
- * routes (default /products/<slug>).
+ * routes (default /productos/<slug>).
  * AI: change columns, gaps and the empty state to fit the page; keep the loading and error
  * states so the page never looks broken.
  */
@@ -14,7 +14,7 @@ import { ProductCard } from './product-card';
 export function ProductGrid({
   collection,
   limit = 24,
-  hrefFor = (slug: string) => `/products/${slug}`,
+  hrefFor = (slug: string) => `/productos/${slug}`,
 }: {
   collection?: string;
   limit?: number;

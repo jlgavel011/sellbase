@@ -74,6 +74,8 @@ export interface RouteDef {
   response: z.ZodType;
   /** 302 redirect instead of JSON. */
   redirect?: boolean;
+  /** Stricter per-IP limit for this route (e.g. guessable lookups). */
+  rateLimitPerMinute?: number;
 }
 
 const publicAuth = { kind: 'public' } as const;
@@ -517,6 +519,59 @@ export const auditEntryView = z.object({
   created_at: timestamp,
 });
 
+export const storefrontCollection = z.object({
+  slug: z.string(),
+  title: z.string(),
+  description: z.string(),
+  product_count: z.number().int(),
+});
+
+/** What the buyer may see about their own order (return page, order lookup). */
+export const orderSummaryView = z.object({
+  number: z.number().int(),
+  email: z.string().describe('Masked, e.g. b***@example.com'),
+  status: orderStatus,
+  payment_status: paymentStatus,
+  fulfillment_status: fulfillmentStatus,
+  currency,
+  subtotal_amount: amount,
+  discount_amount: amount,
+  shipping_amount: amount,
+  tax_amount: amount,
+  total_amount: amount,
+  amount_paid: amount,
+  placed_at: timestamp,
+  items: z.array(
+    z.object({
+      title: z.string(),
+      variant_title: z.string().nullable(),
+      quantity: z.number().int(),
+      total_amount: amount,
+      fulfillment_type: z.enum(['shipment', 'digital', 'booking', 'none']),
+    }),
+  ),
+  shipments: z.array(
+    z.object({
+      carrier: z.string().nullable(),
+      tracking_number: z.string().nullable(),
+      tracking_url: z.string().nullable(),
+      status: z.string(),
+      created_at: timestamp,
+    }),
+  ),
+  bookings: z.array(
+    z.object({
+      title: z.string(),
+      starts_at: timestamp,
+      ends_at: timestamp,
+      timezone: z.string(),
+      status: z.string(),
+      meeting_url: z.string().nullable(),
+    }),
+  ),
+  has_downloads: z.boolean().describe('Download links were emailed to the buyer.'),
+});
+
 const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$|^24:00$/, 'Use HH:MM (24h), e.g. 09:00');
 
 // ── Routes ───────────────────────────────────────────────────────────────────
@@ -685,7 +740,57 @@ export const routes = {
     response: z.object({
       checkout_session_id: id,
       status: z.enum(['pending', 'paid', 'expired']),
-      order: z.object({ number: z.number().int(), email: z.string() }).nullable(),
+      order: orderSummaryView.nullable(),
+    }),
+  },
+  storefrontCollectionsList: {
+    id: 'storefrontCollectionsList',
+    method: 'GET',
+    path: '/storefront/collections',
+    summary: 'Collections with at least one active product, for navigation',
+    tag: 'storefront',
+    auth: publicAuth,
+    response: z.object({ data: z.array(storefrontCollection) }),
+  },
+  storefrontCollectionGet: {
+    id: 'storefrontCollectionGet',
+    method: 'GET',
+    path: '/storefront/collections/:slug',
+    summary: 'One collection; list its products with GET /storefront/products?collection=<slug>',
+    tag: 'storefront',
+    auth: publicAuth,
+    params: z.object({ slug }),
+    response: storefrontCollection,
+  },
+  orderLookup: {
+    id: 'orderLookup',
+    method: 'POST',
+    path: '/storefront/orders/lookup',
+    summary: 'A buyer checks their order with its number and email',
+    description:
+      'Any mismatch answers NOT_FOUND (it never tells which part was wrong). Limited to 10 attempts per minute per IP.',
+    tag: 'storefront',
+    auth: publicAuth,
+    rateLimitPerMinute: 10,
+    body: z.object({ number: z.coerce.number().int().positive(), email }),
+    response: orderSummaryView,
+  },
+  downloadInfo: {
+    id: 'downloadInfo',
+    method: 'GET',
+    path: '/storefront/downloads/:grant_token/info',
+    summary: 'What a download link gives, and whether it still works',
+    tag: 'storefront',
+    auth: publicAuth,
+    params: z.object({ grant_token: z.string().min(20) }),
+    response: z.object({
+      product_title: z.string(),
+      file_name: z.string(),
+      status: z.enum(['ready', 'expired', 'limit_reached']),
+      downloads_used: z.number().int(),
+      download_limit: z.number().int().nullable(),
+      expires_at: timestamp,
+      download_url: z.string().describe('Opens the file (counts one download).'),
     }),
   },
   downloadGet: {

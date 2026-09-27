@@ -15,18 +15,19 @@
     "pretypecheck": "node scripts/sync-registry.mjs"
   },
   "dependencies": {
+    "@sellbase/admin": "workspace:*",
     "@sellbase/core": "workspace:*",
+    "@sellbase/react": "workspace:*",
     "next": "^16.3.6",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "@sellbase/react": "workspace:*",
-    "@sellbase/admin": "workspace:*"
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.63.0",
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "tailwindcss": "^4.3.3",
-    "@tailwindcss/postcss": "^4.3.3"
+    "tailwindcss": "^4.3.3"
   }
 }

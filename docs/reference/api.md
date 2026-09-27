@@ -19,6 +19,10 @@ Auth: public routes need no token; the rest need `Authorization: Bearer <staff s
 - **POST /storefront/carts/:token/shipping-rates** (public): Quote shipping options for the cart.
 - **POST /storefront/checkout** (public): Start checkout: reserves stock and returns where to pay. Totals are recomputed on the server. Stock is held for 15 minutes. The order is created only when the payment provider confirms payment.
 - **GET /storefront/checkout/:id** (public): Status of a checkout, for the page the buyer returns to after paying. The success_url gets ?sellbase_checkout=<id>. The buyer may arrive before or after the payment webhook: show "confirming payment" while status is pending and poll every few seconds.
+- **GET /storefront/collections** (public): Collections with at least one active product, for navigation.
+- **GET /storefront/collections/:slug** (public): One collection; list its products with GET /storefront/products?collection=<slug>.
+- **POST /storefront/orders/lookup** (public): A buyer checks their order with its number and email. Any mismatch answers NOT_FOUND (it never tells which part was wrong). Limited to 10 attempts per minute per IP.
+- **GET /storefront/downloads/:grant_token/info** (public): What a download link gives, and whether it still works.
 - **GET /storefront/downloads/:grant_token** (public): Redirect to a short-lived signed URL for a purchased file.
 
 ## catalog

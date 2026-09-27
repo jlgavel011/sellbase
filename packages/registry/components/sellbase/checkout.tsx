@@ -203,7 +203,10 @@ export function Checkout({
             </dd>
           </div>
           {totals.tax_amount > 0 && totals.tax_mode === 'inclusive' && (
-            <p className="text-xs text-[var(--sb-muted)]">Impuestos incluidos</p>
+            <div className="flex justify-between text-xs text-[var(--sb-muted)]">
+              <dt>Impuestos</dt>
+              <dd>Incluidos</dd>
+            </div>
           )}
           {payMode === 'deposit' && totals.deposit_amount !== null && (
             <div className="flex justify-between font-semibold text-[var(--sb-primary)]">

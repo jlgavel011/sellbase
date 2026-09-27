@@ -108,18 +108,23 @@ export const DOCS: DocSection[] = [
   },
   {
     source: 'skills/add-storefront/SKILL.md',
-    title: 'Add the storefront › 2. Pages',
-    text: '## 2. Pages\n\n| Page      | Next.js (App Router)                                                | Vite (React Router)                                        |\n| --------- | ------------------------------------------------------------------- | ---------------------------------------------------------- |\n| Listing   | `app/page.tsx` or `app/productos/page.tsx` → `<ProductGrid />`      | `<Route path="/productos" element={<ProductGrid />} />`    |\n| Product   | `app/productos/[slug]/page.tsx` → `<ProductDetail slug={slug} />`   | `<Route path="/productos/:slug" …>` reading the slug param |\n| Cart      | `<CartButton />` in the header, `<CartDrawer />` once in the layout | same                                                       |\n| Checkout  | `app/checkout/page.tsx` → `<Checkout successPath="/gracias" />`     | `<Route path="/checkout" …>`                               |\n| Thank you | `app/gracias/page.tsx`                                              | `<Route path="/gracias" …>`                                |\n\n**Services** (appointments): `<ProductDetail />` already shows `booking-picker` for service products. The buyer picks a time in the store time zone, and it is held while they pay.\n\n**Thank you page:** the buyer can arrive before the payment webhook.\n\n1. Read `sellbase_checkout` from the query string.\n2. Poll `sellbase.checkout.status(id)` every 2–3 s while it says `pending`, and show "Confirmando tu pago…".\n3. When it says `paid`, show "Pedido #N confirmado" and call `useCart().clear()`.\n4. If it says `expired`, offer to go back to the cart.',
+    title: 'Add the storefront › 2. Components and pages',
+    text: '## 2. Components and pages\n\n| Page                             | Component                                                            | Notes                                                                                                                      |\n| -------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |\n| Home, landing                    | `<ProductCarousel collection="lo-mas-vendido" />`, `<ProductGrid />` | Carousel scrolls with arrows or touch                                                                                      |\n| Collection `/colecciones/[slug]` | `<ProductGrid collection={slug} />`                                  | Title and description: `useCollection(slug)`                                                                               |\n| Product `/productos/[slug]`      | `<ProductDetail slug={slug} />`                                      | Includes `variant-picker` (sold-out values crossed out) and, for services, `booking-picker`                                |\n| Header and layout                | `<CartButton />`, `<CartDrawer cartHref="/carrito" />`               | The drawer traps focus; Escape closes it                                                                                   |\n| Cart `/carrito`                  | `<CartPage />`                                                       | Lines, `discount-input`, totals                                                                                            |\n| Checkout `/checkout`             | `<Checkout successPath="/gracias" />`                                | Redirects to pay                                                                                                           |\n| Thank you `/gracias`             | `<CheckoutReturn />` (order-status)                                  | Shows "Confirmando tu pago…" until the webhook arrives, then the order. Clears the cart                                    |\n| My order `/pedido`               | `<OrderLookup />` (order-status)                                     | Order number + email → status, tracking, appointments                                                                      |\n| Downloads `/descargas/[token]`   | `<DownloadPage token={token} />`                                     | Then set `settings.download_page_url` to `https://<site>/descargas/{token}` (`store_update_settings`) so emails link there |\n\nRoutes are suggestions. Components take `hrefFor`, `productHref`, `checkoutHref` and `cartHref` to match yours; the default product URL is `/productos/<slug>`.',
   },
   {
     source: 'skills/add-storefront/SKILL.md',
-    title: 'Add the storefront › 3. Admin at /admin',
-    text: '## 3. Admin at /admin\n\n- **Next.js:** already mounted in `app/admin/[[...path]]/page.tsx`.\n- **Vite:** mount `src/sellbase/admin-page.tsx` for every path under `/admin`:\n  - with React Router, `<Route path="/admin/*" element={<SellbaseAdminPage />} />`;\n  - without a router, render it instead of `<App />` in `src/main.tsx` when `location.pathname.startsWith(\'/admin\')`.\n\n  The host must serve `index.html` for `/admin/*`: a SPA fallback, such as Vercel or Netlify rewrites.',
+    title: 'Add the storefront › 3. SEO',
+    text: '## 3. SEO\n\n- **Product pages:** render `<ProductJsonLd product={product} url={canonical} />` (`product-seo`). For the title and Open Graph tags, use `productMetadata(product, { url, siteName })`: in Next.js return it from `generateMetadata`, loading the product on the server with `createSellbase(...).products.get(slug)`.\n- **Sitemap:** `catalogSitemap(sellbase, { baseUrl })` lists every product and collection. Next.js: return it from `app/sitemap.ts`. Vite: write `sitemapXml(entries)` to `public/sitemap.xml` in a build script.',
   },
   {
     source: 'skills/add-storefront/SKILL.md',
-    title: 'Add the storefront › 4. Match the design and verify',
-    text: '## 4. Match the design and verify\n\n- Adapt markup and classes to the site. Keep the data flow (hooks) and the loading, error and out-of-stock states.\n- In the browser: browse → add to cart → checkout reaches Stripe. Then run `test_purchase`.',
+    title: 'Add the storefront › 4. Admin at /admin',
+    text: '## 4. Admin at /admin\n\n- **Next.js:** already mounted in `app/admin/[[...path]]/page.tsx`.\n- **Vite:** mount `src/sellbase/admin-page.tsx` for every path under `/admin`:\n  - with React Router, `<Route path="/admin/*" element={<SellbaseAdminPage />} />`;\n  - without a router, render it instead of `<App />` in `src/main.tsx` when `location.pathname.startsWith(\'/admin\')`.\n\n  The host must serve `index.html` for `/admin/*`: a SPA fallback, such as Vercel or Netlify rewrites.',
+  },
+  {
+    source: 'skills/add-storefront/SKILL.md',
+    title: 'Add the storefront › 5. Match the design and verify',
+    text: '## 5. Match the design and verify\n\n- Adapt markup and classes to the site.\n- Keep the data flow (hooks), the loading, error and sold-out states, and the accessibility attributes (labels, `aria-live`, radiogroups, focus handling).\n- In the browser: browse → add to cart → checkout reaches Stripe. Then run `test_purchase`.',
   },
   {
     source: 'skills/configure-payments/SKILL.md',
@@ -199,7 +204,7 @@ export const DOCS: DocSection[] = [
   {
     source: 'docs/reference/api.md',
     title: 'Sellbase API reference › storefront',
-    text: '## storefront\n\n- **GET /storefront/products** (public): List active products.\n- **GET /storefront/products/:slug** (public): Get an active product with variants and media.\n- **POST /storefront/carts** (public): Create a cart; keep the returned token in a cookie or localStorage.\n- **GET /storefront/carts/:token** (public): Get a cart with server-computed totals.\n- **GET /storefront/availability** (public): Free start times for a service variant. Times are instants (ISO 8601, UTC); show them in `timezone`. Defaults to the next 14 days; at most 62 days per request.\n- **POST /storefront/carts/:token/items** (public): Add a variant to the cart (adds to the quantity if already present). Services need `booking_slot` with a start time from GET /storefront/availability; each booking is its own line with quantity 1.\n- **PATCH /storefront/carts/:token/items/:item_id** (public): Set the quantity of a cart line.\n- **DELETE /storefront/carts/:token/items/:item_id** (public): Remove a cart line.\n- **POST /storefront/carts/:token/discounts** (public): Apply a discount code.\n- **DELETE /storefront/carts/:token/discounts/:code** (public): Remove a discount code.\n- **POST /storefront/carts/:token/shipping-rates** (public): Quote shipping options for the cart.\n- **POST /storefront/checkout** (public): Start checkout: reserves stock and returns where to pay. Totals are recomputed on the server. Stock is held for 15 minutes. The order is created only when the payment provider confirms payment.\n- **GET /storefront/checkout/:id** (public): Status of a checkout, for the page the buyer returns to after paying. The success_url gets ?sellbase_checkout=<id>. The buyer may arrive before or after the payment webhook: show "confirming payment" while status is pending and poll every few seconds.\n- **GET /storefront/downloads/:grant_token** (public): Redirect to a short-lived signed URL for a purchased file.',
+    text: '## storefront\n\n- **GET /storefront/products** (public): List active products.\n- **GET /storefront/products/:slug** (public): Get an active product with variants and media.\n- **POST /storefront/carts** (public): Create a cart; keep the returned token in a cookie or localStorage.\n- **GET /storefront/carts/:token** (public): Get a cart with server-computed totals.\n- **GET /storefront/availability** (public): Free start times for a service variant. Times are instants (ISO 8601, UTC); show them in `timezone`. Defaults to the next 14 days; at most 62 days per request.\n- **POST /storefront/carts/:token/items** (public): Add a variant to the cart (adds to the quantity if already present). Services need `booking_slot` with a start time from GET /storefront/availability; each booking is its own line with quantity 1.\n- **PATCH /storefront/carts/:token/items/:item_id** (public): Set the quantity of a cart line.\n- **DELETE /storefront/carts/:token/items/:item_id** (public): Remove a cart line.\n- **POST /storefront/carts/:token/discounts** (public): Apply a discount code.\n- **DELETE /storefront/carts/:token/discounts/:code** (public): Remove a discount code.\n- **POST /storefront/carts/:token/shipping-rates** (public): Quote shipping options for the cart.\n- **POST /storefront/checkout** (public): Start checkout: reserves stock and returns where to pay. Totals are recomputed on the server. Stock is held for 15 minutes. The order is created only when the payment provider confirms payment.\n- **GET /storefront/checkout/:id** (public): Status of a checkout, for the page the buyer returns to after paying. The success_url gets ?sellbase_checkout=<id>. The buyer may arrive before or after the payment webhook: show "confirming payment" while status is pending and poll every few seconds.\n- **GET /storefront/collections** (public): Collections with at least one active product, for navigation.\n- **GET /storefront/collections/:slug** (public): One collection; list its products with GET /storefront/products?collection=<slug>.\n- **POST /storefront/orders/lookup** (public): A buyer checks their order with its number and email. Any mismatch answers NOT_FOUND (it never tells which part was wrong). Limited to 10 attempts per minute per IP.\n- **GET /storefront/downloads/:grant_token/info** (public): What a download link gives, and whether it still works.\n- **GET /storefront/downloads/:grant_token** (public): Redirect to a short-lived signed URL for a purchased file.',
   },
   {
     source: 'docs/reference/api.md',
@@ -270,6 +275,17 @@ export const REGISTRY: { name: string; description: string; dependencies: string
     dependencies: ['product-card'],
   },
   {
+    name: 'product-carousel',
+    description: 'Horizontal row of products (a collection or the latest), with arrow buttons.',
+    dependencies: ['product-card'],
+  },
+  {
+    name: 'variant-picker',
+    description:
+      'Option chips (Talla, Color…) built from the variants; marks sold-out combinations; keyboard friendly.',
+    dependencies: ['theme'],
+  },
+  {
     name: 'booking-picker',
     description: 'Day and time picker for services, in the store time zone.',
     dependencies: ['theme'],
@@ -277,16 +293,52 @@ export const REGISTRY: { name: string; description: string; dependencies: string
   {
     name: 'product-detail',
     description: 'Product page: gallery, variant picker, availability and add to cart.',
-    dependencies: ['theme', 'booking-picker'],
+    dependencies: ['theme', 'booking-picker', 'variant-picker'],
+  },
+  {
+    name: 'product-seo',
+    description:
+      'schema.org Product/Offer JSON-LD for product pages (search engines show price and stock).',
+    dependencies: [],
+  },
+  {
+    name: 'discount-input',
+    description: "Discount code field with the server's explanation when a code does not apply.",
+    dependencies: ['theme'],
+  },
+  {
+    name: 'cart-lines',
+    description:
+      'Cart lines with quantity controls and the totals computed by the server (used by cart-drawer and cart-page).',
+    dependencies: ['theme'],
   },
   {
     name: 'cart-drawer',
-    description: 'Cart button with count and a side panel with lines, discount code and totals.',
-    dependencies: ['theme'],
+    description:
+      'Cart button with count and a side panel with lines, discount code and totals (focus-trapped, Escape closes).',
+    dependencies: ['cart-lines', 'discount-input'],
+  },
+  {
+    name: 'cart-page',
+    description:
+      'Full cart page (e.g. /carrito) with lines, discount code, totals and checkout button.',
+    dependencies: ['cart-lines', 'discount-input'],
   },
   {
     name: 'checkout',
     description: 'Checkout form: email, address, shipping option, summary and redirect to pay.',
+    dependencies: ['theme'],
+  },
+  {
+    name: 'order-status',
+    description:
+      'Return page after paying (confirming → paid, with the order summary) and "where is my order?" lookup.',
+    dependencies: ['theme'],
+  },
+  {
+    name: 'download-page',
+    description:
+      'Page for download links: file, downloads left, expiry, and friendly expired/used states.',
     dependencies: ['theme'],
   },
 ];

@@ -23,6 +23,18 @@
       "registryDependencies": ["product-card"]
     },
     {
+      "name": "product-carousel",
+      "description": "Horizontal row of products (a collection or the latest), with arrow buttons.",
+      "files": ["components/sellbase/product-carousel.tsx"],
+      "registryDependencies": ["product-card"]
+    },
+    {
+      "name": "variant-picker",
+      "description": "Option chips (Talla, Color…) built from the variants; marks sold-out combinations; keyboard friendly.",
+      "files": ["components/sellbase/variant-picker.tsx"],
+      "registryDependencies": ["theme"]
+    },
+    {
       "name": "booking-picker",
       "description": "Day and time picker for services, in the store time zone.",
       "files": ["components/sellbase/booking-picker.tsx"],
@@ -34,20 +46,56 @@
       "description": "Product page: gallery, variant picker, availability and add to cart.",
       "files": ["components/sellbase/product-detail.tsx"],
       "dependencies": ["@sellbase/react"],
-      "registryDependencies": ["theme", "booking-picker"]
+      "registryDependencies": ["theme", "booking-picker", "variant-picker"]
+    },
+    {
+      "name": "product-seo",
+      "description": "schema.org Product/Offer JSON-LD for product pages (search engines show price and stock).",
+      "files": ["components/sellbase/product-seo.tsx"],
+      "registryDependencies": []
+    },
+    {
+      "name": "discount-input",
+      "description": "Discount code field with the server's explanation when a code does not apply.",
+      "files": ["components/sellbase/discount-input.tsx"],
+      "registryDependencies": ["theme"]
+    },
+    {
+      "name": "cart-lines",
+      "description": "Cart lines with quantity controls and the totals computed by the server (used by cart-drawer and cart-page).",
+      "files": ["components/sellbase/cart-lines.tsx"],
+      "registryDependencies": ["theme"]
     },
     {
       "name": "cart-drawer",
-      "description": "Cart button with count and a side panel with lines, discount code and totals.",
+      "description": "Cart button with count and a side panel with lines, discount code and totals (focus-trapped, Escape closes).",
       "files": ["components/sellbase/cart-drawer.tsx"],
       "dependencies": ["@sellbase/react"],
-      "registryDependencies": ["theme"]
+      "registryDependencies": ["cart-lines", "discount-input"]
+    },
+    {
+      "name": "cart-page",
+      "description": "Full cart page (e.g. /carrito) with lines, discount code, totals and checkout button.",
+      "files": ["components/sellbase/cart-page.tsx"],
+      "registryDependencies": ["cart-lines", "discount-input"]
     },
     {
       "name": "checkout",
       "description": "Checkout form: email, address, shipping option, summary and redirect to pay.",
       "files": ["components/sellbase/checkout.tsx"],
       "dependencies": ["@sellbase/react"],
+      "registryDependencies": ["theme"]
+    },
+    {
+      "name": "order-status",
+      "description": "Return page after paying (confirming → paid, with the order summary) and \"where is my order?\" lookup.",
+      "files": ["components/sellbase/order-status.tsx"],
+      "registryDependencies": ["theme"]
+    },
+    {
+      "name": "download-page",
+      "description": "Page for download links: file, downloads left, expiry, and friendly expired/used states.",
+      "files": ["components/sellbase/download-page.tsx"],
       "registryDependencies": ["theme"]
     }
   ]

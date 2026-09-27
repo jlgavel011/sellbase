@@ -80,7 +80,23 @@ El usuario pausó los evals. Antes se termina, en este orden:
      - Actualiza componentes solo si no fueron modificados (hashes en `.sellbase/manifest.json`); si lo fueron, deja un `.diff`.
      - Refresca skills y reglas, y corre el doctor.
    - Queda para 2g: la conexión OAuth con Supabase (Management API) y `--project-ref`.
-3. **2f. Componentes del storefront**: el set completo del registry, pulido y probado, incluida una página de regreso de pago que usa `GET /storefront/checkout/:id` (pendiente, pagado o expirado).
+3. ✅ **2f. Componentes del storefront** (SPEC §12): el set completo del registry, pulido y probado.
+   - **API pública:**
+     - `GET /storefront/collections` y `/:slug`.
+     - El estado del checkout trae el resumen del pedido cuando ya está pagado.
+     - `POST /storefront/orders/lookup` (número + correo, con límite de intentos más estricto).
+     - `GET /storefront/downloads/:token/info`.
+     - Setting opcional `settings.download_page_url` para que los correos lleven a la página de descargas de la tienda.
+   - **SDK y hooks:**
+     - `useCollections`, `useCollection`, `useCheckoutStatus` (consulta cada pocos segundos mientras está pendiente), `useOrderLookup` y `useDownload`.
+     - Helpers de SEO en el SDK: JSON-LD `Product`/`Offer`, sitemap y metadatos OG.
+   - **Registry (nuevos):** `variant-picker`, `discount-input`, `cart-page`, `product-carousel`, `order-status` (página de regreso: confirmando, pagado o expirado, y búsqueda de pedido), `download-page` y `product-seo`. `product-detail` y `cart-drawer` reutilizan `variant-picker` y `discount-input`.
+   - **Pulido:** accesibilidad (etiquetas, foco, `aria-live` en estados, navegación con teclado), responsive, estados de carga, error y agotado, y comentarios para la IA en cada componente.
+   - **Pruebas:**
+     - Integración de la API nueva.
+     - Hooks.
+     - e2e en el playground: colección, carrusel, variantes, página de carrito con descuento, regreso de pago con webhook firmado (pendiente → pagado), búsqueda de pedido, descarga, sitemap y JSON-LD.
+     - Revisión de accesibilidad con axe.
 4. **Antes de 2g, bloqueo de webhooks a redes privadas**: en producción los webhooks salientes rechazan destinos privados o internos. Eso incluye loopback, 10/8, 172.16/12, 192.168/16, link-local y metadata 169.254.169.254, CGNAT 100.64/10, IPv6 ULA y link-local, y nombres que resuelvan ahí, como `localhost` o `kong`. Se valida al crear o editar el endpoint y otra vez justo antes de cada envío, para cubrir cambios de DNS. No se siguen redirecciones. Solo se permiten destinos privados con la variable `SELLBASE_WEBHOOKS_ALLOW_PRIVATE=true`, pensada para el stack local; `sellbase init` no la pone en la nube. Tendrá tests y actualización del ADR 0010.
 5. **2g. Instalación en un Supabase en la nube**: `sellbase init` contra un proyecto real (migraciones, functions, secretos, cron) y compra de prueba.
 6. **2h. Evals del agente**: se construyen después. **Solo corren cuando el usuario lo pide**; nada automático ni semanal en CI.

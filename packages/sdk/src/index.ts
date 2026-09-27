@@ -32,6 +32,11 @@ export type StorefrontProduct = RouteResponse<'storefrontProductGet'>;
 export type StorefrontProductSummary = RouteResponse<'storefrontProductsList'>['data'][number];
 export type ShippingRate = RouteResponse<'cartShippingRates'>['rates'][number];
 export type CheckoutInput = Body<'checkoutStart'>;
+export type StorefrontCollection = RouteResponse<'storefrontCollectionGet'>;
+export type OrderSummary = RouteResponse<'orderLookup'>;
+export type CheckoutStatus = RouteResponse<'checkoutStatus'>;
+export type DownloadInfo = RouteResponse<'downloadInfo'>;
+export { catalogSitemap, productJsonLd, productMetadata, sitemapXml } from './seo.js';
 
 /**
  * Friendly client for storefronts and agents. Every method maps to one API route; money
@@ -55,6 +60,16 @@ export function createSellbase(options: SellbaseClientOptions) {
       list: (query: Query<'storefrontProductsList'> = {}) =>
         request('storefrontProductsList', { query }),
       get: (slug: string) => request('storefrontProductGet', { params: { slug } }),
+    },
+    collections: {
+      /** Collections with active products, for navigation. */
+      list: () => request('storefrontCollectionsList', {}),
+      get: (slug: string) => request('storefrontCollectionGet', { params: { slug } }),
+    },
+    orders: {
+      /** A buyer looks up their order with its number and email (rate limited). */
+      lookup: (number: number, email: string) =>
+        request('orderLookup', { body: { number, email } }),
     },
     cart: {
       create: (body: Body<'cartCreate'> = {}) => request('cartCreate', { body }),
@@ -98,6 +113,9 @@ export function createSellbase(options: SellbaseClientOptions) {
     downloads: {
       url: (grantToken: string) =>
         `${baseUrl}/storefront/downloads/${encodeURIComponent(grantToken)}`,
+      /** What the link gives and whether it still works (does not count a download). */
+      info: (grantToken: string) =>
+        request('downloadInfo', { params: { grant_token: grantToken } }),
     },
     admin: {
       products: {

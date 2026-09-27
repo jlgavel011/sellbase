@@ -75,6 +75,14 @@ export const storeSettingsPatch = z
     auto_label: z.boolean(),
     brand_color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
     shipping: z.record(z.string(), z.unknown()),
+    site_url: z.url().describe('The storefront; default landing page after payment links.'),
+    download_page_url: z
+      .url()
+      .refine((u) => u.includes('%7Btoken%7D') || u.includes('{token}'), 'Must contain {token}')
+      .nullable()
+      .describe(
+        'Store page for downloads, e.g. https://tienda.com/descargas/{token} (download-page component). Emails link there instead of straight to the file.',
+      ),
   })
   .partial()
   .loose();

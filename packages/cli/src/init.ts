@@ -194,7 +194,15 @@ async function writeFrontendFiles(cwd: string, project: ProjectInfo) {
   const vite = project.framework === 'vite-react';
   await addComponents(
     cwd,
-    ['theme', 'product-card', 'product-grid', 'product-detail', 'cart-drawer', 'checkout'],
+    [
+      'theme',
+      'product-card',
+      'product-grid',
+      'product-detail',
+      'cart-drawer',
+      'checkout',
+      'order-status',
+    ],
     { quiet: true, base: project.componentsBase },
   );
   const files: [target: string, template: string][] = vite

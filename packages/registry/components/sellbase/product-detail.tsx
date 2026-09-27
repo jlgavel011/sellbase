@@ -3,30 +3,15 @@
 /*
  * Sellbase · product-detail
  * Product page body: gallery, title, price, variant picker, availability and "Add to cart".
- * Variants come from the API; options (e.g. Talla, Color) are built from them.
+ * Variants come from the API; <VariantPicker> builds the options (e.g. Talla, Color).
  * AI: rearrange the layout, add sections (reviews, FAQs) around it, change button copy.
  * Keep the availability check: the server also refuses out-of-stock checkouts.
  * Services show <BookingPicker> instead of a quantity: the buyer must pick a time.
  */
-import {
-  formatMoney,
-  useCart,
-  useCartDrawer,
-  useProduct,
-  type StorefrontProduct,
-} from '@sellbase/react';
+import { formatMoney, useCart, useCartDrawer, useProduct } from '@sellbase/react';
 import { useMemo, useState } from 'react';
 import { BookingPicker, type PickedSlot } from './booking-picker';
-
-type Variant = StorefrontProduct['variants'][number];
-
-function pickVariant(variants: Variant[], selected: Record<string, string>) {
-  return (
-    variants.find((v) =>
-      Object.entries(selected).every(([k, val]) => v.option_values[k] === val),
-    ) ?? null
-  );
-}
+import { pickVariant, VariantPicker } from './variant-picker';
 
 export function ProductDetail({ slug }: { slug: string }) {
   const { data: product, isLoading, error } = useProduct(slug);
@@ -36,11 +21,11 @@ export function ProductDetail({ slug }: { slug: string }) {
   const [quantity, setQuantity] = useState(1);
   const [slot, setSlot] = useState<PickedSlot | null>(null);
 
-  const variant = useMemo(() => {
-    if (!product) return null;
-    if (product.variants.length === 1) return product.variants[0] ?? null;
-    return pickVariant(product.variants, selected);
-  }, [product, selected]);
+  const variant = useMemo(
+    () => (product ? pickVariant(product.variants, selected) : null),
+    [product, selected],
+  );
+  const [imageIndex, setImageIndex] = useState(0);
 
   if (isLoading)
     return (
@@ -51,7 +36,12 @@ export function ProductDetail({ slug }: { slug: string }) {
     );
   if (error || !product) return <p role="alert">Este producto no está disponible.</p>;
 
-  const image = product.media.find((m) => m.variant_id === variant?.id) ?? product.media[0];
+  const images = product.media.filter((m) => m.kind === 'image');
+  // A variant with its own photo shows it; otherwise the thumbnail the buyer chose.
+  const image =
+    images.find((m) => m.variant_id && m.variant_id === variant?.id) ??
+    images[imageIndex] ??
+    images[0];
   const allChosen = product.options.every((o) => selected[o.name]);
   const isService = product.type === 'service';
   const canAdd = Boolean(variant?.available) && !cart.isUpdating && (!isService || Boolean(slot));
@@ -64,14 +54,32 @@ export function ProductDetail({ slug }: { slug: string }) {
 
   return (
     <div className="grid gap-8 text-[var(--sb-fg)] md:grid-cols-2">
-      <div className="aspect-square overflow-hidden rounded-[var(--sb-radius)] bg-[var(--sb-border)]">
-        {image ? (
-          <img
-            src={image.url}
-            alt={image.alt || product.title}
-            className="h-full w-full object-cover"
-          />
-        ) : null}
+      <div className="flex flex-col gap-3">
+        <div className="aspect-square overflow-hidden rounded-[var(--sb-radius)] bg-[var(--sb-border)]">
+          {image ? (
+            <img
+              src={image.url}
+              alt={image.alt || product.title}
+              className="h-full w-full object-cover"
+            />
+          ) : null}
+        </div>
+        {images.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto" role="group" aria-label="Fotos del producto">
+            {images.map((m, i) => (
+              <button
+                key={m.url}
+                type="button"
+                onClick={() => setImageIndex(i)}
+                aria-label={`Ver foto ${i + 1} de ${images.length}`}
+                aria-current={m.url === image?.url}
+                className={`h-16 w-16 shrink-0 overflow-hidden rounded-md border-2 ${m.url === image?.url ? 'border-[var(--sb-primary)]' : 'border-transparent'}`}
+              >
+                <img src={m.url} alt="" className="h-full w-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-5">
@@ -91,27 +99,7 @@ export function ProductDetail({ slug }: { slug: string }) {
           </p>
         </div>
 
-        {product.options.map((option) => (
-          <fieldset key={option.name}>
-            <legend className="mb-2 text-sm font-medium">{option.name}</legend>
-            <div className="flex flex-wrap gap-2">
-              {option.values.map((value) => {
-                const active = selected[option.name] === value;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => setSelected({ ...selected, [option.name]: value })}
-                    className={`rounded-full border px-4 py-1.5 text-sm ${active ? 'border-[var(--sb-primary)] bg-[var(--sb-primary)] text-[var(--sb-primary-fg)]' : 'border-[var(--sb-border)]'}`}
-                  >
-                    {value}
-                  </button>
-                );
-              })}
-            </div>
-          </fieldset>
-        ))}
+        <VariantPicker product={product} selected={selected} onChange={setSelected} />
 
         {isService && variant && (
           <div className="flex flex-col gap-2">

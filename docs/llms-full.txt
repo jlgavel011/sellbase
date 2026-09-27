@@ -168,26 +168,28 @@ They read everything from the API through `@sellbase/react`. Never hardcode prod
 - Import `…/components/sellbase/theme.css` once in the global CSS. Set its variables to the site's colors, radius and fonts.
 - Tailwind v4: if the components folder is outside what Tailwind scans, add `@source "../components/sellbase";`.
 
-## 2. Pages
+## 2. Components and pages
 
-| Page      | Next.js (App Router)                                                | Vite (React Router)                                        |
-| --------- | ------------------------------------------------------------------- | ---------------------------------------------------------- |
-| Listing   | `app/page.tsx` or `app/productos/page.tsx` → `<ProductGrid />`      | `<Route path="/productos" element={<ProductGrid />} />`    |
-| Product   | `app/productos/[slug]/page.tsx` → `<ProductDetail slug={slug} />`   | `<Route path="/productos/:slug" …>` reading the slug param |
-| Cart      | `<CartButton />` in the header, `<CartDrawer />` once in the layout | same                                                       |
-| Checkout  | `app/checkout/page.tsx` → `<Checkout successPath="/gracias" />`     | `<Route path="/checkout" …>`                               |
-| Thank you | `app/gracias/page.tsx`                                              | `<Route path="/gracias" …>`                                |
+| Page                             | Component                                                            | Notes                                                                                                                      |
+| -------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Home, landing                    | `<ProductCarousel collection="lo-mas-vendido" />`, `<ProductGrid />` | Carousel scrolls with arrows or touch                                                                                      |
+| Collection `/colecciones/[slug]` | `<ProductGrid collection={slug} />`                                  | Title and description: `useCollection(slug)`                                                                               |
+| Product `/productos/[slug]`      | `<ProductDetail slug={slug} />`                                      | Includes `variant-picker` (sold-out values crossed out) and, for services, `booking-picker`                                |
+| Header and layout                | `<CartButton />`, `<CartDrawer cartHref="/carrito" />`               | The drawer traps focus; Escape closes it                                                                                   |
+| Cart `/carrito`                  | `<CartPage />`                                                       | Lines, `discount-input`, totals                                                                                            |
+| Checkout `/checkout`             | `<Checkout successPath="/gracias" />`                                | Redirects to pay                                                                                                           |
+| Thank you `/gracias`             | `<CheckoutReturn />` (order-status)                                  | Shows "Confirmando tu pago…" until the webhook arrives, then the order. Clears the cart                                    |
+| My order `/pedido`               | `<OrderLookup />` (order-status)                                     | Order number + email → status, tracking, appointments                                                                      |
+| Downloads `/descargas/[token]`   | `<DownloadPage token={token} />`                                     | Then set `settings.download_page_url` to `https://<site>/descargas/{token}` (`store_update_settings`) so emails link there |
 
-**Services** (appointments): `<ProductDetail />` already shows `booking-picker` for service products. The buyer picks a time in the store time zone, and it is held while they pay.
+Routes are suggestions. Components take `hrefFor`, `productHref`, `checkoutHref` and `cartHref` to match yours; the default product URL is `/productos/<slug>`.
 
-**Thank you page:** the buyer can arrive before the payment webhook.
+## 3. SEO
 
-1. Read `sellbase_checkout` from the query string.
-2. Poll `sellbase.checkout.status(id)` every 2–3 s while it says `pending`, and show "Confirmando tu pago…".
-3. When it says `paid`, show "Pedido #N confirmado" and call `useCart().clear()`.
-4. If it says `expired`, offer to go back to the cart.
+- **Product pages:** render `<ProductJsonLd product={product} url={canonical} />` (`product-seo`). For the title and Open Graph tags, use `productMetadata(product, { url, siteName })`: in Next.js return it from `generateMetadata`, loading the product on the server with `createSellbase(...).products.get(slug)`.
+- **Sitemap:** `catalogSitemap(sellbase, { baseUrl })` lists every product and collection. Next.js: return it from `app/sitemap.ts`. Vite: write `sitemapXml(entries)` to `public/sitemap.xml` in a build script.
 
-## 3. Admin at /admin
+## 4. Admin at /admin
 
 - **Next.js:** already mounted in `app/admin/[[...path]]/page.tsx`.
 - **Vite:** mount `src/sellbase/admin-page.tsx` for every path under `/admin`:
@@ -196,9 +198,10 @@ They read everything from the API through `@sellbase/react`. Never hardcode prod
 
   The host must serve `index.html` for `/admin/*`: a SPA fallback, such as Vercel or Netlify rewrites.
 
-## 4. Match the design and verify
+## 5. Match the design and verify
 
-- Adapt markup and classes to the site. Keep the data flow (hooks) and the loading, error and out-of-stock states.
+- Adapt markup and classes to the site.
+- Keep the data flow (hooks), the loading, error and sold-out states, and the accessibility attributes (labels, `aria-live`, radiogroups, focus handling).
 - In the browser: browse → add to cart → checkout reaches Stripe. Then run `test_purchase`.
 
 
@@ -383,6 +386,10 @@ Auth: public routes need no token; the rest need `Authorization: Bearer <staff s
 - **POST /storefront/carts/:token/shipping-rates** (public): Quote shipping options for the cart.
 - **POST /storefront/checkout** (public): Start checkout: reserves stock and returns where to pay. Totals are recomputed on the server. Stock is held for 15 minutes. The order is created only when the payment provider confirms payment.
 - **GET /storefront/checkout/:id** (public): Status of a checkout, for the page the buyer returns to after paying. The success_url gets ?sellbase_checkout=<id>. The buyer may arrive before or after the payment webhook: show "confirming payment" while status is pending and poll every few seconds.
+- **GET /storefront/collections** (public): Collections with at least one active product, for navigation.
+- **GET /storefront/collections/:slug** (public): One collection; list its products with GET /storefront/products?collection=<slug>.
+- **POST /storefront/orders/lookup** (public): A buyer checks their order with its number and email. Any mismatch answers NOT_FOUND (it never tells which part was wrong). Limited to 10 attempts per minute per IP.
+- **GET /storefront/downloads/:grant_token/info** (public): What a download link gives, and whether it still works.
 - **GET /storefront/downloads/:grant_token** (public): Redirect to a short-lived signed URL for a purchased file.
 
 ## catalog

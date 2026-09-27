@@ -5,7 +5,10 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
 test('a customer books a service, pays a deposit and reaches Stripe', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: /Asesoría 1:1/ }).click();
+  await page
+    .getByRole('region', { name: 'Productos' })
+    .getByRole('link', { name: /Asesoría 1:1/ })
+    .click();
   await expect(page.getByRole('heading', { name: 'Asesoría 1:1 para tu tienda' })).toBeVisible();
   await expect(page.getByText('45 min · En línea · Anticipo $200.00')).toBeVisible();
 
@@ -16,7 +19,7 @@ test('a customer books a service, pays a deposit and reaches Stripe', async ({ p
   await expect(page.getByText(/^Horarios en /)).toBeVisible();
   await page.getByRole('button', { name: 'Agregar al carrito' }).click();
 
-  const drawer = page.getByRole('dialog', { name: 'Carrito' });
+  const drawer = page.getByRole('dialog', { name: 'Tu carrito' });
   await expect(drawer.getByText('Asesoría 1:1 para tu tienda')).toBeVisible();
   await expect(drawer.getByText(/Ana \(asesora\)|\d{1,2}:\d{2}/).first()).toBeVisible();
   await drawer.getByRole('link', { name: 'Ir a pagar' }).click();

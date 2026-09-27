@@ -3,6 +3,7 @@ import type { Hono } from 'hono';
 import { randomToken, sha256Hex } from '../auth.js';
 import type { Deps } from '../deps.js';
 import { notFound } from '../errors.js';
+import { loadOrderSummary } from './storefront-orders.js';
 import { register, type AppOptions } from '../http.js';
 import {
   depositDue,
@@ -25,12 +26,6 @@ function withCheckoutParam(url: string, sessionId: string) {
   const u = new URL(url);
   u.searchParams.set('sellbase_checkout', sessionId);
   return u.toString();
-}
-
-/** b***@example.com: enough for the buyer to recognize it, not to harvest it. */
-function maskEmail(email: string) {
-  const [user = '', domain = ''] = email.split('@');
-  return `${user.slice(0, 1)}***@${domain}`;
 }
 
 export function registerStorefront(app: Hono, deps: Deps, options: AppOptions) {
@@ -395,11 +390,8 @@ export function registerStorefront(app: Hono, deps: Deps, options: AppOptions) {
 
   // ── Downloads ──────────────────────────────────────────────────────────────
   register(app, deps, options, routes.checkoutStatus, async ({ storeId, params }) => {
-    const [row] = await sql<{ status: string; number: number | null; email: string | null }[]>`
-      select cs.status, o.number, o.email::text as email
-        from sellbase.checkout_sessions cs
-        left join sellbase.orders o on o.id = cs.order_id
-       where cs.id = ${params.id} and cs.store_id = ${storeId}`;
+    const [row] = await sql<{ status: string; order_id: string | null }[]>`
+      select status, order_id from sellbase.checkout_sessions where id = ${params.id} and store_id = ${storeId}`;
     if (!row)
       throw notFound('Checkout', params.id, 'Use the sellbase_checkout value from the return URL.');
     return {
@@ -410,10 +402,7 @@ export function registerStorefront(app: Hono, deps: Deps, options: AppOptions) {
           : row.status === 'expired'
             ? ('expired' as const)
             : ('pending' as const),
-      order:
-        row.number !== null && row.email
-          ? { number: row.number, email: maskEmail(row.email) }
-          : null,
+      order: row.order_id ? await loadOrderSummary(sql, storeId, row.order_id) : null,
     };
   });
 

@@ -134,6 +134,9 @@ export function register<R extends RouteDef>(
     if (route.auth.kind === 'public') {
       rateLimit(`${ip ?? 'unknown'}`, options.rateLimitPerMinute ?? 120, deps.now().getTime());
     }
+    if (route.rateLimitPerMinute) {
+      rateLimit(`${route.id}:${ip ?? 'unknown'}`, route.rateLimitPerMinute, deps.now().getTime());
+    }
     const storeId = await deps.storeId();
     const actor = authorize(await resolveActor(deps, c.req.header('authorization')), route.auth);
 

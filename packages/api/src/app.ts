@@ -13,6 +13,7 @@ import { registerOrders } from './handlers/orders.js';
 import { registerReports } from './handlers/reports.js';
 import { registerStore } from './handlers/store.js';
 import { registerStorefront } from './handlers/storefront.js';
+import { registerStorefrontOrders } from './handlers/storefront-orders.js';
 import { registerTeam } from './handlers/team.js';
 import { registerTestPurchase } from './handlers/test-purchase.js';
 import { registerWebhookEndpoints } from './handlers/webhook-endpoints.js';
@@ -33,6 +34,7 @@ export function createApiApp(deps: Deps, options: AppOptions = {}, basePath = '/
 
   app.get('/openapi.json', (c) => c.json(buildOpenApi(deps.version)));
   registerStorefront(app, deps, options);
+  registerStorefrontOrders(app, deps, options);
   registerCatalogBulk(app, deps, options);
   registerCatalog(app, deps, options);
   registerOrders(app, deps, options);

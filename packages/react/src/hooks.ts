@@ -172,3 +172,76 @@ export function useCheckout() {
     data: mutation.data,
   };
 }
+
+/** Collections with active products (for menus and filters). */
+export function useCollections() {
+  const { sellbase, queryClient } = useSellbase();
+  return useQuery(
+    { queryKey: ['sellbase', 'collections'], queryFn: () => sellbase.collections.list() },
+    queryClient,
+  );
+}
+
+/** One collection (title, description); list its products with useProducts({ collection }). */
+export function useCollection(slug: string | undefined) {
+  const { sellbase, queryClient } = useSellbase();
+  return useQuery(
+    {
+      queryKey: ['sellbase', 'collection', slug],
+      queryFn: () => sellbase.collections.get(slug ?? ''),
+      enabled: Boolean(slug),
+    },
+    queryClient,
+  );
+}
+
+/**
+ * The checkout the buyer returns from (`?sellbase_checkout=<id>`). Polls while the
+ * payment webhook has not arrived; stops once it is paid or expired.
+ */
+export function useCheckoutStatus(checkoutId: string | null | undefined, intervalMs = 2500) {
+  const { sellbase, queryClient } = useSellbase();
+  return useQuery(
+    {
+      queryKey: ['sellbase', 'checkout-status', checkoutId],
+      queryFn: () => sellbase.checkout.status(checkoutId ?? ''),
+      enabled: Boolean(checkoutId),
+      refetchInterval: (q) => (q.state.data?.status === 'pending' ? intervalMs : false),
+      retry: false,
+    },
+    queryClient,
+  );
+}
+
+/** A buyer looks up their order with its number and the email they used. */
+export function useOrderLookup() {
+  const { sellbase, queryClient } = useSellbase();
+  const mutation = useMutation(
+    {
+      mutationFn: ({ number, email }: { number: number; email: string }) =>
+        sellbase.orders.lookup(number, email),
+    },
+    queryClient,
+  );
+  return {
+    lookup: mutation.mutateAsync,
+    order: mutation.data ?? null,
+    isPending: mutation.isPending,
+    error: mutation.error as (Error & { code?: string; hint?: string }) | null,
+    reset: mutation.reset,
+  };
+}
+
+/** A purchased file from its email link token: what it is, whether it still works, its URL. */
+export function useDownload(token: string | null | undefined) {
+  const { sellbase, queryClient } = useSellbase();
+  return useQuery(
+    {
+      queryKey: ['sellbase', 'download', token],
+      queryFn: () => sellbase.downloads.info(token ?? ''),
+      enabled: Boolean(token),
+      retry: false,
+    },
+    queryClient,
+  );
+}

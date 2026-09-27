@@ -8,21 +8,26 @@ import { expect, test } from '@playwright/test';
 test('browse, add to cart, and reach Stripe Checkout', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Productos' })).toBeVisible();
-  const card = page.getByRole('link', { name: /Playera Sellbase/ });
+  const card = page
+    .getByRole('region', { name: 'Productos' })
+    .getByRole('link', { name: /Playera Sellbase/ });
   await expect(card).toBeVisible();
   // Guards against missing Tailwind output (the e2e would otherwise pass unstyled).
-  await expect(page.getByRole('list').first()).toHaveCSS('display', 'grid');
+  await expect(page.getByRole('region', { name: 'Productos' }).getByRole('list')).toHaveCSS(
+    'display',
+    'grid',
+  );
   await card.click();
 
   await expect(page.getByRole('heading', { name: 'Playera Sellbase' })).toBeVisible();
   await page.getByRole('button', { name: 'Agregar al carrito' }).click();
 
-  const drawer = page.getByRole('dialog', { name: 'Carrito' });
+  const drawer = page.getByRole('dialog', { name: 'Tu carrito' });
   await expect(drawer).toBeVisible();
   await expect(drawer.getByText('Playera Sellbase')).toBeVisible();
-  await expect(page.getByRole('button', { name: /Carrito, 1 artículos/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Carrito, 1 artículo/ })).toBeVisible();
 
-  await drawer.getByPlaceholder('Código de descuento').fill('NOEXISTE');
+  await drawer.getByLabel('Código de descuento').fill('NOEXISTE');
   await drawer.getByRole('button', { name: 'Aplicar' }).click();
   await expect(drawer.getByRole('alert')).toContainText('not valid');
 

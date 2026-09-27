@@ -1,7 +1,13 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createSellbase, SellbaseProvider, useCart, useProducts } from '../src/index.js';
+import {
+  createSellbase,
+  SellbaseProvider,
+  useCart,
+  useCheckoutStatus,
+  useProducts,
+} from '../src/index.js';
 
 /** Minimal in-memory API: one product, carts keyed by token. */
 function fakeApi() {
@@ -143,5 +149,41 @@ describe('useCart', () => {
     window.localStorage.setItem('sellbase_cart_token', 'missing-token-xxxxxxxxxxxx');
     renderHook(() => useCart(), { wrapper });
     await waitFor(() => expect(window.localStorage.getItem('sellbase_cart_token')).toBeNull());
+  });
+});
+
+describe('useCheckoutStatus', () => {
+  it('polls while the payment is pending and stops once paid', async () => {
+    let calls = 0;
+    const statusFetch = (async (input: string) => {
+      const path = new URL(input).pathname;
+      if (!path.includes('/storefront/checkout/')) return api.fetch(input);
+      calls += 1;
+      const paid = calls >= 3;
+      return new Response(
+        JSON.stringify({
+          checkout_session_id: '00000000-0000-4000-8000-000000000001',
+          status: paid ? 'paid' : 'pending',
+          order: paid ? { number: 1001, email: 'b***@test.dev' } : null,
+        }),
+        { status: 200 },
+      );
+    }) as typeof globalThis.fetch;
+    const local = ({ children }: { children: ReactNode }) => (
+      <SellbaseProvider
+        client={createSellbase({ url: 'http://x.test/sellbase-api', fetch: statusFetch })}
+      >
+        {children}
+      </SellbaseProvider>
+    );
+    const { result } = renderHook(
+      () => useCheckoutStatus('00000000-0000-4000-8000-000000000001', 20),
+      { wrapper: local },
+    );
+    await waitFor(() => expect(result.current.data?.status).toBe('paid'));
+    expect(result.current.data?.order?.number).toBe(1001);
+    const settled = calls;
+    await new Promise((r) => setTimeout(r, 100));
+    expect(calls).toBe(settled);
   });
 });

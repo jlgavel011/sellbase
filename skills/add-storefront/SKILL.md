@@ -1,6 +1,6 @@
 ---
 name: sellbase-add-storefront
-description: Integrate Sellbase storefront components (product grid, product page, cart, checkout, booking picker) into the site's existing design, in Next.js or Vite + React. Use when the site needs to show or sell products or services.
+description: Integrate Sellbase storefront components (catalog, product page, cart, checkout, return page, order lookup, downloads, SEO) into the site's existing design, in Next.js or Vite + React. Use when the site needs to show or sell products or services.
 ---
 
 # Add the storefront
@@ -22,26 +22,28 @@ They read everything from the API through `@sellbase/react`. Never hardcode prod
 - Import `…/components/sellbase/theme.css` once in the global CSS. Set its variables to the site's colors, radius and fonts.
 - Tailwind v4: if the components folder is outside what Tailwind scans, add `@source "../components/sellbase";`.
 
-## 2. Pages
+## 2. Components and pages
 
-| Page      | Next.js (App Router)                                                | Vite (React Router)                                        |
-| --------- | ------------------------------------------------------------------- | ---------------------------------------------------------- |
-| Listing   | `app/page.tsx` or `app/productos/page.tsx` → `<ProductGrid />`      | `<Route path="/productos" element={<ProductGrid />} />`    |
-| Product   | `app/productos/[slug]/page.tsx` → `<ProductDetail slug={slug} />`   | `<Route path="/productos/:slug" …>` reading the slug param |
-| Cart      | `<CartButton />` in the header, `<CartDrawer />` once in the layout | same                                                       |
-| Checkout  | `app/checkout/page.tsx` → `<Checkout successPath="/gracias" />`     | `<Route path="/checkout" …>`                               |
-| Thank you | `app/gracias/page.tsx`                                              | `<Route path="/gracias" …>`                                |
+| Page                             | Component                                                            | Notes                                                                                                                      |
+| -------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Home, landing                    | `<ProductCarousel collection="lo-mas-vendido" />`, `<ProductGrid />` | Carousel scrolls with arrows or touch                                                                                      |
+| Collection `/colecciones/[slug]` | `<ProductGrid collection={slug} />`                                  | Title and description: `useCollection(slug)`                                                                               |
+| Product `/productos/[slug]`      | `<ProductDetail slug={slug} />`                                      | Includes `variant-picker` (sold-out values crossed out) and, for services, `booking-picker`                                |
+| Header and layout                | `<CartButton />`, `<CartDrawer cartHref="/carrito" />`               | The drawer traps focus; Escape closes it                                                                                   |
+| Cart `/carrito`                  | `<CartPage />`                                                       | Lines, `discount-input`, totals                                                                                            |
+| Checkout `/checkout`             | `<Checkout successPath="/gracias" />`                                | Redirects to pay                                                                                                           |
+| Thank you `/gracias`             | `<CheckoutReturn />` (order-status)                                  | Shows "Confirmando tu pago…" until the webhook arrives, then the order. Clears the cart                                    |
+| My order `/pedido`               | `<OrderLookup />` (order-status)                                     | Order number + email → status, tracking, appointments                                                                      |
+| Downloads `/descargas/[token]`   | `<DownloadPage token={token} />`                                     | Then set `settings.download_page_url` to `https://<site>/descargas/{token}` (`store_update_settings`) so emails link there |
 
-**Services** (appointments): `<ProductDetail />` already shows `booking-picker` for service products. The buyer picks a time in the store time zone, and it is held while they pay.
+Routes are suggestions. Components take `hrefFor`, `productHref`, `checkoutHref` and `cartHref` to match yours; the default product URL is `/productos/<slug>`.
 
-**Thank you page:** the buyer can arrive before the payment webhook.
+## 3. SEO
 
-1. Read `sellbase_checkout` from the query string.
-2. Poll `sellbase.checkout.status(id)` every 2–3 s while it says `pending`, and show "Confirmando tu pago…".
-3. When it says `paid`, show "Pedido #N confirmado" and call `useCart().clear()`.
-4. If it says `expired`, offer to go back to the cart.
+- **Product pages:** render `<ProductJsonLd product={product} url={canonical} />` (`product-seo`). For the title and Open Graph tags, use `productMetadata(product, { url, siteName })`: in Next.js return it from `generateMetadata`, loading the product on the server with `createSellbase(...).products.get(slug)`.
+- **Sitemap:** `catalogSitemap(sellbase, { baseUrl })` lists every product and collection. Next.js: return it from `app/sitemap.ts`. Vite: write `sitemapXml(entries)` to `public/sitemap.xml` in a build script.
 
-## 3. Admin at /admin
+## 4. Admin at /admin
 
 - **Next.js:** already mounted in `app/admin/[[...path]]/page.tsx`.
 - **Vite:** mount `src/sellbase/admin-page.tsx` for every path under `/admin`:
@@ -50,7 +52,8 @@ They read everything from the API through `@sellbase/react`. Never hardcode prod
 
   The host must serve `index.html` for `/admin/*`: a SPA fallback, such as Vercel or Netlify rewrites.
 
-## 4. Match the design and verify
+## 5. Match the design and verify
 
-- Adapt markup and classes to the site. Keep the data flow (hooks) and the loading, error and out-of-stock states.
+- Adapt markup and classes to the site.
+- Keep the data flow (hooks), the loading, error and sold-out states, and the accessibility attributes (labels, `aria-live`, radiogroups, focus handling).
 - In the browser: browse → add to cart → checkout reaches Stripe. Then run `test_purchase`.
