@@ -40,7 +40,7 @@ export const metadata = z
   .default({})
   .describe('Free-form JSON to extend any entity. Never alter Sellbase tables; use this instead.');
 
-export const email = z.email().transform((v) => v.toLowerCase());
+export const email = z.email().overwrite((v) => v.toLowerCase());
 
 export const address = z.object({
   first_name: z.string().max(100).optional(),
