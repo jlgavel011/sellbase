@@ -1,0 +1,8 @@
+pnpm-lock.yaml
+**/dist
+**/.next
+**/.turbo
+supabase/.temp
+SPEC.md
+CLAUDE.md
+**/next-env.d.ts
