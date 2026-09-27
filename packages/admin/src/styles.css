@@ -1,0 +1,60 @@
+/*
+ * Admin styles, compiled to dist/styles.css. Tailwind utilities use the `sb:` prefix and
+ * there is no global preflight, so the host site's styles are never touched. A minimal
+ * reset is scoped to `.sb-admin`.
+ */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme) prefix(sb);
+@import 'tailwindcss/utilities.css' layer(utilities) prefix(sb);
+
+@source './';
+
+@layer base {
+  .sb-admin {
+    color: #18181b;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sb-admin *,
+  .sb-admin *::before,
+  .sb-admin *::after {
+    box-sizing: border-box;
+    border-width: 0;
+    border-style: solid;
+    border-color: currentColor;
+  }
+  .sb-admin h1,
+  .sb-admin h2,
+  .sb-admin h3,
+  .sb-admin p,
+  .sb-admin ul,
+  .sb-admin ol,
+  .sb-admin dl,
+  .sb-admin dd,
+  .sb-admin fieldset {
+    margin: 0;
+    padding: 0;
+  }
+  .sb-admin ul,
+  .sb-admin ol {
+    list-style: none;
+  }
+  .sb-admin a {
+    color: inherit;
+    text-decoration: inherit;
+  }
+  .sb-admin button,
+  .sb-admin input,
+  .sb-admin select,
+  .sb-admin textarea {
+    font: inherit;
+    color: inherit;
+  }
+  .sb-admin img {
+    display: block;
+    max-width: 100%;
+  }
+  .sb-admin table {
+    border-collapse: collapse;
+  }
+}

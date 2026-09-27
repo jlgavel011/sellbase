@@ -151,6 +151,16 @@ export function toMinorUnits(decimal: string, currency: string): number {
   return toSafeNumber(BigInt(whole + fraction.padEnd(digits, '0')), 'amount');
 }
 
+/** Minor units back to a plain decimal string for inputs: 19990 MXN → "199.90". */
+export function toDecimalString(amount: number, currency: string): string {
+  const digits = currencyMinorDigits(currency);
+  if (!digits) return String(amount);
+  const scale = 10 ** digits;
+  const sign = amount < 0 ? '-' : '';
+  const abs = Math.abs(amount);
+  return `${sign}${Math.floor(abs / scale)}.${String(abs % scale).padStart(digits, '0')}`;
+}
+
 export function formatMoney(amount: number, currency: string, locale = 'es-MX'): string {
   const digits = currencyMinorDigits(currency);
   const sign = amount < 0 ? '-' : '';

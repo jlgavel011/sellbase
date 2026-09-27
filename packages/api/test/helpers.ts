@@ -58,6 +58,7 @@ export interface TestStore {
   api: ReturnType<typeof createApiApp>;
   webhooks: ReturnType<typeof createWebhooksApp>;
   emails: NotifyMessage[];
+  uploads: { bucket: string; path: string; size: number }[];
   payments: ReturnType<typeof fakePayments>;
   token: (scopes?: readonly ApiScope[]) => Promise<string>;
   staff: (role: 'owner' | 'admin' | 'staff') => Promise<string>;
@@ -83,6 +84,7 @@ export async function createTestStore(
   if (!store) throw new Error('store insert returned no row');
   const storeId = store.id;
   const emails: NotifyMessage[] = [];
+  const uploads: { bucket: string; path: string; size: number }[] = [];
   const payments = fakePayments();
   const users = new Map<string, string>();
   const secrets = { stripe: { secret_key: 'sk_test_fake', webhook_secret: 'whsec_test' } };
@@ -98,6 +100,10 @@ export async function createTestStore(
     notify: async () => logNotify((m) => emails.push(m)),
     storage: {
       signedUrl: async (bucket, path, ttl) => `https://storage.test/${bucket}/${path}?ttl=${ttl}`,
+      upload: async (bucket, path, bytes) => {
+        uploads.push({ bucket, path, size: bytes.byteLength });
+      },
+      publicUrl: (bucket, path) => `https://storage.test/public/${bucket}/${path}`,
     },
     now: () => new Date(),
     publicApiUrl: 'https://project.test/functions/v1/sellbase-api',
@@ -112,6 +118,7 @@ export async function createTestStore(
     api,
     webhooks,
     emails,
+    uploads,
     payments,
     token: async (scopes = DEFAULT_AGENT_SCOPES) =>
       (await createApiToken(deps, { storeId, name: 'test', scopes })).token,

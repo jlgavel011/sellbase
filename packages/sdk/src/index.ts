@@ -12,6 +12,8 @@ export {
 } from './client.js';
 export {
   formatMoney,
+  toMinorUnits,
+  toDecimalString,
   isSellbaseError,
   type SellbaseError,
   type CartView,
@@ -80,6 +82,13 @@ export function createSellbase(options: SellbaseClientOptions) {
         get: (id: string) => request('productGet', { params: { id } }),
         upsert: (body: Body<'productUpsert'>) => request('productUpsert', { body }),
         archive: (id: string) => request('productArchive', { params: { id } }),
+        addMedia: (id: string, body: Body<'productMediaAdd'>) =>
+          request('productMediaAdd', { params: { id }, body }),
+      },
+      variants: {
+        /** Attach the file buyers receive (base64, max 10 MB) to a digital variant. */
+        uploadFile: (variantId: string, body: Body<'digitalAssetUpload'>) =>
+          request('digitalAssetUpload', { params: { id: variantId }, body }),
       },
       inventory: {
         adjust: (body: Body<'inventoryAdjust'>) => request('inventoryAdjust', { body }),

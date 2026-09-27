@@ -21,6 +21,60 @@ export function slugify(text: string): string {
   return slug || 'product';
 }
 
+const CONTENT_TYPES: Record<string, string> = {
+  pdf: 'application/pdf',
+  zip: 'application/zip',
+  epub: 'application/epub+zip',
+  mp3: 'audio/mpeg',
+  mp4: 'video/mp4',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+  gif: 'image/gif',
+  svg: 'image/svg+xml',
+  txt: 'text/plain',
+  csv: 'text/csv',
+};
+
+export function contentTypeFor(fileName: string): string {
+  return (
+    CONTENT_TYPES[fileName.split('.').pop()?.toLowerCase() ?? ''] ?? 'application/octet-stream'
+  );
+}
+
+export function safeFileName(fileName: string): string {
+  return (
+    fileName
+      .normalize('NFKD')
+      .replace(/[^\w.-]+/g, '-')
+      .replace(/-+/g, '-')
+      .slice(-120) || 'file'
+  );
+}
+
+function decodeBase64(content: string, maxBytes: number): Uint8Array {
+  let binary: string;
+  try {
+    binary = atob(content.replace(/^data:[^,]*,/, ''));
+  } catch {
+    throw sellbaseError(
+      'VALIDATION_ERROR',
+      'content_base64 is not valid base64.',
+      'Encode the file bytes as base64 (without line breaks).',
+    );
+  }
+  if (binary.length > maxBytes) {
+    throw sellbaseError(
+      'VALIDATION_ERROR',
+      `The file is larger than ${Math.round(maxBytes / 1_000_000)} MB.`,
+      'Compress the file or host it elsewhere and link it.',
+      { size_bytes: binary.length },
+    );
+  }
+  return Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
+}
+
 /** Full product for admin/agent views: variants with inventory and specs, plus media. */
 export async function loadAdminProduct(sql: Db, storeId: string, id: string) {
   const [product] = await sql`
@@ -224,6 +278,68 @@ export function registerCatalog(app: Hono, deps: Deps, options: AppOptions) {
     await sql`select sellbase.emit_event(${storeId}, 'product.archived', 'product', ${params.id})`;
     return loadAdminProduct(sql, storeId, params.id);
   });
+
+  register(app, deps, options, routes.productMediaAdd, async ({ storeId, actor, params, body }) => {
+    const [product] =
+      await sql`select id from sellbase.products where id = ${params.id} and store_id = ${storeId}`;
+    if (!product) throw notFound('Product', params.id, 'Search products with GET /products.');
+    let url = body.url ?? null;
+    let storagePath: string | null = null;
+    if (!url && body.file_name && body.content_base64) {
+      const bytes = decodeBase64(body.content_base64, 5_000_000);
+      storagePath = `${storeId}/${params.id}/${crypto.randomUUID()}-${safeFileName(body.file_name)}`;
+      await deps.storage.upload(
+        'sellbase-media',
+        storagePath,
+        bytes,
+        contentTypeFor(body.file_name),
+      );
+      url = deps.storage.publicUrl('sellbase-media', storagePath);
+    }
+    await sql`
+      insert into sellbase.product_media (store_id, product_id, variant_id, storage_path, url, alt, position)
+      values (${storeId}, ${params.id}, ${body.variant_id ?? null}, ${storagePath}, ${url}, ${body.alt},
+              (select coalesce(max(position) + 1, 0) from sellbase.product_media where product_id = ${params.id}))`;
+    const { actor_type, actor_id } = actorRef(actor);
+    await sql`
+      insert into sellbase.audit_log (store_id, actor_type, actor_id, action, entity, entity_id, diff)
+      values (${storeId}, ${actor_type}, ${actor_id}, 'product.media_add', 'product', ${params.id}, ${sql.json({ url } as never)})`;
+    return loadAdminProduct(sql, storeId, params.id);
+  });
+
+  register(
+    app,
+    deps,
+    options,
+    routes.digitalAssetUpload,
+    async ({ storeId, actor, params, body }) => {
+      const [variant] = await sql<{ type: string }[]>`
+      select p.type from sellbase.variants v join sellbase.products p on p.id = v.product_id
+       where v.id = ${params.id} and v.store_id = ${storeId}`;
+      if (!variant) throw notFound('Variant', params.id, 'Get variant ids from GET /products/:id.');
+      if (variant.type !== 'digital') {
+        throw sellbaseError(
+          'VALIDATION_ERROR',
+          `Files can only be attached to digital products; this one is ${variant.type}.`,
+          'Change the product type to "digital" with product_upsert, or attach the file to a digital product.',
+        );
+      }
+      const bytes = decodeBase64(body.content_base64, 10_000_000);
+      const path = `${storeId}/${params.id}/${crypto.randomUUID()}-${safeFileName(body.file_name)}`;
+      await deps.storage.upload('sellbase-digital', path, bytes, contentTypeFor(body.file_name));
+      const [asset] = await sql<{ id: string; file_name: string; size_bytes: number }[]>`
+      insert into sellbase.digital_assets (store_id, variant_id, storage_path, file_name, size_bytes, download_limit, link_ttl_hours)
+      values (${storeId}, ${params.id}, ${path}, ${body.file_name}, ${bytes.byteLength}, ${body.download_limit}, ${body.link_ttl_hours})
+      returning id, file_name, size_bytes`;
+      const { actor_type, actor_id } = actorRef(actor);
+      await sql`
+      insert into sellbase.audit_log (store_id, actor_type, actor_id, action, entity, entity_id, diff)
+      values (${storeId}, ${actor_type}, ${actor_id}, 'digital_asset.upload', 'variant', ${params.id},
+              ${sql.json({ file_name: body.file_name, size_bytes: bytes.byteLength } as never)})`;
+      if (!asset) throw new Error('digital asset insert returned no row');
+      return asset;
+    },
+  );
 
   register(app, deps, options, routes.inventoryAdjust, async ({ storeId, actor, body }) => {
     const [owned] =

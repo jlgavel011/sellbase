@@ -1,4 +1,4 @@
-import { Checkout } from '../../components/sellbase/checkout';
+import { Checkout } from '../../../components/sellbase/checkout';
 
 export default function CheckoutPage() {
   return (

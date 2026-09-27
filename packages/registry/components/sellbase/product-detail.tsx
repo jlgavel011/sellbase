@@ -142,7 +142,9 @@ export function ProductDetail({ slug }: { slug: string }) {
           variant.available_quantity > 0 &&
           variant.available_quantity <= 5 && (
             <p className="text-sm text-[var(--sb-muted)]">
-              Solo quedan {variant.available_quantity}.
+              {variant.available_quantity === 1
+                ? 'Solo queda 1.'
+                : `Solo quedan ${variant.available_quantity}.`}
             </p>
           )}
         {cart.error && (

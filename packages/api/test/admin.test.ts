@@ -177,6 +177,77 @@ describe('product_upsert', () => {
   });
 });
 
+describe('files', () => {
+  it('uploads the file buyers receive for a digital product', async () => {
+    const token = await s.token();
+    const product = await s.request('POST', '/products', {
+      token,
+      body: { type: 'digital', title: 'Ebook Archivos', variants: [{ price_amount: 9900 }] },
+    });
+    const variantId = product.body.variants[0].id;
+    const res = await s.request('POST', `/variants/${variantId}/digital-assets`, {
+      token,
+      body: {
+        file_name: 'mi guía.pdf',
+        content_base64: Buffer.from('%PDF-1.4 hola').toString('base64'),
+        download_limit: 3,
+      },
+    });
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    expect(res.body).toMatchObject({ file_name: 'mi guía.pdf', size_bytes: 13 });
+    expect(s.uploads.at(-1)).toMatchObject({ bucket: 'sellbase-digital', size: 13 });
+    expect(s.uploads.at(-1)?.path).toMatch(/mi-gui.a\.pdf$|mi-guia\.pdf$/);
+    const detail = await s.request('GET', `/products/${product.body.id}`, { token });
+    expect(detail.body.variants[0].digital_assets).toHaveLength(1);
+  });
+
+  it('refuses files on physical products', async () => {
+    const token = await s.token();
+    const product = await s.request('POST', '/products', {
+      token,
+      body: { type: 'physical', title: 'Taza', variants: [{ price_amount: 100 }] },
+    });
+    const res = await s.request('POST', `/variants/${product.body.variants[0].id}/digital-assets`, {
+      token,
+      body: { file_name: 'x.pdf', content_base64: 'aGk=' },
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error.hint).toContain('digital');
+  });
+
+  it('adds product images from a URL or an upload', async () => {
+    const token = await s.token();
+    const product = await s.request('POST', '/products', {
+      token,
+      body: {
+        type: 'physical',
+        title: 'Gorra',
+        status: 'active',
+        variants: [{ price_amount: 100 }],
+      },
+    });
+    await s.request('POST', `/products/${product.body.id}/media`, {
+      token,
+      body: { url: 'https://img.test/gorra.jpg', alt: 'Gorra' },
+    });
+    const up = await s.request('POST', `/products/${product.body.id}/media`, {
+      token,
+      body: { file_name: 'lado.png', content_base64: Buffer.from('png').toString('base64') },
+    });
+    expect(up.body.media.map((m: { url: string }) => m.url)).toEqual([
+      'https://img.test/gorra.jpg',
+      expect.stringContaining('sellbase-media'),
+    ]);
+    const storefront = await s.request('GET', '/storefront/products/gorra');
+    expect(storefront.body.image_url).toBe('https://img.test/gorra.jpg');
+    const bad = await s.request('POST', `/products/${product.body.id}/media`, {
+      token,
+      body: { alt: 'nada' },
+    });
+    expect(bad.status).toBe(400);
+  });
+});
+
 describe('idempotency', () => {
   it('replays the first response for the same key', async () => {
     const key = crypto.randomUUID();

@@ -77,6 +77,13 @@ export function edgeDeps(adapters: {
         // Locally SUPABASE_URL is the internal Docker address; buyers need the public one.
         return data.signedUrl.replace(url, publicUrl);
       },
+      upload: async (bucket, path, bytes, contentType) => {
+        const { error } = await supabase.storage
+          .from(bucket)
+          .upload(path, bytes, { contentType, upsert: true });
+        if (error) throw new Error(`Could not upload ${bucket}/${path}: ${error.message}`);
+      },
+      publicUrl: (bucket, path) => `${publicUrl}/storage/v1/object/public/${bucket}/${path}`,
     },
     now: () => new Date(),
     publicApiUrl: `${publicUrl}/functions/v1/sellbase-api`,

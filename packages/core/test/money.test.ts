@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  toDecimalString,
   allocate,
   currencyMinorDigits,
   formatMoney,
@@ -64,6 +65,15 @@ describe('toMinorUnits', () => {
     expect(() => toMinorUnits('1.5', 'JPY')).toThrow();
     expect(() => toMinorUnits('-1', 'MXN')).toThrow();
     expect(() => toMinorUnits('abc', 'MXN')).toThrow();
+  });
+});
+
+describe('toDecimalString', () => {
+  it('round-trips with toMinorUnits', () => {
+    expect(toDecimalString(19990, 'MXN')).toBe('199.90');
+    expect(toDecimalString(5, 'MXN')).toBe('0.05');
+    expect(toDecimalString(1500, 'JPY')).toBe('1500');
+    expect(toMinorUnits(toDecimalString(123456, 'USD'), 'USD')).toBe(123456);
   });
 });
 

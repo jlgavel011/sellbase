@@ -1,4 +1,4 @@
-import { ProductGrid } from '../components/sellbase/product-grid';
+import { ProductGrid } from '../../components/sellbase/product-grid';
 
 export default function Home() {
   return (

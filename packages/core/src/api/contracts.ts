@@ -438,6 +438,52 @@ export const routes = {
     params: z.object({ id }),
     response: adminProductView,
   },
+  productMediaAdd: {
+    id: 'productMediaAdd',
+    method: 'POST',
+    path: '/products/:id/media',
+    summary: 'Add an image to a product from a URL or an uploaded file',
+    description:
+      'Send `url` to reference an existing image, or `file_name` + `content_base64` (max 5 MB) to upload it to the public media bucket.',
+    tag: 'catalog',
+    auth: staff('catalog:write'),
+    params: z.object({ id }),
+    body: z
+      .object({
+        url: z.url().optional(),
+        file_name: z.string().min(1).max(200).optional(),
+        content_base64: z.string().max(7_000_000).optional(),
+        alt: z.string().max(200).default(''),
+        variant_id: id.optional(),
+      })
+      .refine((b) => Boolean(b.url) !== Boolean(b.file_name && b.content_base64), {
+        message: 'Send either `url`, or `file_name` with `content_base64`.',
+      }),
+    response: adminProductView,
+  },
+  digitalAssetUpload: {
+    id: 'digitalAssetUpload',
+    method: 'POST',
+    path: '/variants/:id/digital-assets',
+    summary: 'Upload the file buyers receive for a digital variant',
+    description:
+      'The file is stored in a private bucket and only reachable through short-lived signed links issued after payment. Max 10 MB per call.',
+    tag: 'catalog',
+    auth: staff('catalog:write'),
+    params: z.object({ id }),
+    body: z.object({
+      file_name: z.string().min(1).max(200),
+      content_base64: z.string().min(1).max(14_000_000),
+      download_limit: z.number().int().positive().nullable().default(null),
+      link_ttl_hours: z
+        .number()
+        .int()
+        .positive()
+        .max(24 * 365)
+        .default(72),
+    }),
+    response: z.object({ id, file_name: z.string(), size_bytes: z.number().int() }),
+  },
   inventoryAdjust: {
     id: 'inventoryAdjust',
     method: 'POST',

@@ -1,6 +1,9 @@
 @import 'tailwindcss';
 @import '../components/sellbase/theme.css';
 
+/* The copied components are gitignored here (generated), and Tailwind skips ignored files. */
+@source '../components/sellbase';
+
 body {
   background: var(--sb-bg);
   color: var(--sb-fg);

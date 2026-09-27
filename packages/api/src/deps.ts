@@ -16,6 +16,8 @@ export interface Deps {
   notify: (storeId: string) => Promise<NotifyAdapter>;
   storage: {
     signedUrl: (bucket: string, path: string, expiresInSeconds: number) => Promise<string>;
+    upload: (bucket: string, path: string, bytes: Uint8Array, contentType: string) => Promise<void>;
+    publicUrl: (bucket: string, path: string) => string;
   };
   now: () => Date;
   /** Public base URL of the API function, used in links sent to customers. */

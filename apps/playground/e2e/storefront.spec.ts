@@ -10,6 +10,8 @@ test('browse, add to cart, and reach Stripe Checkout', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Productos' })).toBeVisible();
   const card = page.getByRole('link', { name: /Playera Sellbase/ });
   await expect(card).toBeVisible();
+  // Guards against missing Tailwind output (the e2e would otherwise pass unstyled).
+  await expect(page.getByRole('list').first()).toHaveCSS('display', 'grid');
   await card.click();
 
   await expect(page.getByRole('heading', { name: 'Playera Sellbase' })).toBeVisible();
