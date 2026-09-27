@@ -4,8 +4,10 @@ import { cors } from 'hono/cors';
 import type { Deps } from './deps.js';
 import { registerBookings } from './handlers/bookings.js';
 import { registerCatalog } from './handlers/catalog.js';
+import { registerCatalogBulk } from './handlers/catalog-bulk.js';
 import { registerCustomers } from './handlers/customers.js';
 import { registerMerchandising } from './handlers/merchandising.js';
+import { registerManualOrders } from './handlers/manual-order.js';
 import { registerOrderActions } from './handlers/order-actions.js';
 import { registerOrders } from './handlers/orders.js';
 import { registerReports } from './handlers/reports.js';
@@ -29,8 +31,10 @@ export function createApiApp(deps: Deps, options: AppOptions = {}, basePath = '/
 
   app.get('/openapi.json', (c) => c.json(buildOpenApi(deps.version)));
   registerStorefront(app, deps, options);
+  registerCatalogBulk(app, deps, options);
   registerCatalog(app, deps, options);
   registerOrders(app, deps, options);
+  registerManualOrders(app, deps, options);
   registerOrderActions(app, deps, options);
   registerBookings(app, deps, options);
   registerMerchandising(app, deps, options);

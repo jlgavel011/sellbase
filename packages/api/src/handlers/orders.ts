@@ -54,6 +54,7 @@ export function registerOrders(app: Hono, deps: Deps, options: AppOptions) {
        where store_id = ${storeId}
          ${query.status ? sql`and status = ${query.status}` : sql``}
          ${query.payment_status ? sql`and payment_status = ${query.payment_status}` : sql``}
+         ${query.channel ? sql`and channel = ${query.channel}` : sql``}
          ${query.fulfillment_status ? sql`and fulfillment_status = ${query.fulfillment_status}` : sql``}
          ${query.from ? sql`and placed_at >= ${query.from}` : sql``}
          ${query.to ? sql`and placed_at < ${query.to}` : sql``}

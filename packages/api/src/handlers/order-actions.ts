@@ -150,6 +150,118 @@ export async function refundOrder(
   return prepared.value;
 }
 
+/**
+ * Stripe payment link for what is still owed on an order: the balance of a deposit order,
+ * or the whole total of a manual order waiting for payment.
+ */
+export async function createPaymentLink(
+  deps: Deps,
+  storeId: string,
+  actor: Actor | null,
+  orderId: string,
+  body: {
+    amount?: number | undefined;
+    success_url?: string | undefined;
+    cancel_url?: string | undefined;
+  },
+) {
+  const { sql } = deps;
+  const [order] = await sql<
+    {
+      id: string;
+      number: number;
+      status: string;
+      currency: string;
+      balance: number;
+      settings: { site_url?: string };
+    }[]
+  >`
+    select o.id, o.number, o.status, o.currency::text as currency, o.total_amount - o.amount_paid as balance, s.settings
+      from sellbase.orders o join sellbase.stores s on s.id = o.store_id where o.id = ${orderId} and o.store_id = ${storeId}`;
+  if (!order) throw notFound('Order', orderId, 'Search orders with GET /orders.');
+  if (order.status === 'cancelled')
+    throw sellbaseError(
+      'INVALID_TRANSITION',
+      `Order #${order.number} is cancelled.`,
+      'Payment links are only for orders that are not cancelled.',
+    );
+  if (order.balance <= 0)
+    throw sellbaseError(
+      'VALIDATION_ERROR',
+      `Order #${order.number} is already paid.`,
+      'Nothing is owed on this order.',
+    );
+  const value = body.amount ?? order.balance;
+  if (value > order.balance) {
+    throw sellbaseError(
+      'VALIDATION_ERROR',
+      `Only ${formatMoney(order.balance, order.currency)} is owed.`,
+      `Send amount ≤ ${order.balance} or omit it.`,
+      { balance: order.balance },
+    );
+  }
+  const success = body.success_url ?? order.settings.site_url;
+  if (!success) {
+    throw sellbaseError(
+      'VALIDATION_ERROR',
+      'Where should the customer land after paying?',
+      'Send success_url, or set settings.site_url on the store (PATCH /store).',
+    );
+  }
+  const payments = await deps.payments(storeId);
+  if (!payments)
+    throw sellbaseError(
+      'VALIDATION_ERROR',
+      'No payment provider is connected.',
+      'Connect Stripe: POST /integrations/stripe/connect.',
+    );
+  const [customer] = await sql<
+    { email: string }[]
+  >`select email::text from sellbase.orders where id = ${order.id}`;
+  const expiresAt = new Date(deps.now().getTime() + 23 * 3_600_000);
+  const link = await payments.createCheckout({
+    checkout_session_id: null,
+    order_id: order.id,
+    store_id: storeId,
+    currency: order.currency,
+    amount_total: value,
+    email: customer?.email ?? '',
+    lines: [
+      {
+        title:
+          order.status === 'pending_payment'
+            ? `Pedido #${order.number}`
+            : `Saldo del pedido #${order.number}`,
+        quantity: 1,
+        total_amount: value,
+      },
+    ],
+    shipping_amount: 0,
+    success_url: success,
+    cancel_url: body.cancel_url ?? success,
+    expires_at: expiresAt,
+    idempotency_key: crypto.randomUUID(),
+  });
+  if (link.mode !== 'redirect') throw new Error('balance links need a redirect checkout');
+  await sql.begin(async (tx) => {
+    const locked = await lockOrder(tx, storeId, order.id);
+    await timeline(
+      tx,
+      locked,
+      actor,
+      'payment_link.created',
+      `Payment link for ${formatMoney(value, order.currency)} created.`,
+      { amount: value },
+    );
+  });
+  return {
+    url: link.url,
+    amount: value,
+    currency: order.currency,
+    expires_at: expiresAt.toISOString(),
+  };
+}
+
 export function registerOrderActions(app: Hono, deps: Deps, options: AppOptions) {
   const { sql } = deps;
 
@@ -290,98 +402,8 @@ export function registerOrderActions(app: Hono, deps: Deps, options: AppOptions)
     return loadOrderDetail(sql, storeId, params.id);
   });
 
-  register(
-    app,
-    deps,
-    options,
-    routes.orderPaymentLink,
-    async ({ storeId, actor, params, body }) => {
-      const [order] = await sql<
-        {
-          id: string;
-          number: number;
-          status: string;
-          currency: string;
-          balance: number;
-          settings: { site_url?: string };
-        }[]
-      >`
-      select o.id, o.number, o.status, o.currency::text as currency, o.total_amount - o.amount_paid as balance, s.settings
-        from sellbase.orders o join sellbase.stores s on s.id = o.store_id where o.id = ${params.id} and o.store_id = ${storeId}`;
-      if (!order) throw notFound('Order', params.id, 'Search orders with GET /orders.');
-      if (order.status === 'cancelled')
-        throw sellbaseError(
-          'INVALID_TRANSITION',
-          `Order #${order.number} is cancelled.`,
-          'Balance links are only for open orders.',
-        );
-      if (order.balance <= 0)
-        throw sellbaseError(
-          'VALIDATION_ERROR',
-          `Order #${order.number} is already paid.`,
-          'Nothing is owed on this order.',
-        );
-      const value = body.amount ?? order.balance;
-      if (value > order.balance) {
-        throw sellbaseError(
-          'VALIDATION_ERROR',
-          `Only ${formatMoney(order.balance, order.currency)} is owed.`,
-          `Send amount ≤ ${order.balance} or omit it.`,
-          { balance: order.balance },
-        );
-      }
-      const success = body.success_url ?? order.settings.site_url;
-      if (!success) {
-        throw sellbaseError(
-          'VALIDATION_ERROR',
-          'Where should the customer land after paying?',
-          'Send success_url, or set settings.site_url on the store (PATCH /store).',
-        );
-      }
-      const payments = await deps.payments(storeId);
-      if (!payments)
-        throw sellbaseError(
-          'VALIDATION_ERROR',
-          'No payment provider is connected.',
-          'Connect Stripe: POST /integrations/stripe/connect.',
-        );
-      const [customer] = await sql<
-        { email: string }[]
-      >`select email::text from sellbase.orders where id = ${order.id}`;
-      const expiresAt = new Date(deps.now().getTime() + 23 * 3_600_000);
-      const link = await payments.createCheckout({
-        checkout_session_id: null,
-        order_id: order.id,
-        store_id: storeId,
-        currency: order.currency,
-        amount_total: value,
-        email: customer?.email ?? '',
-        lines: [{ title: `Saldo del pedido #${order.number}`, quantity: 1, total_amount: value }],
-        shipping_amount: 0,
-        success_url: success,
-        cancel_url: body.cancel_url ?? success,
-        expires_at: expiresAt,
-        idempotency_key: crypto.randomUUID(),
-      });
-      if (link.mode !== 'redirect') throw new Error('balance links need a redirect checkout');
-      await sql.begin(async (tx) => {
-        const locked = await lockOrder(tx, storeId, order.id);
-        await timeline(
-          tx,
-          locked,
-          actor,
-          'payment_link.created',
-          `Payment link for ${formatMoney(value, order.currency)} created.`,
-          { amount: value },
-        );
-      });
-      return {
-        url: link.url,
-        amount: value,
-        currency: order.currency,
-        expires_at: expiresAt.toISOString(),
-      };
-    },
+  register(app, deps, options, routes.orderPaymentLink, ({ storeId, actor, params, body }) =>
+    createPaymentLink(deps, storeId, actor, params.id, body),
   );
 
   register(app, deps, options, routes.orderNote, async ({ storeId, actor, params, body }) => {

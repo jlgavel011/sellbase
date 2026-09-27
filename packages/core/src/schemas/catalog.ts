@@ -175,3 +175,21 @@ export const collectionUpsertInput = z.object({
     .describe('Replaces the products in the collection, in this order. Omit to keep them.'),
 });
 export type CollectionUpsertInput = z.infer<typeof collectionUpsertInput>;
+
+/** Bulk change over many products. Price changes return a preview unless confirm is true. */
+export const productsBulkInput = z.object({
+  product_ids: z.array(id).min(1).max(200),
+  action: z.enum(['publish', 'draft', 'archive', 'price']),
+  price: z
+    .object({
+      mode: z
+        .enum(['set', 'percent', 'amount'])
+        .describe(
+          'set: new price. percent: basis points up (+) or down (-), -1000 = 10% off. amount: minor units up or down.',
+        ),
+      value: z.number().int(),
+    })
+    .optional(),
+  confirm: z.boolean().optional(),
+});
+export type ProductsBulkInput = z.infer<typeof productsBulkInput>;

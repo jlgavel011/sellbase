@@ -96,6 +96,10 @@ export function createSellbase(options: SellbaseClientOptions) {
     admin: {
       products: {
         search: (query: Query<'productsList'> = {}) => request('productsList', { query }),
+        /** CSV (our template, Spanish headers or a Shopify export). Try dry_run first. */
+        import: (body: Body<'productsImport'>) => request('productsImport', { body }),
+        /** Status or price for many products; price changes preview unless confirm is true. */
+        bulk: (body: Body<'productsBulk'>) => request('productsBulk', { body }),
         get: (id: string) => request('productGet', { params: { id } }),
         upsert: (body: Body<'productUpsert'>) => request('productUpsert', { body }),
         archive: (id: string) => request('productArchive', { params: { id } }),
@@ -130,6 +134,8 @@ export function createSellbase(options: SellbaseClientOptions) {
       orders: {
         search: (query: Query<'ordersList'> = {}) => request('ordersList', { query }),
         get: (id: string) => request('orderGet', { params: { id } }),
+        /** Manual order: paid outside the store (confirm: true) or with a payment link. */
+        create: (body: Body<'orderCreate'>) => request('orderCreate', { body }),
         fulfill: (id: string, body: Body<'orderFulfill'> = {}) =>
           request('orderFulfill', { params: { id }, body }),
         cancel: (id: string, body: Body<'orderCancel'>) =>

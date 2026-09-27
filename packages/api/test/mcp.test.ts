@@ -215,6 +215,41 @@ describe('mcp', () => {
     expect(removed.data.deleted).toBe(true);
   });
 
+  it('imports a CSV file, reprices with a preview and records a manual sale', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'sellbase-csv-'));
+    const file = join(dir, 'productos.csv');
+    await writeFile(file, 'nombre,precio,existencias,estado\nLlavero,50,20,activo\n');
+    const dry = await call('products_import', { file_path: file, dry_run: true });
+    expect(dry.data).toMatchObject({ dry_run: true, created: 1 });
+    const imported = await call('products_import', { file_path: file });
+    const id = imported.data.products[0].id;
+
+    const preview = await call('products_bulk', {
+      product_ids: [id],
+      action: 'price',
+      price: { mode: 'set', value: 6000 },
+    });
+    expect(preview.data).toMatchObject({ applied: false, preview: [{ to_amount: 6000 }] });
+    await call('products_bulk', {
+      product_ids: [id],
+      action: 'price',
+      price: { mode: 'set', value: 6000 },
+      confirm: true,
+    });
+
+    const product = await call('product_get', { id });
+    const sale = await call('order_create', {
+      order: {
+        email: 'mostrador@test.dev',
+        items: [{ variant_id: product.data.variants[0].id, quantity: 2 }],
+        payment: { mode: 'paid', method: 'cash' },
+        confirm: true,
+      },
+    });
+    expect(sale.isError, JSON.stringify(sale.data)).toBe(false);
+    expect(sale.data.order).toMatchObject({ total_amount: 12000, channel: 'agent' });
+  });
+
   it('returns API errors with a hint the agent can act on', async () => {
     const res = await call('product_upsert', {
       product: {

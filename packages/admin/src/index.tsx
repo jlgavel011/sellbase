@@ -7,6 +7,7 @@ import { AgendaPage } from './pages/agenda.js';
 import { CollectionsPage } from './pages/collections.js';
 import { CustomerDetailPage, CustomersPage } from './pages/customers.js';
 import { DiscountsPage } from './pages/discounts.js';
+import { ManualOrderPage } from './pages/manual-order.js';
 import { HomePage } from './pages/home.js';
 import { OrderDetailPage, OrdersPage } from './pages/orders.js';
 import { ProductFormPage, ProductsPage } from './pages/products.js';
@@ -67,6 +68,7 @@ function Routes() {
 
   if (match('/', path)) return <HomePage />;
   if (match('/orders', path)) return <OrdersPage />;
+  if (match('/orders/new', path)) return <ManualOrderPage />;
   if ((params = match('/orders/:id', path))) return <OrderDetailPage id={params.id ?? ''} />;
   if (match('/agenda', path)) return <AgendaPage />;
   if (match('/agenda/resources', path)) return <ResourcesPage />;

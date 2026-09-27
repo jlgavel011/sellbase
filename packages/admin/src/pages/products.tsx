@@ -87,12 +87,20 @@ export function ProductsPage() {
     queryFn: () => sellbase.admin.products.search(q ? { q } : {}),
   });
   const top = useSlot('products.list.top');
+  const [selected, setSelected] = useState<string[]>([]);
+  const [importing, setImporting] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const visible = products.data?.data.map((p) => p.id) ?? [];
+  const allSelected = visible.length > 0 && visible.every((id) => selected.includes(id));
 
   return (
     <>
       <PageTitle
         actions={
           <div className="sb:flex sb:gap-2">
+            <Button variant="outline" onClick={() => setImporting(!importing)}>
+              {t.products.import.button}
+            </Button>
             <Link
               to="/products/collections"
               className="sb:rounded-[var(--sba-radius)] sb:border sb:border-zinc-300 sb:bg-white sb:px-4 sb:py-2 sb:text-sm"
@@ -111,6 +119,21 @@ export function ProductsPage() {
         {t.products.title}
       </PageTitle>
       {top}
+      {importing && <ImportPanel onClose={() => setImporting(false)} />}
+      {notice && (
+        <div className="sb:mb-4">
+          <Alert tone="green">{notice}</Alert>
+        </div>
+      )}
+      {selected.length > 0 && (
+        <BulkBar
+          ids={selected}
+          onDone={(message) => {
+            setSelected([]);
+            setNotice(message);
+          }}
+        />
+      )}
       <Card>
         <Input
           placeholder={t.products.search}
@@ -133,6 +156,13 @@ export function ProductsPage() {
         {products.data && products.data.data.length > 0 && (
           <Table
             head={[
+              <input
+                key="all"
+                type="checkbox"
+                aria-label={t.products.bulk.selectAll}
+                checked={allSelected}
+                onChange={(e) => setSelected(e.target.checked ? visible : [])}
+              />,
               t.products.name,
               t.products.type,
               t.products.status,
@@ -151,7 +181,21 @@ export function ProductsPage() {
               const tracked = p.variants.some((v) => v.inventory);
               const currency = p.variants[0]?.currency ?? 'MXN';
               return (
-                <tr key={p.id} className="sb:hover:bg-zinc-50">
+                <tr key={p.id} className="sb:hover:bg-zinc-50" data-testid="product-row">
+                  <td className={`${td} sb:w-8`}>
+                    <input
+                      type="checkbox"
+                      aria-label={t.products.bulk.select(p.title)}
+                      checked={selected.includes(p.id)}
+                      onChange={(e) =>
+                        setSelected(
+                          e.target.checked
+                            ? [...selected, p.id]
+                            : selected.filter((x) => x !== p.id),
+                        )
+                      }
+                    />
+                  </td>
                   <td className={td}>
                     <Link
                       to={`/products/${p.id}`}
@@ -650,5 +694,241 @@ export function ProductFormPage({ id }: { id?: string }) {
         </div>
       </form>
     </>
+  );
+}
+
+const TEMPLATE = [
+  'handle,title,type,status,price,compare_at_price,sku,stock,option1 name,option1 value,weight_g,image',
+  'playera,Playera,physical,active,349.00,399.00,PL-M,10,Talla,M,200,https://example.com/playera.jpg',
+  'playera,,,,349.00,,PL-L,5,,L,200,',
+  'guia-ia,Guía para vender con IA,digital,active,199.00,,,,,,,',
+].join('\n');
+
+/** CSV import: check the file first (dry run), then import. */
+function ImportPanel({ onClose }: { onClose: () => void }) {
+  const { sellbase, t } = useAdmin();
+  const qc = useQueryClient();
+  const [csv, setCsv] = useState<string | null>(null);
+  const check = useMutation({
+    mutationFn: (text: string) => sellbase.admin.products.import({ csv: text, dry_run: true }),
+  });
+  const run = useMutation({
+    mutationFn: () => sellbase.admin.products.import({ csv: csv ?? '', dry_run: false }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['sellbase-admin', 'products'] }),
+  });
+  const report = run.data ?? check.data;
+
+  return (
+    <Card
+      title={t.products.import.title}
+      actions={
+        <Button variant="ghost" onClick={onClose}>
+          {t.products.import.close}
+        </Button>
+      }
+    >
+      <div className="sb:mb-6 sb:flex sb:flex-col sb:gap-4">
+        <p className="sb:text-sm sb:text-zinc-600">{t.products.import.hint}</p>
+        <a
+          href={`data:text/csv;charset=utf-8,${encodeURIComponent(TEMPLATE)}`}
+          download="productos.csv"
+          className="sb:text-sm sb:text-[var(--sba-primary)] sb:underline"
+        >
+          {t.products.import.template}
+        </a>
+        <Field label={t.products.import.file}>
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            className="sb:text-sm"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const text = await file.text();
+              setCsv(text);
+              run.reset();
+              check.mutate(text);
+            }}
+          />
+        </Field>
+        <ErrorAlert error={check.error ?? run.error} />
+        {report && (
+          <div className="sb:flex sb:flex-col sb:gap-3" data-testid="import-report">
+            <Alert tone={run.data || !report.errors.length ? 'green' : 'amber'}>
+              {run.data
+                ? t.products.import.done(report.created, report.updated)
+                : t.products.import.summary(report.created, report.updated)}
+            </Alert>
+            {report.errors.length > 0 && (
+              <div className="sb:text-sm">
+                <p className="sb:mb-1 sb:font-medium">{t.products.import.rowErrors}</p>
+                <ul className="sb:flex sb:flex-col sb:gap-1">
+                  {report.errors.map((e) => (
+                    <li key={`${e.row}-${e.message}`}>
+                      <span className="sb:font-medium">{t.products.import.row(e.row)}:</span>{' '}
+                      {e.message} <span className="sb:text-zinc-500">{e.hint}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {!run.data && report.products.length > 0 && (
+              <div>
+                <Button onClick={() => run.mutate()} disabled={run.isPending}>
+                  {t.products.import.run}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+/** Actions over the selected products; price changes show a preview before applying. */
+function BulkBar({ ids, onDone }: { ids: string[]; onDone: (message: string) => void }) {
+  const { sellbase, t } = useAdmin();
+  const qc = useQueryClient();
+  const b = t.products.bulk;
+  const [pricing, setPricing] = useState(false);
+  const [mode, setMode] = useState<'percent' | 'amount' | 'set'>('percent');
+  const [value, setValue] = useState('');
+  const store = useQuery({
+    queryKey: ['sellbase-admin', 'store'],
+    queryFn: () => sellbase.admin.store.get(),
+  });
+  const currency = store.data?.default_currency ?? 'MXN';
+  const price = () => {
+    if (mode === 'percent') return { mode, value: Math.round(Number(value) * 100) };
+    const negative = value.trim().startsWith('-');
+    const minor = toMinorUnits(value.replace('-', '').trim() || '0', currency);
+    return { mode, value: negative ? -minor : minor };
+  };
+  const status = useMutation({
+    mutationFn: (action: 'publish' | 'draft' | 'archive') =>
+      sellbase.admin.products.bulk({ product_ids: ids, action }),
+    onSuccess: (r) => {
+      void qc.invalidateQueries({ queryKey: ['sellbase-admin', 'products'] });
+      onDone(b.done(r.updated));
+    },
+  });
+  const preview = useMutation({
+    mutationFn: () =>
+      sellbase.admin.products.bulk({ product_ids: ids, action: 'price', price: price() }),
+  });
+  const apply = useMutation({
+    mutationFn: () =>
+      sellbase.admin.products.bulk({
+        product_ids: ids,
+        action: 'price',
+        price: price(),
+        confirm: true,
+      }),
+    onSuccess: (r) => {
+      void qc.invalidateQueries({ queryKey: ['sellbase-admin', 'products'] });
+      onDone(b.done(r.updated));
+    },
+  });
+
+  return (
+    <div
+      className="sb:mb-4 sb:flex sb:flex-col sb:gap-3 sb:rounded-[var(--sba-radius)] sb:border sb:border-zinc-200 sb:bg-white sb:p-3"
+      data-testid="bulk-bar"
+    >
+      <div className="sb:flex sb:flex-wrap sb:items-center sb:gap-2">
+        <span className="sb:mr-2 sb:text-sm sb:font-medium">{b.selected(ids.length)}</span>
+        <Button
+          variant="outline"
+          className="sb:px-3 sb:py-1"
+          onClick={() => status.mutate('publish')}
+        >
+          {b.publish}
+        </Button>
+        <Button
+          variant="outline"
+          className="sb:px-3 sb:py-1"
+          onClick={() => status.mutate('draft')}
+        >
+          {b.draft}
+        </Button>
+        <Button
+          variant="outline"
+          className="sb:px-3 sb:py-1"
+          onClick={() => status.mutate('archive')}
+        >
+          {b.archive}
+        </Button>
+        <Button variant="outline" className="sb:px-3 sb:py-1" onClick={() => setPricing(!pricing)}>
+          {b.price}
+        </Button>
+      </div>
+      {pricing && (
+        <div className="sb:flex sb:flex-col sb:gap-3">
+          <div className="sb:grid sb:gap-3 sb:md:grid-cols-3">
+            <Field label={b.mode}>
+              <Select
+                value={mode}
+                onChange={(e) => {
+                  setMode(e.target.value as typeof mode);
+                  preview.reset();
+                }}
+              >
+                {(['percent', 'amount', 'set'] as const).map((k) => (
+                  <option key={k} value={k}>
+                    {b.modes[k]}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label={b.value} {...(mode === 'set' ? {} : { hint: b.valueHint })}>
+              <Input
+                inputMode="decimal"
+                value={value}
+                onChange={(e) => {
+                  setValue(e.target.value);
+                  preview.reset();
+                }}
+              />
+            </Field>
+            <div className="sb:self-center">
+              <Button
+                variant="outline"
+                onClick={() => preview.mutate()}
+                disabled={!value || preview.isPending}
+              >
+                {b.preview}
+              </Button>
+            </div>
+          </div>
+          <ErrorAlert error={preview.error ?? apply.error ?? status.error} />
+          {preview.data && (
+            <>
+              <Table head={['', b.from, b.to]}>
+                {preview.data.preview.map((row) => (
+                  <tr key={row.variant_id} data-testid="price-preview-row">
+                    <td className={td}>{row.title}</td>
+                    <td className={`${td} sb:text-zinc-500 sb:line-through`}>
+                      {formatMoney(row.from_amount, currency)}
+                    </td>
+                    <td className={`${td} sb:font-medium`}>
+                      {formatMoney(row.to_amount, currency)}
+                    </td>
+                  </tr>
+                ))}
+              </Table>
+              <div className="sb:flex sb:gap-2">
+                <Button onClick={() => apply.mutate()} disabled={apply.isPending}>
+                  {b.apply}
+                </Button>
+                <Button variant="ghost" onClick={() => preview.reset()}>
+                  {b.cancel}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

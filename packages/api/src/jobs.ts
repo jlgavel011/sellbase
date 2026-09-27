@@ -164,7 +164,7 @@ async function handle(deps: Deps, tx: TransactionSql, event: OutboxEvent) {
       const links = await fulfillDigital(deps, tx, orderId);
       await refreshOrderStatus(tx, orderId);
       // A balance that completes a deposit order only emails again when it unlocks downloads.
-      if (!event.payload.balance || links.length > 0)
+      if (notify && (!event.payload.balance || links.length > 0))
         await confirmation(deps, tx, event, orderId, links);
       return;
     }

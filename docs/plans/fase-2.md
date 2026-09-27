@@ -37,7 +37,7 @@ Base para el admin completo y para cancelar/reembolsar citas.
 Se entrega en tres partes, cada una con commit propio:
 
 1. ✅ **Datos de negocio**: métricas en Inicio (`GET /reports/summary`), clientes, descuentos y colecciones en API, admin y MCP (`report_summary`, `customers_search`, `discount_upsert`, `collection_upsert`).
-2. **Pedidos y productos**: filtros de pedidos, pedido manual, importar CSV y acciones masivas.
+2. ✅ **Pedidos y productos**: filtros de pedidos (estado, entrega, canal, fechas), pedido manual cobrado o con link de pago, importar CSV (plantilla, español o Shopify) y acciones masivas con vista previa de precios (ADR 0009).
 3. **Ajustes**: equipo y roles, API tokens, webhooks salientes y bitácora de agentes.
 
 Alcance original:

@@ -244,3 +244,45 @@ export const refundInput = z.object({
     .describe('Must be true. Refunds move real money; confirm with the owner first.'),
 });
 export type RefundInput = z.infer<typeof refundInput>;
+
+/** Sale made outside the storefront (cash, transfer, WhatsApp), recorded by staff or an agent. */
+export const manualOrderInput = z.object({
+  email,
+  phone: z.string().max(30).optional(),
+  first_name: z.string().max(100).optional(),
+  last_name: z.string().max(100).optional(),
+  channel: z.enum(['admin', 'whatsapp', 'api', 'agent']).optional(),
+  items: z
+    .array(
+      z.object({
+        variant_id: id,
+        quantity: z.number().int().min(1).max(999).default(1),
+        unit_price_amount: amount
+          .optional()
+          .describe('Overrides the catalog price for this order only.'),
+      }),
+    )
+    .min(1)
+    .max(100),
+  discount_codes: z.array(z.string().min(1).max(40)).max(5).optional(),
+  shipping_amount: amount.default(0),
+  shipping_address: address.optional(),
+  note: z.string().max(2000).optional(),
+  payment: z.discriminatedUnion('mode', [
+    z.object({
+      mode: z.literal('paid'),
+      method: z.enum(['cash', 'spei', 'card', 'other']),
+      reference: z.string().max(200).optional(),
+    }),
+    z.object({
+      mode: z.literal('link'),
+      success_url: z.url().optional(),
+    }),
+  ]),
+  notify_customer: z.boolean().default(true),
+  confirm: z
+    .boolean()
+    .optional()
+    .describe('Required (true) with payment.mode "paid": it records money received.'),
+});
+export type ManualOrderInput = z.infer<typeof manualOrderInput>;

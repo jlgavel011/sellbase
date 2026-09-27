@@ -5,6 +5,8 @@ import {
   collectionUpsertInput,
   discountUpsertInput,
   fromZodError,
+  manualOrderInput,
+  productsBulkInput,
   isSellbaseError,
   productUpsertInput,
   storeUpdateInput,
@@ -315,6 +317,9 @@ export function createSellbaseMcpServer(sellbase: Sellbase, options: { version?:
           .enum(['unpaid', 'partially_paid', 'paid', 'partially_refunded', 'refunded'])
           .optional(),
         fulfillment_status: z.enum(['unfulfilled', 'partially_fulfilled', 'fulfilled']).optional(),
+        channel: z
+          .enum(['web', 'admin', 'whatsapp', 'google', 'mercadolibre', 'api', 'agent'])
+          .optional(),
         from: z.iso.datetime({ offset: true }).optional(),
         to: z.iso.datetime({ offset: true }).optional(),
         limit: z.number().int().min(1).max(100).default(25),
@@ -609,6 +614,51 @@ export function createSellbaseMcpServer(sellbase: Sellbase, options: { version?:
           ...(variant_ids ? { variant_ids } : {}),
           ...(email ? { email } : {}),
         }),
+      ),
+  );
+
+  server.registerTool(
+    'products_import',
+    {
+      title: 'Import products from CSV',
+      description:
+        'Import or update many products from a CSV: our template (title,price,sku,stock,status,type,option1 name,option1 value,image), Spanish headers (nombre,precio,existencias…) or a Shopify export. Rows with the same handle become variants; existing products (same handle) are updated and variants match by SKU; variants missing from the file are archived. Services are not imported (use product_upsert). Run with dry_run: true first and show the owner the summary and any row errors.',
+      inputSchema: {
+        file_path: z.string().optional().describe('Absolute path to a .csv on this machine.'),
+        csv: z.string().optional().describe('CSV text, when there is no file.'),
+        dry_run: dryRun,
+      },
+    },
+    ({ file_path, csv, dry_run }) =>
+      run(async () => {
+        const text = file_path ? await readFile(file_path, 'utf8') : csv;
+        if (!text) throw new Error('Pass file_path or csv.');
+        return sellbase.admin.products.import({ csv: text, dry_run });
+      }),
+  );
+
+  server.registerTool(
+    'products_bulk',
+    {
+      title: 'Bulk product changes',
+      description: `Publish, unpublish (draft), archive or reprice many products at once. Prices: price.mode "percent" in basis points (-1000 = 10% off, 500 = 5% up), "amount" adds minor units (negative lowers), "set" sets the price. Price changes return a preview of old → new prices; only send confirm: true after the owner approves that preview. ${money}`,
+      inputSchema: productsBulkInput.shape,
+    },
+    (input) => run(() => sellbase.admin.products.bulk(input)),
+  );
+
+  server.registerTool(
+    'order_create',
+    {
+      title: 'Record a manual order',
+      description: `Record a sale made outside the storefront (in person, WhatsApp, phone). payment.mode "paid" with method cash/spei/card/other when the money was already received: needs confirm: true after the owner checks the total. payment.mode "link" to get a Stripe payment link for the customer (the order waits as pending_payment and opens when paid). Stock is taken immediately; unit_price_amount overrides the price for this order only. Services must be booked from the storefront. ${money}`,
+      inputSchema: { order: manualOrderInput, dry_run: dryRun },
+    },
+    ({ order, dry_run }) =>
+      run(async () =>
+        dry_run
+          ? { dry_run: true, valid: true, would_create: order }
+          : sellbase.admin.orders.create(order),
       ),
   );
 

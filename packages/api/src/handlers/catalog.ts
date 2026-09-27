@@ -1,4 +1,4 @@
-import { routes, sellbaseError, type ProductUpsertInput } from '@sellbase/core';
+import { routes, sellbaseError, slugify, type ProductUpsertInput } from '@sellbase/core';
 import type { Hono } from 'hono';
 import type { Sql, TransactionSql } from 'postgres';
 import { actorRef, type Actor } from '../auth.js';
@@ -9,17 +9,6 @@ import { decodeCursor, encodeCursor } from '../pagination.js';
 import { loadStore } from '../pricing-context.js';
 
 type Db = Sql | TransactionSql;
-
-export function slugify(text: string): string {
-  const slug = text
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 100);
-  return slug || 'product';
-}
 
 const CONTENT_TYPES: Record<string, string> = {
   pdf: 'application/pdf',

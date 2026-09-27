@@ -12,4 +12,4 @@ description: Look up and report on Sellbase orders. Use when the owner asks abou
 - A specific order: `orders_search` with `q: "#1001"` or the customer email, then `order_get` for items, payments and timeline.
 - Orders flagged `metadata.test_purchase: true` come from `test_purchase`; leave them out of sales reports.
 - Amounts are minor units; format them for the owner (19990 → $199.90).
-- Fulfillment actions, refunds and cancellations arrive in the next Sellbase release; until then, point the owner to the admin at `/admin`.
+- Sales outside the store (in person, WhatsApp): `order_create`. With `payment.mode: "paid"` (cash, spei, card terminal) confirm the total with the owner and send `confirm: true`. With `payment.mode: "link"` you get a Stripe link to send; the order opens when it is paid. Orders filter by `channel` (e.g. `whatsapp`).

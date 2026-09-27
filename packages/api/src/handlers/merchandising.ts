@@ -1,11 +1,10 @@
-import { routes, sellbaseError, type DiscountUpsertInput } from '@sellbase/core';
+import { routes, sellbaseError, slugify, type DiscountUpsertInput } from '@sellbase/core';
 import type { Hono } from 'hono';
 import type { Sql, TransactionSql } from 'postgres';
 import { actorRef, type Actor } from '../auth.js';
 import type { Deps } from '../deps.js';
 import { notFound } from '../errors.js';
 import { register, type AppOptions } from '../http.js';
-import { slugify } from './catalog.js';
 
 type Db = Sql | TransactionSql;
 

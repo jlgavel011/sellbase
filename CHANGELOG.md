@@ -6,6 +6,8 @@
 - Order operations: fulfill with tracking, cancel, refund (full or partial), notes and payment links for balances.
 - Admin: sales metrics on Home, Customers (with order and appointment history), Discounts and Collections.
 - API: `/reports/summary`, `/customers`, `/discounts`, `/collections`. MCP: `report_summary`, `customers_search`, `discount_upsert`, `collection_upsert`.
+- Manual orders (`POST /orders`): paid in cash/transfer/terminal or with a Stripe payment link (migration 0006). Order filters by status, delivery, channel and dates.
+- Products: CSV import (our template, Spanish headers or a Shopify export) and bulk publish/archive/price changes with a preview. MCP: `order_create`, `products_import`, `products_bulk`.
 
 ## 0.1.0 — Phase 1 (unreleased)
 

@@ -1,15 +1,17 @@
 import { formatMoney } from '@sellbase/sdk';
-import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { useAdmin } from '../context.js';
 import { Link } from '../router.js';
 import { OrderActions } from './order-actions.js';
 import { PageTitle, useSlot } from '../shell.js';
 import {
   Badge,
+  Button,
   Card,
   EmptyState,
   ErrorAlert,
+  Input,
   Select,
   Spinner,
   Table,
@@ -51,39 +53,131 @@ function useDate() {
 export function OrdersPage() {
   const { sellbase, t } = useAdmin();
   const date = useDate();
+  const [search, setSearch] = useState('');
+  const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
-  const orders = useQuery({
-    queryKey: ['sellbase-admin', 'orders', status],
-    queryFn: () =>
-      sellbase.admin.orders.search(status ? { fulfillment_status: status as 'unfulfilled' } : {}),
+  const [fulfillment, setFulfillment] = useState('');
+  const [channel, setChannel] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  useEffect(() => {
+    const id = setTimeout(() => setQ(search.trim()), 300);
+    return () => clearTimeout(id);
+  }, [search]);
+  const filters = {
+    ...(q ? { q } : {}),
+    ...(status ? { status: status as 'open' } : {}),
+    ...(fulfillment ? { fulfillment_status: fulfillment as 'unfulfilled' } : {}),
+    ...(channel ? { channel: channel as 'web' } : {}),
+    // Dates are local days: from 00:00 to the end of the "to" day.
+    ...(from ? { from: new Date(`${from}T00:00:00`).toISOString() } : {}),
+    ...(to
+      ? { to: new Date(new Date(`${to}T00:00:00`).getTime() + 86_400_000).toISOString() }
+      : {}),
+  };
+  const filtered = Object.keys(filters).length > 0;
+  const orders = useInfiniteQuery({
+    queryKey: ['sellbase-admin', 'orders', filters],
+    queryFn: ({ pageParam }) =>
+      sellbase.admin.orders.search({ ...filters, ...(pageParam ? { cursor: pageParam } : {}) }),
+    initialPageParam: '',
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
+  const rows = orders.data?.pages.flatMap((p) => p.data) ?? [];
   const top = useSlot('orders.list.top');
+  const clear = () => {
+    setSearch('');
+    setStatus('');
+    setFulfillment('');
+    setChannel('');
+    setFrom('');
+    setTo('');
+  };
 
   return (
     <>
       <PageTitle
         actions={
-          <div className="sb:w-52">
-            <Select
-              aria-label={t.orders.status}
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <option value="">{t.orders.all}</option>
-              <option value="unfulfilled">{t.status.unfulfilled}</option>
-              <option value="partially_fulfilled">{t.status.partially_fulfilled}</option>
-              <option value="fulfilled">{t.status.fulfilled}</option>
-            </Select>
-          </div>
+          <Link
+            to="/orders/new"
+            className="sb:rounded-[var(--sba-radius)] sb:bg-[var(--sba-primary)] sb:px-4 sb:py-2 sb:text-sm sb:font-medium sb:text-[var(--sba-primary-fg)]"
+          >
+            {t.orders.new}
+          </Link>
         }
       >
         {t.orders.title}
       </PageTitle>
       {top}
+      <div
+        className="sb:mb-4 sb:grid sb:gap-2 sb:sm:grid-cols-2 sb:lg:grid-cols-4"
+        role="search"
+        aria-label={t.orders.filters.label}
+      >
+        <div className="sb:lg:col-span-2">
+          <Input
+            type="search"
+            aria-label={t.orders.filters.search}
+            placeholder={t.orders.filters.search}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <Select
+          aria-label={t.orders.status}
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+        >
+          <option value="">{t.orders.filters.allStatuses}</option>
+          {(['pending_payment', 'open', 'completed', 'cancelled'] as const).map((v) => (
+            <option key={v} value={v}>
+              {t.status[v]}
+            </option>
+          ))}
+        </Select>
+        <Select
+          aria-label={t.status.unfulfilled}
+          value={fulfillment}
+          onChange={(e) => setFulfillment(e.target.value)}
+        >
+          <option value="">{t.orders.filters.allFulfillment}</option>
+          {(['unfulfilled', 'partially_fulfilled', 'fulfilled'] as const).map((v) => (
+            <option key={v} value={v}>
+              {t.status[v]}
+            </option>
+          ))}
+        </Select>
+        <Select
+          aria-label={t.orders.channel}
+          value={channel}
+          onChange={(e) => setChannel(e.target.value)}
+        >
+          <option value="">{t.orders.filters.allChannels}</option>
+          {Object.entries(t.orders.channels).map(([v, label]) => (
+            <option key={v} value={v}>
+              {label}
+            </option>
+          ))}
+        </Select>
+        <Input
+          type="date"
+          aria-label={t.orders.filters.from}
+          title={t.orders.filters.from}
+          value={from}
+          onChange={(e) => setFrom(e.target.value)}
+        />
+        <Input
+          type="date"
+          aria-label={t.orders.filters.to}
+          title={t.orders.filters.to}
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+        />
+      </div>
       <Card>
         {orders.isLoading && <Spinner label={t.common.loading} />}
         <ErrorAlert error={orders.error} />
-        {orders.data && orders.data.data.length === 0 && (
+        {orders.data && rows.length === 0 && !filtered && (
           <EmptyState
             title={t.orders.empty}
             prompt={t.orders.emptyPrompt}
@@ -92,7 +186,15 @@ export function OrdersPage() {
             copied={t.home.copied}
           />
         )}
-        {orders.data && orders.data.data.length > 0 && (
+        {orders.data && rows.length === 0 && filtered && (
+          <div className="sb:flex sb:items-center sb:gap-3 sb:text-sm sb:text-zinc-500">
+            —
+            <Button variant="ghost" onClick={clear}>
+              {t.orders.filters.clear}
+            </Button>
+          </div>
+        )}
+        {rows.length > 0 && (
           <Table
             head={[
               t.orders.number,
@@ -102,8 +204,8 @@ export function OrdersPage() {
               t.orders.total,
             ]}
           >
-            {orders.data.data.map((o) => (
-              <tr key={o.id} className="sb:hover:bg-zinc-50">
+            {rows.map((o) => (
+              <tr key={o.id} className="sb:hover:bg-zinc-50" data-testid="order-row">
                 <td className={td}>
                   <Link
                     to={`/orders/${o.id}`}
@@ -111,14 +213,25 @@ export function OrdersPage() {
                   >
                     #{o.number}
                   </Link>
+                  {o.channel !== 'web' && (
+                    <span className="sb:block sb:text-xs sb:text-zinc-500">
+                      {t.orders.channels[o.channel] ?? o.channel}
+                    </span>
+                  )}
                 </td>
                 <td className={td}>{o.email}</td>
                 <td className={`${td} sb:whitespace-nowrap sb:text-zinc-500`}>
                   {date(o.placed_at)}
                 </td>
                 <td className={`${td} sb:space-x-1`}>
-                  <StatusBadge value={o.payment_status} />
-                  <StatusBadge value={o.fulfillment_status} />
+                  {o.status === 'pending_payment' || o.status === 'cancelled' ? (
+                    <StatusBadge value={o.status} />
+                  ) : (
+                    <>
+                      <StatusBadge value={o.payment_status} />
+                      <StatusBadge value={o.fulfillment_status} />
+                    </>
+                  )}
                 </td>
                 <td className={`${td} sb:text-right sb:font-medium`}>
                   {formatMoney(o.total_amount, o.currency)}
@@ -126,6 +239,17 @@ export function OrdersPage() {
               </tr>
             ))}
           </Table>
+        )}
+        {orders.hasNextPage && (
+          <div className="sb:mt-4">
+            <Button
+              variant="outline"
+              onClick={() => void orders.fetchNextPage()}
+              disabled={orders.isFetchingNextPage}
+            >
+              {t.customers.loadMore}
+            </Button>
+          </div>
         )}
       </Card>
     </>
@@ -151,8 +275,13 @@ export function OrderDetailPage({ id }: { id: string }) {
   const eventText = (e: (typeof o.events)[number]) => {
     const d = e.data;
     switch (e.type) {
-      case 'order.created':
-        return ev['order.created'];
+      case 'order.created': {
+        const payment = d.payment as { mode?: string; method?: string } | undefined;
+        if (!payment) return ev['order.created'];
+        return payment.mode === 'paid'
+          ? ev.manualPaid(t.orders.manual.methods[payment.method ?? ''] ?? payment.method ?? '')
+          : ev.manualLink;
+      }
       case 'digital.granted':
         return ev['digital.granted'](num(d.count) || (Array.isArray(d.files) ? d.files.length : 0));
       case 'test_purchase':
