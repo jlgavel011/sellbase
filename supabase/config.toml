@@ -385,6 +385,8 @@ deno_version = 2
 # The default local DB host (supabase_db_<project>) has underscores that Deno's resolver
 # rejects; this alias of the same container is a valid hostname. Local stack only.
 SELLBASE_DB_HOST = "db.supabase.internal"
+# Links in emails and signed download URLs must use the address buyers can reach.
+SELLBASE_PUBLIC_URL = "http://127.0.0.1:54321"
 
 [analytics]
 enabled = false

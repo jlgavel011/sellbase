@@ -1,6 +1,6 @@
+import { toLocale, type OrderConfirmationProps } from '@sellbase/emails';
 import {
   deriveFulfillmentStatus,
-  formatMoney,
   shouldCompleteOrder,
   type FulfillmentStatus,
   type OrderStatus,
@@ -99,56 +99,74 @@ export async function refreshOrderStatus(tx: TransactionSql, orderId: string) {
   }
 }
 
-export interface OrderSummary {
-  number: number;
-  email: string;
-  currency: string;
-  total_amount: number;
-  items: { title: string; variant_title: string | null; quantity: number; total_amount: number }[];
-  store_name: string;
-  locale: string;
-}
-
-export async function loadOrderSummary(
+export async function loadOrderEmailProps(
   tx: TransactionSql,
   orderId: string,
-): Promise<OrderSummary | null> {
-  const [order] = await tx<Omit<OrderSummary, 'items'>[]>`
-    select o.number, o.email::text as email, o.currency::text as currency, o.total_amount,
-           s.name as store_name, s.default_locale as locale
+  links: DownloadLink[],
+): Promise<(OrderConfirmationProps & { email: string }) | null> {
+  const [order] = await tx<
+    {
+      number: number;
+      email: string;
+      currency: string;
+      subtotal_amount: number;
+      discount_amount: number;
+      shipping_amount: number;
+      tax_amount: number;
+      total_amount: number;
+      store_name: string;
+      logo_url: string | null;
+      contact_email: string | null;
+      default_locale: string;
+      settings: { brand_color?: string; tax?: { mode?: 'inclusive' | 'exclusive' } };
+    }[]
+  >`
+    select o.number, o.email::text as email, o.currency::text as currency, o.subtotal_amount, o.discount_amount,
+           o.shipping_amount, o.tax_amount, o.total_amount, s.name as store_name, s.logo_url,
+           s.contact_email::text as contact_email, s.default_locale, s.settings
       from sellbase.orders o join sellbase.stores s on s.id = o.store_id where o.id = ${orderId}`;
   if (!order) return null;
-  const items = await tx<OrderSummary['items']>`
-    select title, variant_title, quantity, total_amount from sellbase.order_items
+  const items = await tx<
+    {
+      title: string;
+      variant_title: string | null;
+      quantity: number;
+      total_amount: number;
+      fulfillment_type: string;
+    }[]
+  >`
+    select title, variant_title, quantity, total_amount, fulfillment_type from sellbase.order_items
      where order_id = ${orderId} order by created_at, id`;
-  return { ...order, items };
-}
-
-/** Minimal transactional email bodies. Replaced by React Email templates in @sellbase/emails. */
-export function orderConfirmationEmail(order: OrderSummary, links: DownloadLink[]) {
-  const rows = order.items
-    .map(
-      (i) =>
-        `<tr><td>${escape(i.title)}${i.variant_title ? ` — ${escape(i.variant_title)}` : ''} × ${i.quantity}</td><td align="right">${formatMoney(i.total_amount, order.currency)}</td></tr>`,
-    )
-    .join('');
-  const downloads = links.length
-    ? `<h3>Tus descargas</h3><ul>${links.map((l) => `<li><a href="${l.url}">${escape(l.file_name)}</a></li>`).join('')}</ul>`
-    : '';
-  const html = `<h2>Gracias por tu compra en ${escape(order.store_name)}</h2>
-<p>Pedido #${order.number}</p><table width="100%">${rows}
-<tr><td><strong>Total</strong></td><td align="right"><strong>${formatMoney(order.total_amount, order.currency)}</strong></td></tr></table>${downloads}`;
-  const text = [
-    `Gracias por tu compra en ${order.store_name}. Pedido #${order.number}.`,
-    ...order.items.map(
-      (i) => `${i.title} × ${i.quantity}: ${formatMoney(i.total_amount, order.currency)}`,
-    ),
-    `Total: ${formatMoney(order.total_amount, order.currency)}`,
-    ...links.map((l) => `Descarga ${l.file_name}: ${l.url}`),
-  ].join('\n');
-  return { subject: `Pedido #${order.number} confirmado`, html, text };
-}
-
-function escape(value: string) {
-  return value.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
+  return {
+    email: order.email,
+    locale: toLocale(order.default_locale),
+    brand: {
+      store_name: order.store_name,
+      logo_url: order.logo_url,
+      brand_color: order.settings.brand_color ?? null,
+      contact_email: order.contact_email,
+    },
+    order: {
+      number: order.number,
+      currency: order.currency,
+      subtotal_amount: order.subtotal_amount,
+      discount_amount: order.discount_amount,
+      shipping_amount: order.shipping_amount,
+      tax_amount: order.tax_amount,
+      tax_mode: order.settings.tax?.mode ?? 'inclusive',
+      total_amount: order.total_amount,
+      items: items.map(({ title, variant_title, quantity, total_amount }) => ({
+        title,
+        variant_title,
+        quantity,
+        total_amount,
+      })),
+      requires_shipping: items.some((i) => i.fulfillment_type === 'shipment'),
+    },
+    downloads: links.map((l) => ({
+      file_name: l.file_name,
+      url: l.url,
+      expires_at: l.expires_at.toISOString(),
+    })),
+  };
 }

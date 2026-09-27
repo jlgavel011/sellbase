@@ -1,11 +1,7 @@
+import { renderOrderConfirmation } from '@sellbase/emails';
 import type { TransactionSql } from 'postgres';
 import type { Deps } from './deps.js';
-import {
-  fulfillDigital,
-  loadOrderSummary,
-  orderConfirmationEmail,
-  refreshOrderStatus,
-} from './fulfillment.js';
+import { fulfillDigital, loadOrderEmailProps, refreshOrderStatus } from './fulfillment.js';
 
 /** Event types the job runner acts on; everything else is marked processed untouched. */
 const HANDLED = new Set(['order.paid']);
@@ -56,10 +52,11 @@ async function handleOrderPaid(
 ) {
   const links = await fulfillDigital(deps, tx, orderId);
   await refreshOrderStatus(tx, orderId);
-  const order = await loadOrderSummary(tx, orderId);
-  if (!order) return;
-
-  const email = orderConfirmationEmail(order, links);
+  const props = await loadOrderEmailProps(tx, orderId, links);
+  if (!props) return;
+  const { email: to, ...emailProps } = props;
+  const email = await renderOrderConfirmation(emailProps);
+  const order = { email: to };
   const notify = await deps.notify(storeId);
   const [notification] = await tx<{ id: string }[]>`
     insert into sellbase.notifications (store_id, event_id, channel, "to", template)

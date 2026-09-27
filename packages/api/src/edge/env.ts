@@ -27,6 +27,7 @@ export function edgeDeps(adapters: {
   const host = Deno.env.get('SELLBASE_DB_HOST');
   const sql = createSql(env('SUPABASE_DB_URL'), { max: 3, ...(host ? { host } : {}) });
   const supabase = createClient(url, serviceKey, { auth: { persistSession: false } });
+  const publicUrl = Deno.env.get('SELLBASE_PUBLIC_URL') ?? url;
   let storeId: string | null = null;
 
   const secrets: Deps['secrets'] = async (id, provider) => {
@@ -73,11 +74,12 @@ export function edgeDeps(adapters: {
           .from(bucket)
           .createSignedUrl(path, expiresIn);
         if (error || !data) throw new Error(`Could not sign ${bucket}/${path}: ${error?.message}`);
-        return data.signedUrl;
+        // Locally SUPABASE_URL is the internal Docker address; buyers need the public one.
+        return data.signedUrl.replace(url, publicUrl);
       },
     },
     now: () => new Date(),
-    publicApiUrl: `${Deno.env.get('SELLBASE_PUBLIC_URL') ?? url}/functions/v1/sellbase-api`,
+    publicApiUrl: `${publicUrl}/functions/v1/sellbase-api`,
     version: '0.1.0',
   };
 }

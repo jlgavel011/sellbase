@@ -3,8 +3,8 @@
   "compilerOptions": {
     "lib": ["ES2023", "DOM"],
     "types": ["node"],
-    "noEmit": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "noEmit": true
   },
-  "include": ["src", "test", "vitest.config.ts", "build.mjs"]
+  "include": ["src", "test", "vitest.config.ts"]
 }

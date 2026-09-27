@@ -1,15 +1,11 @@
-import { logNotify, manualShipping } from '@sellbase/adapters';
-import type { PaymentsAdapter } from '@sellbase/core';
+import { logNotify, manualShipping, resendNotify, stripePayments } from '@sellbase/adapters';
 import { edgeDeps } from './env.js';
-
-// TODO(1d): Stripe payments and Resend email adapters replace these placeholders.
-const paymentsPending = (): PaymentsAdapter => {
-  throw new Error('The Stripe adapter is not bundled yet.');
-};
 
 export const deps = () =>
   edgeDeps({
-    payments: paymentsPending,
+    payments: (secrets) => stripePayments({ secretKey: secrets.secret_key ?? '' }),
     shipping: (config) => manualShipping(config),
-    notify: () => logNotify(),
+    // Without Resend, emails are printed to the function logs so local tests still work.
+    notify: (secrets, from) =>
+      secrets?.secret_key ? resendNotify({ apiKey: secrets.secret_key, from }) : logNotify(),
   });
