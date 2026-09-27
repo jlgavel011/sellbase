@@ -148,6 +148,24 @@ export function createSellbase(options: SellbaseClientOptions) {
         notify: (id: string, template: Body<'orderNotify'>['template'] = 'order_confirmation') =>
           request('orderNotify', { params: { id }, body: { template } }),
       },
+      collections: {
+        list: () => request('collectionsList', {}),
+        upsert: (body: Body<'collectionUpsert'>) => request('collectionUpsert', { body }),
+        delete: (id: string) => request('collectionDelete', { params: { id } }),
+      },
+      customers: {
+        search: (query: Query<'customersList'> = {}) => request('customersList', { query }),
+        get: (id: string) => request('customerGet', { params: { id } }),
+      },
+      discounts: {
+        list: (query: Query<'discountsList'> = {}) => request('discountsList', { query }),
+        upsert: (body: Body<'discountUpsert'>) => request('discountUpsert', { body }),
+        /** Deletes an unused discount; a used one is disabled instead. */
+        delete: (id: string) => request('discountDelete', { params: { id } }),
+      },
+      reports: {
+        summary: () => request('reportsSummary', {}),
+      },
       store: {
         get: () => request('storeGet', {}),
         update: (body: Body<'storeUpdate'>) => request('storeUpdate', { body }),

@@ -2,6 +2,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import {
   BRAND,
+  collectionUpsertInput,
+  discountUpsertInput,
   fromZodError,
   isSellbaseError,
   productUpsertInput,
@@ -608,6 +610,81 @@ export function createSellbaseMcpServer(sellbase: Sellbase, options: { version?:
           ...(email ? { email } : {}),
         }),
       ),
+  );
+
+  server.registerTool(
+    'collection_upsert',
+    {
+      title: 'Create or update collection',
+      description:
+        'Group products (e.g. "Lo más vendido", "Regalos"). Send id to update. product_ids replaces the products in that order; omit it to keep them. The storefront filters with ?collection=<slug>. Use delete: true with id to remove the collection (products are kept).',
+      inputSchema: {
+        collection: collectionUpsertInput.optional(),
+        delete: z.object({ id: z.uuid() }).optional(),
+        dry_run: dryRun,
+      },
+    },
+    ({ collection, delete: del, dry_run }) =>
+      run(async () => {
+        if (del) {
+          return dry_run
+            ? { dry_run: true, would_delete: del.id }
+            : sellbase.admin.collections.delete(del.id);
+        }
+        if (!collection) {
+          const list = await sellbase.admin.collections.list();
+          return { hint: 'Pass collection to create/update one.', collections: list.data };
+        }
+        return dry_run
+          ? { dry_run: true, valid: true, would_upsert: collection }
+          : sellbase.admin.collections.upsert(collection);
+      }),
+  );
+
+  server.registerTool(
+    'discount_upsert',
+    {
+      title: 'Create or update discount',
+      description: `Discount codes and automatic discounts. kind "percent": value in basis points (1000 = 10%). kind "fixed": value in minor units. kind "free_shipping": value 0. code null = automatic (applies without a code). Codes are uppercase. Send id to update (every field is replaced). Call without discount to list the current ones. ${money}`,
+      inputSchema: { discount: discountUpsertInput.optional(), dry_run: dryRun },
+    },
+    ({ discount, dry_run }) =>
+      run(async () => {
+        if (!discount) return sellbase.admin.discounts.list();
+        return dry_run
+          ? { dry_run: true, valid: true, would_upsert: discount }
+          : sellbase.admin.discounts.upsert(discount);
+      }),
+  );
+
+  server.registerTool(
+    'customers_search',
+    {
+      title: 'Search customers',
+      description:
+        'Find customers by email, name or phone, with orders count and total spent. Pass id for one customer with addresses, orders and appointments.',
+      inputSchema: {
+        id: z.uuid().optional(),
+        q: z.string().max(100).optional(),
+        limit: z.number().int().min(1).max(100).default(25),
+        cursor: z.string().optional(),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    ({ id, ...query }) =>
+      run(() => (id ? sellbase.admin.customers.get(id) : sellbase.admin.customers.search(query))),
+  );
+
+  server.registerTool(
+    'report_summary',
+    {
+      title: 'Sales summary',
+      description:
+        'Sales today, last 7 and 30 days (paid minus refunded), daily series, top products, orders waiting to ship and appointments today. Use it to answer "how is the store doing?".',
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
+    () => run(() => sellbase.admin.reports.summary()),
   );
 
   return server;

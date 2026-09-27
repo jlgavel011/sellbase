@@ -4,6 +4,9 @@ import type { CSSProperties } from 'react';
 import type { AdminConfig } from './config.js';
 import { AdminProvider, useAdmin } from './context.js';
 import { AgendaPage } from './pages/agenda.js';
+import { CollectionsPage } from './pages/collections.js';
+import { CustomerDetailPage, CustomersPage } from './pages/customers.js';
+import { DiscountsPage } from './pages/discounts.js';
 import { HomePage } from './pages/home.js';
 import { OrderDetailPage, OrdersPage } from './pages/orders.js';
 import { ProductFormPage, ProductsPage } from './pages/products.js';
@@ -68,9 +71,14 @@ function Routes() {
   if (match('/agenda', path)) return <AgendaPage />;
   if (match('/agenda/resources', path)) return <ResourcesPage />;
   if (match('/products', path)) return <ProductsPage />;
+  if (match('/products/collections', path)) return <CollectionsPage />;
   if (match('/products/new', path)) return <ProductFormPage />;
   if ((params = match('/products/:id', path)))
     return <ProductFormPage key={params.id} id={params.id ?? ''} />;
+  if (match('/customers', path)) return <CustomersPage />;
+  if ((params = match('/customers/:id', path)))
+    return <CustomerDetailPage key={params.id} id={params.id ?? ''} />;
+  if (match('/discounts', path)) return <DiscountsPage />;
   if (match('/settings', path)) return <SettingsPage />;
 
   const page = config.pages?.find((p) => match(`/${p.path.replace(/^\//, '')}`, path));

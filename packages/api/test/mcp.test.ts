@@ -186,6 +186,35 @@ describe('mcp', () => {
     ).toBe(true);
   });
 
+  it('runs merchandising and reports tools', async () => {
+    const mug = (await call('products_search', { q: 'Taza' })).data.products[0];
+    const collection = await call('collection_upsert', {
+      collection: { title: 'Regalos', product_ids: [mug.id] },
+    });
+    expect(collection.isError, JSON.stringify(collection.data)).toBe(false);
+    expect(collection.data).toMatchObject({ slug: 'regalos', product_ids: [mug.id] });
+
+    const discount = await call('discount_upsert', {
+      discount: { code: 'REGALO10', kind: 'percent', value: 1000 },
+    });
+    expect(discount.data).toMatchObject({ code: 'REGALO10', value: 1000 });
+    const bad = (await client.callTool({
+      name: 'discount_upsert',
+      arguments: { discount: { code: 'regalo', kind: 'percent', value: 10 } },
+    })) as { isError?: boolean; content: { text: string }[] };
+    expect(bad.isError).toBe(true);
+    expect(bad.content[0]?.text).toContain('Uppercase');
+    expect((await call('discount_upsert')).data.data).toHaveLength(1);
+
+    const customers = await call('customers_search', { q: '@' });
+    expect(customers.isError).toBe(false);
+    const report = await call('report_summary');
+    expect(report.data.daily).toHaveLength(30);
+
+    const removed = await call('collection_upsert', { delete: { id: collection.data.id } });
+    expect(removed.data.deleted).toBe(true);
+  });
+
   it('returns API errors with a hint the agent can act on', async () => {
     const res = await call('product_upsert', {
       product: {

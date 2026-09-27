@@ -161,3 +161,17 @@ export const collection = z.object({
   updated_at: timestamp,
 });
 export type Collection = z.infer<typeof collection>;
+
+export const collectionUpsertInput = z.object({
+  id: id.optional().describe('Send to update; omit to create.'),
+  title: z.string().min(1).max(200),
+  slug: slug.optional().describe('Derived from the title when omitted.'),
+  description: z.string().max(10_000).optional(),
+  position: z.number().int().nonnegative().optional(),
+  product_ids: z
+    .array(id)
+    .max(1000)
+    .optional()
+    .describe('Replaces the products in the collection, in this order. Omit to keep them.'),
+});
+export type CollectionUpsertInput = z.infer<typeof collectionUpsertInput>;

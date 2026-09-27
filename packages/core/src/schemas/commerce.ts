@@ -40,49 +40,67 @@ export const discountStatus = z.enum(['active', 'disabled']);
  * - fixed: minor units in the store currency, 5000 = $50.00.
  * - free_shipping: ignored, send 0.
  */
-export const discountInput = z
-  .object({
-    code: z
-      .string()
-      .min(3)
-      .max(40)
-      .regex(/^[A-Z0-9_-]+$/, 'Uppercase letters, numbers, - and _ only')
-      .nullable()
-      .describe('Null = automatic discount (applied without a code).'),
-    kind: discountKind,
-    value: z.number().int().nonnegative(),
-    applies_to: discountAppliesTo.default({ type: 'all' }),
-    min_subtotal_amount: amount.nullable().default(null),
-    usage_limit: z.number().int().positive().nullable().default(null),
-    per_customer_limit: z.number().int().positive().nullable().default(null),
-    starts_at: timestamp.nullable().default(null),
-    ends_at: timestamp.nullable().default(null),
-    status: discountStatus.default('active'),
-  })
-  .superRefine((d, ctx) => {
-    if (d.kind === 'percent' && (d.value < 1 || d.value > 10_000)) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['value'],
-        message: 'Percent discounts use basis points between 1 and 10000 (1000 = 10%).',
-      });
-    }
-    if (d.kind === 'fixed' && d.value < 1) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['value'],
-        message: 'Fixed discounts need a positive amount in minor units.',
-      });
-    }
-    if (d.starts_at && d.ends_at && d.ends_at <= d.starts_at) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['ends_at'],
-        message: 'ends_at must be after starts_at.',
-      });
-    }
-  });
+const discountFields = z.object({
+  code: z
+    .string()
+    .min(3)
+    .max(40)
+    .regex(/^[A-Z0-9_-]+$/, 'Uppercase letters, numbers, - and _ only')
+    .nullable()
+    .describe('Null = automatic discount (applied without a code).'),
+  kind: discountKind,
+  value: z.number().int().nonnegative(),
+  applies_to: discountAppliesTo.default({ type: 'all' }),
+  min_subtotal_amount: amount.nullable().default(null),
+  usage_limit: z.number().int().positive().nullable().default(null),
+  per_customer_limit: z.number().int().positive().nullable().default(null),
+  starts_at: timestamp.nullable().default(null),
+  ends_at: timestamp.nullable().default(null),
+  status: discountStatus.default('active'),
+});
+
+function refineDiscount(
+  d: { kind: DiscountKind; value: number; starts_at: string | null; ends_at: string | null },
+  ctx: z.RefinementCtx,
+) {
+  if (d.kind === 'percent' && (d.value < 1 || d.value > 10_000)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['value'],
+      message: 'Percent discounts use basis points between 1 and 10000 (1000 = 10%).',
+    });
+  }
+  if (d.kind === 'fixed' && d.value < 1) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['value'],
+      message: 'Fixed discounts need a positive amount in minor units.',
+    });
+  }
+  if (d.starts_at && d.ends_at && Date.parse(d.ends_at) <= Date.parse(d.starts_at)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['ends_at'],
+      message: 'ends_at must be after starts_at.',
+    });
+  }
+}
+
+export const discountInput = discountFields.superRefine(refineDiscount);
 export type DiscountInput = z.infer<typeof discountInput>;
+
+/** Create (no `id`) or update (with `id`) a discount. Updates replace every field. */
+export const discountUpsertInput = discountFields
+  .extend({ id: id.optional() })
+  .superRefine(refineDiscount);
+export type DiscountUpsertInput = z.infer<typeof discountUpsertInput>;
+
+export const discountView = discountFields.extend({
+  id,
+  usage_count: z.number().int(),
+  created_at: timestamp,
+  updated_at: timestamp,
+});
 
 // ── Carts ────────────────────────────────────────────────────────────────────
 

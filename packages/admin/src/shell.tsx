@@ -126,6 +126,8 @@ export function Shell({ children }: { children: ReactNode }) {
     { to: '/orders', label: t.nav.orders, icon: '🧾' },
     { to: '/agenda', label: t.nav.agenda, icon: '📅' },
     { to: '/products', label: t.nav.products, icon: '🏷' },
+    { to: '/customers', label: t.nav.customers, icon: '👥' },
+    { to: '/discounts', label: t.nav.discounts, icon: '％' },
     ...(config.pages ?? []).map((p) => ({
       to: `/${p.path.replace(/^\//, '')}`,
       label: p.label,

@@ -92,12 +92,20 @@ export function ProductsPage() {
     <>
       <PageTitle
         actions={
-          <Link
-            to="/products/new"
-            className="sb:rounded-[var(--sba-radius)] sb:bg-[var(--sba-primary)] sb:px-4 sb:py-2 sb:text-sm sb:font-medium sb:text-[var(--sba-primary-fg)]"
-          >
-            {t.products.new}
-          </Link>
+          <div className="sb:flex sb:gap-2">
+            <Link
+              to="/products/collections"
+              className="sb:rounded-[var(--sba-radius)] sb:border sb:border-zinc-300 sb:bg-white sb:px-4 sb:py-2 sb:text-sm"
+            >
+              {t.collections.link}
+            </Link>
+            <Link
+              to="/products/new"
+              className="sb:rounded-[var(--sba-radius)] sb:bg-[var(--sba-primary)] sb:px-4 sb:py-2 sb:text-sm sb:font-medium sb:text-[var(--sba-primary-fg)]"
+            >
+              {t.products.new}
+            </Link>
+          </div>
         }
       >
         {t.products.title}

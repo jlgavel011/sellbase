@@ -4,6 +4,12 @@ import {
   amount,
   bookingSlot,
   apiScope,
+  collection,
+  collectionUpsertInput,
+  customer,
+  discountStatus,
+  discountUpsertInput,
+  discountView,
   currency,
   email,
   fulfillmentStatus,
@@ -44,7 +50,16 @@ export interface RouteDef {
   path: string;
   summary: string;
   description?: string;
-  tag: 'storefront' | 'catalog' | 'orders' | 'store' | 'integrations' | 'system';
+  tag:
+    | 'storefront'
+    | 'catalog'
+    | 'orders'
+    | 'customers'
+    | 'discounts'
+    | 'reports'
+    | 'store'
+    | 'integrations'
+    | 'system';
   auth: RouteAuth;
   params?: AnyObject;
   query?: AnyObject;
@@ -365,6 +380,73 @@ export const bookingView = z.object({
   meeting_url: z.string().nullable(),
   rescheduled_from: id.nullable(),
   notes: z.string().nullable(),
+});
+
+export const collectionView = collection.extend({
+  product_ids: z.array(id),
+});
+
+export const customerListItem = customer
+  .pick({
+    id: true,
+    email: true,
+    phone: true,
+    first_name: true,
+    last_name: true,
+    accepts_marketing: true,
+    created_at: true,
+  })
+  .extend({
+    orders_count: z.number().int(),
+    total_spent_amount: amount.describe('Paid minus refunded, store currency.'),
+    last_order_at: timestamp.nullable(),
+  });
+
+export const customerDetail = customer.extend({
+  orders_count: z.number().int(),
+  total_spent_amount: amount,
+  currency,
+  addresses: z.array(
+    z.object({
+      id,
+      label: z.string().nullable(),
+      line1: z.string(),
+      line2: z.string().nullable(),
+      city: z.string(),
+      state: z.string().nullable(),
+      postal_code: z.string(),
+      country: z.string(),
+      phone: z.string().nullable(),
+      is_default: z.boolean(),
+    }),
+  ),
+  orders: z.array(orderListItem),
+  bookings: z.array(bookingView),
+});
+
+const salesPeriod = z.object({
+  amount: amount.describe('Paid minus refunded on orders placed in the period.'),
+  orders: z.number().int(),
+  average_order_amount: amount,
+});
+
+export const reportSummary = z.object({
+  currency,
+  timezone: z.string(),
+  sales: z.object({ today: salesPeriod, last_7_days: salesPeriod, last_30_days: salesPeriod }),
+  daily: z
+    .array(z.object({ date: z.string(), amount, orders: z.number().int() }))
+    .describe('Last 30 days, oldest first, dates in the store time zone.'),
+  top_products: z.array(
+    z.object({
+      product_id: id.nullable(),
+      title: z.string(),
+      quantity: z.number().int(),
+      amount,
+    }),
+  ),
+  orders_to_fulfill: z.number().int(),
+  bookings_today: z.number().int(),
 });
 
 const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$|^24:00$/, 'Use HH:MM (24h), e.g. 09:00');
@@ -953,6 +1035,99 @@ export const routes = {
   },
 
   // Store and integrations
+  collectionsList: {
+    id: 'collectionsList',
+    method: 'GET',
+    path: '/collections',
+    summary: 'List collections with their product ids',
+    tag: 'catalog',
+    auth: staff('catalog:read'),
+    response: z.object({ data: z.array(collectionView) }),
+  },
+  collectionUpsert: {
+    id: 'collectionUpsert',
+    method: 'POST',
+    path: '/collections',
+    summary: 'Create or update a collection and set its products',
+    tag: 'catalog',
+    auth: staff('catalog:write'),
+    body: collectionUpsertInput,
+    response: collectionView,
+  },
+  collectionDelete: {
+    id: 'collectionDelete',
+    method: 'DELETE',
+    path: '/collections/:id',
+    summary: 'Delete a collection (products are kept)',
+    tag: 'catalog',
+    auth: staff('catalog:write'),
+    params: z.object({ id }),
+    response: z.object({ id, deleted: z.literal(true) }),
+  },
+  customersList: {
+    id: 'customersList',
+    method: 'GET',
+    path: '/customers',
+    summary: 'Search customers by email or name',
+    tag: 'customers',
+    auth: staff('customers:read'),
+    query: z.object({ ...pageQuery, q: z.string().max(100).optional() }),
+    response: paginated(customerListItem),
+  },
+  customerGet: {
+    id: 'customerGet',
+    method: 'GET',
+    path: '/customers/:id',
+    summary: 'Get a customer with addresses, orders and bookings',
+    tag: 'customers',
+    auth: staff('customers:read'),
+    params: z.object({ id }),
+    response: customerDetail,
+  },
+  discountsList: {
+    id: 'discountsList',
+    method: 'GET',
+    path: '/discounts',
+    summary: 'List discounts (codes and automatic)',
+    tag: 'discounts',
+    auth: staff(null),
+    query: z.object({
+      status: discountStatus.optional(),
+      q: z.string().max(40).optional().describe('Part of the code'),
+    }),
+    response: z.object({ data: z.array(discountView) }),
+  },
+  discountUpsert: {
+    id: 'discountUpsert',
+    method: 'POST',
+    path: '/discounts',
+    summary: 'Create or update a discount',
+    description:
+      'percent: value in basis points (1000 = 10%). fixed: minor units. free_shipping: value 0. code null = automatic discount.',
+    tag: 'discounts',
+    auth: staff('discounts:write'),
+    body: discountUpsertInput,
+    response: discountView,
+  },
+  discountDelete: {
+    id: 'discountDelete',
+    method: 'DELETE',
+    path: '/discounts/:id',
+    summary: 'Delete an unused discount; used ones are disabled so orders keep their history',
+    tag: 'discounts',
+    auth: staff('discounts:write'),
+    params: z.object({ id }),
+    response: z.object({ id, deleted: z.boolean(), status: discountStatus }),
+  },
+  reportsSummary: {
+    id: 'reportsSummary',
+    method: 'GET',
+    path: '/reports/summary',
+    summary: 'Sales today / 7 / 30 days, daily series, top products and pending work',
+    tag: 'reports',
+    auth: staff('orders:read'),
+    response: reportSummary,
+  },
   storeGet: {
     id: 'storeGet',
     method: 'GET',
