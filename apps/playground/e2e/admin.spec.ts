@@ -62,7 +62,7 @@ test('staff signs in, manages a product, and sees orders and settings', async ({
     await expect(page.getByText('Modo prueba')).toBeVisible();
     await expect(page.getByTestId('payments-card')).toContainText('Cuenta de Stripe');
   } else {
-    await expect(page.getByTestId('payments-card')).toContainText('Stripe no está conectado');
+    await expect(page.getByText('Stripe no está conectado')).toBeVisible();
   }
 
   // Sign out returns to the login screen.

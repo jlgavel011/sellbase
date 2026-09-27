@@ -19,7 +19,7 @@ test('team invites, agent tokens with activity, and signed webhooks', async ({ p
     await expect(page.getByText('Modo prueba')).toBeVisible();
     await expect(payments).toContainText('Cuenta de Stripe');
   } else {
-    await expect(payments).toContainText('Stripe no está conectado');
+    await expect(page.getByText('Stripe no está conectado')).toBeVisible();
   }
   await payments.getByLabel('Llave secreta (sk_…)').fill('sk_live_not_a_real_key');
   await payments.getByRole('button', { name: 'Conectar' }).click();
