@@ -13,6 +13,7 @@ export default tseslint.config(
       '**/playwright-report/**',
       '**/test-results/**',
       '**/next-env.d.ts',
+      'supabase/functions/**',
     ],
   },
   js.configs.recommended,
@@ -24,6 +25,11 @@ export default tseslint.config(
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
+  },
+  {
+    // Tests read loosely typed JSON responses; production code never uses `any`.
+    files: ['**/test/**/*.ts'],
+    rules: { '@typescript-eslint/no-explicit-any': 'off' },
   },
   prettier,
 );

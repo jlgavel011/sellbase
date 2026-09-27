@@ -722,8 +722,9 @@ create policy admin_read on sellbase.audit_log for select to authenticated
 create policy admin_read on sellbase.events for select to authenticated
   using (sellbase.has_role(store_id, 'admin'));
 
+-- Any team member of any store may read the schema version (it has no store_id).
 create policy staff_read on sellbase.schema_version for select to authenticated
-  using (sellbase.is_staff(sellbase.current_store_id()));
+  using (exists (select 1 from sellbase.staff_members where user_id = auth.uid()));
 
 -- Signed-in customers read their own data.
 create policy customer_read_self on sellbase.customers for select to authenticated

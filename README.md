@@ -12,7 +12,8 @@
 pnpm i            # install
 pnpm dev          # playground on http://localhost:3100
 pnpm test         # unit (Vitest)
-pnpm test:db      # pgTAP (needs `pnpm exec supabase db start` and Docker)
+pnpm test:db      # pgTAP (needs `pnpm exec supabase start` and Docker)
+pnpm test:integration  # API against the local database
 pnpm test:e2e     # Playwright
 pnpm lint && pnpm typecheck
 ```

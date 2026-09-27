@@ -46,7 +46,7 @@ $$;
 select lives_ok($$ select sellbase.adjust_inventory('30000000-0000-4000-8000-000000000001', 5, 'initial count', 'staff', 'u1') $$,
   'adjust_inventory creates the stock row and default location');
 select results_eq('select * from pg_temp.stock()', $$ values (5, 0) $$, 'stock starts at 5');
-select results_eq($$ select count(*)::int from sellbase.audit_log where action = 'inventory.adjust' $$, array[1],
+select results_eq($$ select count(*)::int from sellbase.audit_log where action = 'inventory.adjust' and store_id = '10000000-0000-4000-8000-00000000000a' $$, array[1],
   'inventory adjustments are audited');
 select throws_ok($$ update sellbase.inventory_levels set on_hand = -1 $$, '23514', null,
   'deny policy forbids negative stock');
@@ -56,7 +56,7 @@ insert into t_ctx select 's1', sellbase.create_checkout_session(
   '70000000-0000-4000-8000-000000000001', 'stripe', pg_temp.lines(2), pg_temp.totals(2), 'buyer@test.dev',
   null, null, array['60000000-0000-4000-8000-000000000001']::uuid[]);
 select results_eq('select * from pg_temp.stock()', $$ values (5, 2) $$, 'checkout reserves 2 units');
-select results_eq($$ select available_quantity from sellbase.storefront_variants where sku = 'TEE' $$, array[3],
+select results_eq($$ select available_quantity from sellbase.storefront_variants where sku = 'TEE' and store_id = '10000000-0000-4000-8000-00000000000a' $$, array[3],
   'storefront availability subtracts reservations');
 select throws_like($$ select sellbase.create_checkout_session('70000000-0000-4000-8000-000000000002', 'stripe',
                         pg_temp.lines(4), pg_temp.totals(4), 'other@test.dev') $$,
@@ -86,19 +86,19 @@ select results_eq($$ select sku, unit_price_amount::int, fulfillment_type from s
 select results_eq('select * from pg_temp.stock()', $$ values (3, 0) $$, 'the reservation is consumed from stock');
 select results_eq($$ select status from sellbase.carts where id = '70000000-0000-4000-8000-000000000001' $$,
   array['converted'], 'the cart is converted');
-select results_eq($$ select usage_count from sellbase.discounts $$, array[1], 'the discount redemption is counted');
-select results_eq($$ select array_agg(type order by type) from sellbase.events $$,
+select results_eq($$ select usage_count from sellbase.discounts where store_id = '10000000-0000-4000-8000-00000000000a' $$, array[1], 'the discount redemption is counted');
+select results_eq($$ select array_agg(type order by type) from sellbase.events where store_id = '10000000-0000-4000-8000-00000000000a' $$,
   $$ values (array['checkout.completed', 'order.created', 'order.paid', 'payment.succeeded']) $$,
   'outbox events are emitted in the same transaction');
-select results_eq($$ select email::text from sellbase.customers $$, array['buyer@test.dev'], 'the customer is upserted');
+select results_eq($$ select email::text from sellbase.customers where store_id = '10000000-0000-4000-8000-00000000000a' $$, array['buyer@test.dev'], 'the customer is upserted');
 
 select results_eq($$ select sellbase.place_order_from_checkout((select id from t_ctx where key = 's1'), '{"amount": 80730}') $$,
   $$ select id from t_ctx where key = 'o1' $$, 'placing the same session again returns the same order');
-select results_eq('select count(*)::int from sellbase.orders', array[1], 'a duplicate webhook creates no second order');
+select results_eq($$ select count(*)::int from sellbase.orders where store_id = '10000000-0000-4000-8000-00000000000a' $$, array[1], 'a duplicate webhook creates no second order');
 
 -- ── Price changes after checkout do not affect the order ─────────────────────
 update sellbase.variants set price_amount = 99900 where sku = 'TEE';
-select results_eq($$ select unit_price_amount::int from sellbase.order_items where sku = 'TEE' $$, array[34900],
+select results_eq($$ select unit_price_amount::int from sellbase.order_items where sku = 'TEE' and store_id = '10000000-0000-4000-8000-00000000000a' $$, array[34900],
   'order items keep the price paid');
 
 -- ── Expired checkouts release stock ──────────────────────────────────────────
@@ -106,7 +106,9 @@ insert into t_ctx select 's2', sellbase.create_checkout_session(
   '70000000-0000-4000-8000-000000000002', 'stripe', pg_temp.lines(3), pg_temp.totals(3), 'late@test.dev',
   null, null, '{}', interval '-1 minute');
 select results_eq('select * from pg_temp.stock()', $$ values (3, 3) $$, 'second checkout reserves the last 3');
-select results_eq('select sellbase.release_expired_checkouts()', array[1], 'the expired session is released');
+select sellbase.release_expired_checkouts();
+select results_eq($$ select status from sellbase.checkout_sessions where id = (select id from t_ctx where key = 's2') $$,
+  array['expired'], 'the expired session is released');
 select results_eq('select * from pg_temp.stock()', $$ values (3, 0) $$, 'released stock is available again');
 
 -- ── A late payment still becomes an order, flagging oversold stock ───────────
@@ -114,7 +116,7 @@ select sellbase.adjust_inventory('30000000-0000-4000-8000-000000000001', -2, 'da
 insert into t_ctx select 'o2', sellbase.place_order_from_checkout((select id from t_ctx where key = 's2'),
   '{"provider": "stripe", "provider_payment_id": "pi_2", "amount": 112140}');
 select results_eq('select * from pg_temp.stock()', $$ values (0, 0) $$, 'stock stops at zero instead of failing a paid order');
-select results_eq($$ select (payload ->> 'short_by')::int from sellbase.events where type = 'inventory.oversold' $$,
+select results_eq($$ select (payload ->> 'short_by')::int from sellbase.events where type = 'inventory.oversold' and store_id = '10000000-0000-4000-8000-00000000000a' $$,
   array[2], 'an inventory.oversold event tells the owner how many units are missing');
 
 -- ── State machine mirror ─────────────────────────────────────────────────────

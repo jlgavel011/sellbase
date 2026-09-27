@@ -1,0 +1,19 @@
+{
+  "name": "@sellbase/adapters",
+  "version": "0.0.0",
+  "description": "Sellbase provider adapters: payments, shipping and notifications.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sellbase/core": "workspace:*",
+    "zod": "^4.6.5"
+  }
+}

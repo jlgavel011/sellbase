@@ -1,0 +1,27 @@
+{
+  "name": "@sellbase/api",
+  "version": "0.0.0",
+  "description": "Sellbase API, webhooks and jobs as runtime-agnostic Hono apps, bundled into Supabase Edge Functions.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:integration": "vitest run"
+  },
+  "dependencies": {
+    "@sellbase/adapters": "workspace:*",
+    "@sellbase/core": "workspace:*",
+    "@supabase/supabase-js": "^2.117.2",
+    "hono": "^4.13.9",
+    "postgres": "^3.4.9",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

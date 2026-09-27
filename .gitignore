@@ -12,3 +12,4 @@ test-results/
 supabase/.temp/
 supabase/.branches/
 .DS_Store
+supabase/functions/sellbase-*/index.js

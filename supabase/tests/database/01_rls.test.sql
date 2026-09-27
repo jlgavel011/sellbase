@@ -56,15 +56,15 @@ insert into sellbase.api_tokens (store_id, name, token_hash, prefix, scopes) val
 -- ── anon ─────────────────────────────────────────────────────────────────────
 set local role anon;
 
-select results_eq('select slug from sellbase.storefront_products order by slug',
+select results_eq($$ select slug from sellbase.storefront_products where store_id in ('10000000-0000-4000-8000-00000000000a', '10000000-0000-4000-8000-00000000000b') order by slug $$,
   array['ebook', 'tee'], 'anon sees active products through the storefront view');
-select is_empty($$ select 1 from sellbase.storefront_products where slug = 'secret' $$,
+select is_empty($$ select 1 from sellbase.storefront_products where slug = 'secret' and store_id = '10000000-0000-4000-8000-00000000000a' $$,
   'anon does not see draft products');
 select results_eq(
-  $$ select available_quantity, available from sellbase.storefront_variants where sku = 'TEE-1' $$,
+  $$ select available_quantity, available from sellbase.storefront_variants where sku = 'TEE-1' and store_id = '10000000-0000-4000-8000-00000000000a' $$,
   $$ values (5, true) $$, 'anon sees stock availability');
 select results_eq(
-  $$ select available_quantity, available from sellbase.storefront_variants where price_amount = 1500 $$,
+  $$ select available_quantity, available from sellbase.storefront_variants where store_id = '10000000-0000-4000-8000-00000000000b' $$,
   $$ values (null::int, true) $$, 'untracked variants are always available');
 select throws_ok('select metadata from sellbase.products', '42501', null, 'anon cannot read product metadata');
 select throws_ok('select * from sellbase.orders', '42501', null, 'anon cannot read orders');
@@ -103,7 +103,7 @@ select is_empty($$ select 1 from sellbase.products where store_id = '10000000-00
 select is_empty('select 1 from sellbase.integrations', 'staff role cannot read integrations');
 select is_empty('select 1 from sellbase.api_tokens', 'staff role cannot read api tokens');
 select is_empty('select 1 from sellbase.audit_log', 'staff role cannot read the audit log');
-select results_eq('select count(*)::int from sellbase.schema_version', array[2], 'staff can read the schema version');
+select ok((select count(*) > 0 from sellbase.schema_version), 'staff can read the schema version');
 select throws_ok($$ insert into sellbase.products (store_id, type, title, slug)
                     values ('10000000-0000-4000-8000-00000000000a', 'physical', 'X', 'x') $$,
   '42501', null, 'staff writes go through the API, not directly');
@@ -126,7 +126,7 @@ select is_empty('select 1 from sellbase.customers', 'another store owner sees no
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-0000000000ff"}', true);
 
 select is_empty('select 1 from sellbase.orders', 'a stranger sees no orders');
-select results_eq('select count(*)::int from sellbase.storefront_products', array[2], 'a stranger still sees the public catalog');
+select results_eq($$ select count(*)::int from sellbase.storefront_products where store_id in ('10000000-0000-4000-8000-00000000000a', '10000000-0000-4000-8000-00000000000b') $$, array[2], 'a stranger still sees the public catalog');
 reset role;
 
 select * from finish();

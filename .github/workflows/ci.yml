@@ -27,7 +27,7 @@ jobs:
       - run: pnpm test
 
   db:
-    name: Database (pgTAP)
+    name: Database (pgTAP) and API integration
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,6 +39,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec supabase db start
       - run: pnpm test:db
+      - run: pnpm test:integration
 
   e2e:
     name: End-to-end (Playwright)

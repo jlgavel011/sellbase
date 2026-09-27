@@ -57,6 +57,23 @@ export const store = z.object({
 });
 export type Store = z.infer<typeof store>;
 
+/** Partial settings for PATCH: no defaults, so omitted keys are left untouched. */
+export const storeSettingsPatch = z
+  .object({
+    tax: z
+      .object({
+        mode: z.enum(['inclusive', 'exclusive']),
+        rate_bps: bps,
+        applies_to_shipping: z.boolean(),
+      })
+      .partial(),
+    auto_label: z.boolean(),
+    brand_color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    shipping: z.record(z.string(), z.unknown()),
+  })
+  .partial()
+  .loose();
+
 export const storeUpdateInput = store
   .pick({
     name: true,
@@ -66,9 +83,9 @@ export const storeUpdateInput = store
     country: true,
     contact_email: true,
     logo_url: true,
-    settings: true,
   })
-  .partial();
+  .partial()
+  .extend({ settings: storeSettingsPatch.optional() });
 export type StoreUpdateInput = z.infer<typeof storeUpdateInput>;
 
 export const auditActorType = z.enum(['staff', 'token', 'system', 'webhook']);
