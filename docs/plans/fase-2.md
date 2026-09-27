@@ -32,13 +32,13 @@ Base para el admin completo y para cancelar/reembolsar citas.
 - Operación: reagendar, cancelar (con reembolso), completar, no-show; recordatorios a las 24 h y 2 h (jobs); invitación `.ics` en el email.
 - Storefront: componente `booking-picker`. Admin: **Agenda** (calendario por recurso, disponibilidad, excepciones). MCP: `service_setup`, `bookings_search`, `booking_action`.
 
-### 2c. Admin completo
+### 2c. Admin completo ✅
 
 Se entrega en tres partes, cada una con commit propio:
 
 1. ✅ **Datos de negocio**: métricas en Inicio (`GET /reports/summary`), clientes, descuentos y colecciones en API, admin y MCP (`report_summary`, `customers_search`, `discount_upsert`, `collection_upsert`).
 2. ✅ **Pedidos y productos**: filtros de pedidos (estado, entrega, canal, fechas), pedido manual cobrado o con link de pago, importar CSV (plantilla, español o Shopify) y acciones masivas con vista previa de precios (ADR 0009).
-3. **Ajustes**: equipo y roles, API tokens, webhooks salientes y bitácora de agentes.
+3. ✅ **Ajustes**: equipo y roles con invitación por correo, tokens de API con permisos, webhooks salientes firmados con reintentos y la bitácora de agentes IA (migración 0007, ADR 0010).
 
 Alcance original:
 

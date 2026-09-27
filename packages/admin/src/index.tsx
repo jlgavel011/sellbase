@@ -13,8 +13,9 @@ import { OrderDetailPage, OrdersPage } from './pages/orders.js';
 import { ProductFormPage, ProductsPage } from './pages/products.js';
 import { ResourcesPage } from './pages/resources.js';
 import { SettingsPage } from './pages/settings.js';
+import { AgentsPage, TeamPage, WebhooksPage } from './pages/settings-sections.js';
 import { match, Router, useRouter } from './router.js';
-import { Login, Shell, StaffGate } from './shell.js';
+import { Login, SetPassword, Shell, StaffGate } from './shell.js';
 import { Card } from './ui.js';
 
 export type { AdminConfig, AdminPage, AdminTheme, SlotContext, SlotName } from './config.js';
@@ -49,9 +50,10 @@ export function SellbaseAdmin({ config }: { config: AdminConfig }) {
 }
 
 function Gate() {
-  const { session, sessionReady } = useAdmin();
+  const { session, sessionReady, needsPassword } = useAdmin();
   if (!sessionReady) return null;
   if (!session) return <Login />;
+  if (needsPassword) return <SetPassword />;
   return (
     <StaffGate>
       <Shell>
@@ -82,6 +84,9 @@ function Routes() {
     return <CustomerDetailPage key={params.id} id={params.id ?? ''} />;
   if (match('/discounts', path)) return <DiscountsPage />;
   if (match('/settings', path)) return <SettingsPage />;
+  if (match('/settings/team', path)) return <TeamPage />;
+  if (match('/settings/agents', path)) return <AgentsPage />;
+  if (match('/settings/webhooks', path)) return <WebhooksPage />;
 
   const page = config.pages?.find((p) => match(`/${p.path.replace(/^\//, '')}`, path));
   if (page) return <>{page.render({ sellbase, navigate })}</>;

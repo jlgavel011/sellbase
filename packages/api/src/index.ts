@@ -6,3 +6,4 @@ export { upsertProduct, loadAdminProduct } from './handlers/catalog.js';
 export { runDoctor, EXPECTED_SCHEMA_VERSION } from './handlers/store.js';
 export { createSql } from './db.js';
 export type { Deps } from './deps.js';
+export { signWebhook, verifyWebhookSignature, SIGNATURE_HEADER } from './webhooks-out.js';

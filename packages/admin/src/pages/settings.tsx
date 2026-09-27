@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useAdmin } from '../context.js';
 import { PageTitle, useSlot } from '../shell.js';
+import { SettingsTabs } from './settings-sections.js';
 import { Alert, Badge, Button, Card, ErrorAlert, Field, Input } from '../ui.js';
 
 interface ShippingSettings {
@@ -108,6 +109,7 @@ export function SettingsPage() {
   return (
     <>
       <PageTitle>{t.settings.title}</PageTitle>
+      <SettingsTabs />
       <div className="sb:flex sb:flex-col sb:gap-6">
         <form onSubmit={submitStore}>
           <Card title={t.settings.store}>

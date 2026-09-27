@@ -19,6 +19,13 @@ export interface Deps {
     upload: (bucket: string, path: string, bytes: Uint8Array, contentType: string) => Promise<void>;
     publicUrl: (bucket: string, path: string) => string;
   };
+  /**
+   * Sends a Supabase Auth invitation and returns the new user's id. Only called for
+   * emails that have no auth user yet.
+   */
+  inviteUser: (email: string, redirectTo?: string) => Promise<string>;
+  /** HTTP client for outbound webhooks; defaults to the global fetch. */
+  fetch?: typeof fetch;
   /** Keeps work alive after the response (EdgeRuntime.waitUntil). Absent in tests. */
   background?: (task: Promise<unknown>) => void;
   now: () => Date;

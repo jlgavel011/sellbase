@@ -8,6 +8,7 @@
 - API: `/reports/summary`, `/customers`, `/discounts`, `/collections`. MCP: `report_summary`, `customers_search`, `discount_upsert`, `collection_upsert`.
 - Manual orders (`POST /orders`): paid in cash/transfer/terminal or with a Stripe payment link (migration 0006). Order filters by status, delivery, channel and dates.
 - Products: CSV import (our template, Spanish headers or a Shopify export) and bulk publish/archive/price changes with a preview. MCP: `order_create`, `products_import`, `products_bulk`.
+- Settings: team invites and roles, API tokens with scopes and an AI agents activity log, outbound webhooks signed with HMAC and retried with backoff (migration 0007). MCP: `webhook_setup`.
 
 ## 0.1.0 — Phase 1 (unreleased)
 

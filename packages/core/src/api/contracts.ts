@@ -4,6 +4,8 @@ import {
   amount,
   bookingSlot,
   apiScope,
+  staffRole,
+  webhookEvent,
   collection,
   collectionUpsertInput,
   customer,
@@ -60,6 +62,8 @@ export interface RouteDef {
     | 'customers'
     | 'discounts'
     | 'reports'
+    | 'team'
+    | 'webhooks'
     | 'store'
     | 'integrations'
     | 'system';
@@ -450,6 +454,67 @@ export const reportSummary = z.object({
   ),
   orders_to_fulfill: z.number().int(),
   bookings_today: z.number().int(),
+});
+
+export const teamMemberView = z.object({
+  user_id: id,
+  email: z.string(),
+  role: staffRole,
+  invited: z.boolean().describe('True until the person signs in for the first time.'),
+  last_sign_in_at: timestamp.nullable(),
+  created_at: timestamp,
+});
+
+export const apiTokenView = z.object({
+  id,
+  name: z.string(),
+  prefix: z.string(),
+  scopes: z.array(apiScope),
+  created_at: timestamp,
+  last_used_at: timestamp.nullable(),
+  expires_at: timestamp.nullable(),
+  revoked_at: timestamp.nullable(),
+  actions_30d: z.number().int().describe('Audit log entries in the last 30 days.'),
+});
+
+export const webhookEndpointView = z.object({
+  id,
+  url: z.string(),
+  description: z.string(),
+  events: z.array(z.string()),
+  enabled: z.boolean(),
+  secret_prefix: z.string(),
+  created_at: timestamp,
+  stats: z.object({
+    pending: z.number().int(),
+    failed: z.number().int(),
+    last_delivery_at: timestamp.nullable(),
+    last_status: z.enum(['pending', 'succeeded', 'failed']).nullable(),
+  }),
+});
+
+export const webhookDeliveryView = z.object({
+  id,
+  event_type: z.string(),
+  status: z.enum(['pending', 'succeeded', 'failed']),
+  attempts: z.number().int(),
+  last_status_code: z.number().int().nullable(),
+  last_error: z.string().nullable(),
+  next_attempt_at: timestamp,
+  delivered_at: timestamp.nullable(),
+  created_at: timestamp,
+});
+
+export const auditEntryView = z.object({
+  id,
+  actor_type: z.enum(['staff', 'token', 'system', 'webhook']),
+  actor_id: z.string().nullable(),
+  actor_name: z.string().nullable(),
+  action: z.string(),
+  entity: z.string(),
+  entity_id: id.nullable(),
+  diff: z.record(z.string(), z.unknown()),
+  created_at: timestamp,
 });
 
 const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$|^24:00$/, 'Use HH:MM (24h), e.g. 09:00');
@@ -1196,6 +1261,176 @@ export const routes = {
     tag: 'reports',
     auth: staff('orders:read'),
     response: reportSummary,
+  },
+  teamList: {
+    id: 'teamList',
+    method: 'GET',
+    path: '/team',
+    summary: 'Team members and their roles',
+    tag: 'team',
+    auth: staff('settings:write'),
+    response: z.object({ data: z.array(teamMemberView) }),
+  },
+  teamInvite: {
+    id: 'teamInvite',
+    method: 'POST',
+    path: '/team',
+    summary: 'Invite someone by email (they get a link to set a password)',
+    description:
+      'Existing users are added right away. Only owners can add owners. redirect_to must be an allowed redirect URL in Supabase Auth.',
+    tag: 'team',
+    auth: staff('settings:write'),
+    body: z.object({
+      email,
+      role: staffRole.default('staff'),
+      redirect_to: z
+        .url()
+        .optional()
+        .describe('Where the invite link lands, e.g. https://mystore.com/admin'),
+    }),
+    response: teamMemberView,
+  },
+  teamUpdate: {
+    id: 'teamUpdate',
+    method: 'PATCH',
+    path: '/team/:user_id',
+    summary: 'Change the role of a team member',
+    tag: 'team',
+    auth: staff('settings:write'),
+    params: z.object({ user_id: id }),
+    body: z.object({ role: staffRole }),
+    response: teamMemberView,
+  },
+  teamRemove: {
+    id: 'teamRemove',
+    method: 'DELETE',
+    path: '/team/:user_id',
+    summary: 'Remove someone from the team (the store always keeps one owner)',
+    tag: 'team',
+    auth: staff('settings:write'),
+    params: z.object({ user_id: id }),
+    response: z.object({ user_id: id, removed: z.literal(true) }),
+  },
+  tokensList: {
+    id: 'tokensList',
+    method: 'GET',
+    path: '/tokens',
+    summary: 'API tokens (for AI agents and integrations), without their secret',
+    tag: 'team',
+    auth: staff('settings:write'),
+    response: z.object({ data: z.array(apiTokenView) }),
+  },
+  tokenCreate: {
+    id: 'tokenCreate',
+    method: 'POST',
+    path: '/tokens',
+    summary: 'Create an API token; the full token is shown only in this response',
+    description:
+      'Defaults to the agent scopes (everything except refunds:write). A token can only create tokens with scopes it has.',
+    tag: 'team',
+    auth: staff('settings:write'),
+    body: z.object({
+      name: z.string().min(1).max(100),
+      scopes: z.array(apiScope).min(1).optional(),
+      expires_in_days: z.number().int().min(1).max(3650).optional(),
+    }),
+    response: apiTokenView.extend({ token: z.string() }),
+  },
+  tokenRevoke: {
+    id: 'tokenRevoke',
+    method: 'DELETE',
+    path: '/tokens/:id',
+    summary: 'Revoke an API token right away',
+    tag: 'team',
+    auth: staff('settings:write'),
+    params: z.object({ id }),
+    response: apiTokenView,
+  },
+  auditList: {
+    id: 'auditList',
+    method: 'GET',
+    path: '/audit',
+    summary: 'Activity log: who (staff, AI agents, webhooks) changed what',
+    tag: 'team',
+    auth: staff('settings:write'),
+    query: z.object({
+      ...pageQuery,
+      actor_type: z.enum(['staff', 'token', 'system', 'webhook']).optional(),
+      actor_id: z.string().max(100).optional().describe('A token id or a user id'),
+      entity: z.string().max(40).optional(),
+    }),
+    response: paginated(auditEntryView),
+  },
+  webhooksList: {
+    id: 'webhooksList',
+    method: 'GET',
+    path: '/webhooks',
+    summary: 'Outbound webhook endpoints with delivery stats',
+    tag: 'webhooks',
+    auth: staff('settings:write'),
+    response: z.object({ data: z.array(webhookEndpointView), events: z.array(z.string()) }),
+  },
+  webhookCreate: {
+    id: 'webhookCreate',
+    method: 'POST',
+    path: '/webhooks',
+    summary: 'Subscribe a URL to store events; the signing secret is shown only here',
+    description:
+      'Each POST carries Sellbase-Signature: t=<unix>,v1=<hex HMAC-SHA256 of "<t>.<body>">. Failed deliveries retry for about a day.',
+    tag: 'webhooks',
+    auth: staff('settings:write'),
+    body: z.object({
+      url: z.url(),
+      events: z.array(webhookEvent).default([]).describe('Empty = every event.'),
+      description: z.string().max(200).default(''),
+    }),
+    response: webhookEndpointView.extend({ secret: z.string() }),
+  },
+  webhookUpdate: {
+    id: 'webhookUpdate',
+    method: 'PATCH',
+    path: '/webhooks/:id',
+    summary: 'Change the URL, events or pause an endpoint',
+    tag: 'webhooks',
+    auth: staff('settings:write'),
+    params: z.object({ id }),
+    body: z.object({
+      url: z.url().optional(),
+      events: z.array(webhookEvent).optional(),
+      description: z.string().max(200).optional(),
+      enabled: z.boolean().optional(),
+    }),
+    response: webhookEndpointView,
+  },
+  webhookDelete: {
+    id: 'webhookDelete',
+    method: 'DELETE',
+    path: '/webhooks/:id',
+    summary: 'Delete an endpoint and its secret',
+    tag: 'webhooks',
+    auth: staff('settings:write'),
+    params: z.object({ id }),
+    response: z.object({ id, deleted: z.literal(true) }),
+  },
+  webhookTest: {
+    id: 'webhookTest',
+    method: 'POST',
+    path: '/webhooks/:id/test',
+    summary: 'Send a signed webhook.test event now and report the response',
+    tag: 'webhooks',
+    auth: staff('settings:write'),
+    params: z.object({ id }),
+    response: webhookDeliveryView,
+  },
+  webhookDeliveries: {
+    id: 'webhookDeliveries',
+    method: 'GET',
+    path: '/webhooks/:id/deliveries',
+    summary: 'Last 50 deliveries of an endpoint',
+    tag: 'webhooks',
+    auth: staff('settings:write'),
+    params: z.object({ id }),
+    response: z.object({ data: z.array(webhookDeliveryView) }),
   },
   storeGet: {
     id: 'storeGet',

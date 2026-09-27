@@ -89,3 +89,22 @@ export const storeUpdateInput = store
 export type StoreUpdateInput = z.infer<typeof storeUpdateInput>;
 
 export const auditActorType = z.enum(['staff', 'token', 'system', 'webhook']);
+
+/** Events a webhook endpoint can subscribe to (the outbox event types). */
+export const WEBHOOK_EVENTS = [
+  'order.created',
+  'order.paid',
+  'order.deposit_paid',
+  'order.cancelled',
+  'payment.succeeded',
+  'refund.created',
+  'fulfillment.shipped',
+  'booking.rescheduled',
+  'booking.cancelled',
+  'product.created',
+  'product.updated',
+  'product.archived',
+  'inventory.oversold',
+] as const;
+export const webhookEvent = z.enum(WEBHOOK_EVENTS);
+export type WebhookEvent = z.infer<typeof webhookEvent>;

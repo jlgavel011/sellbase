@@ -51,6 +51,13 @@ export function edgeDeps(adapters: {
       const { data, error } = await supabase.auth.getUser(jwt);
       return error ? null : (data.user?.id ?? null);
     },
+    inviteUser: async (email, redirectTo) => {
+      const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
+        ...(redirectTo ? { redirectTo } : {}),
+      });
+      if (error || !data.user) throw new Error(`Could not invite ${email}: ${error?.message}`);
+      return data.user.id;
+    },
     secrets,
     payments: async (id) => {
       const s = await secrets(id, 'stripe');

@@ -79,6 +79,55 @@ export function Login() {
   );
 }
 
+/** First visit from an invitation (or a reset link): choose a password. */
+export function SetPassword() {
+  const { supabase, t, config, setNeedsPassword } = useAdmin();
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const { error: err } = await supabase.auth.updateUser({ password });
+    setBusy(false);
+    if (err) setError(err.message);
+    else {
+      window.history.replaceState(null, '', window.location.pathname);
+      setNeedsPassword(false);
+    }
+  }
+
+  return (
+    <div className="sb:flex sb:min-h-screen sb:items-center sb:justify-center sb:bg-zinc-50 sb:p-4">
+      <Card className="sb:w-full sb:max-w-sm">
+        {config.logo && (
+          <img src={config.logo.src} alt={config.logo.alt ?? ''} className="sb:mb-4 sb:h-8" />
+        )}
+        <h1 className="sb:mb-1 sb:text-xl sb:font-semibold">{t.login.setPassword}</h1>
+        <p className="sb:mb-4 sb:text-sm sb:text-zinc-500">{t.login.setPasswordHint}</p>
+        <form onSubmit={save} className="sb:flex sb:flex-col sb:gap-3">
+          <Field label={t.login.newPassword}>
+            <Input
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </Field>
+          {error && <Alert>{error}</Alert>}
+          <Button type="submit" disabled={busy || password.length < 8}>
+            {t.login.savePassword}
+          </Button>
+        </form>
+      </Card>
+    </div>
+  );
+}
+
 /** Blocks signed-in users who are not on the store team (the API answers 401/403). */
 export function StaffGate({ children }: { children: ReactNode }) {
   const { sellbase, supabase, t, setCurrency } = useAdmin();

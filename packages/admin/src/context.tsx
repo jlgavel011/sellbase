@@ -19,6 +19,9 @@ interface AdminContextValue {
   supabase: SupabaseClient;
   session: Session | null;
   sessionReady: boolean;
+  /** Arrived from an invitation or password reset link: ask for a password first. */
+  needsPassword: boolean;
+  setNeedsPassword: (v: boolean) => void;
   sellbase: Sellbase;
   currency: string;
   setCurrency: (c: string) => void;
@@ -36,6 +39,10 @@ export function AdminProvider({ config, children }: { config: AdminConfig; child
   );
   const [session, setSession] = useState<Session | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
+  // Read before supabase-js consumes the URL hash of an invite or recovery link.
+  const [needsPassword, setNeedsPassword] = useState(
+    () => typeof window !== 'undefined' && /type=(invite|recovery)/.test(window.location.hash),
+  );
   const [currency, setCurrency] = useState('MXN');
   const sessionRef = useRef<Session | null>(null);
   const [queryClient] = useState(
@@ -48,7 +55,8 @@ export function AdminProvider({ config, children }: { config: AdminConfig; child
       setSession(data.session);
       setSessionReady(true);
     });
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => {
+    const { data } = supabase.auth.onAuthStateChange((event, next) => {
+      if (event === 'PASSWORD_RECOVERY') setNeedsPassword(true);
       sessionRef.current = next;
       setSession(next);
       if (!next) queryClient.clear();
@@ -68,7 +76,18 @@ export function AdminProvider({ config, children }: { config: AdminConfig; child
   );
 
   const t = useMemo(() => resolveTexts(config), [config]);
-  const value = { config, t, supabase, session, sessionReady, sellbase, currency, setCurrency };
+  const value = {
+    config,
+    t,
+    supabase,
+    session,
+    sessionReady,
+    needsPassword,
+    setNeedsPassword,
+    sellbase,
+    currency,
+    setCurrency,
+  };
   return (
     <QueryClientProvider client={queryClient}>
       <AdminContext.Provider value={value}>{children}</AdminContext.Provider>

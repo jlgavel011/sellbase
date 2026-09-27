@@ -172,6 +172,31 @@ export function createSellbase(options: SellbaseClientOptions) {
       reports: {
         summary: () => request('reportsSummary', {}),
       },
+      team: {
+        list: () => request('teamList', {}),
+        invite: (body: Body<'teamInvite'>) => request('teamInvite', { body }),
+        setRole: (userId: string, role: Body<'teamUpdate'>['role']) =>
+          request('teamUpdate', { params: { user_id: userId }, body: { role } }),
+        remove: (userId: string) => request('teamRemove', { params: { user_id: userId } }),
+      },
+      tokens: {
+        list: () => request('tokensList', {}),
+        /** The plain token is only in this response; store it right away. */
+        create: (body: Body<'tokenCreate'>) => request('tokenCreate', { body }),
+        revoke: (id: string) => request('tokenRevoke', { params: { id } }),
+      },
+      /** Who changed what: staff, AI agents (tokens), webhooks and the system. */
+      audit: (query: Query<'auditList'> = {}) => request('auditList', { query }),
+      webhooks: {
+        list: () => request('webhooksList', {}),
+        /** The signing secret is only in this response. */
+        create: (body: Body<'webhookCreate'>) => request('webhookCreate', { body }),
+        update: (id: string, body: Body<'webhookUpdate'>) =>
+          request('webhookUpdate', { params: { id }, body }),
+        delete: (id: string) => request('webhookDelete', { params: { id } }),
+        test: (id: string) => request('webhookTest', { params: { id } }),
+        deliveries: (id: string) => request('webhookDeliveries', { params: { id } }),
+      },
       store: {
         get: () => request('storeGet', {}),
         update: (body: Body<'storeUpdate'>) => request('storeUpdate', { body }),

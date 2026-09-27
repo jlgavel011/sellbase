@@ -81,6 +81,10 @@ export interface TestStore {
   emails: NotifyMessage[];
   uploads: { bucket: string; path: string; size: number }[];
   payments: ReturnType<typeof fakePayments>;
+  invites: { email: string; redirectTo: string | null }[];
+  /** Outbound webhook requests, and status codes to answer the next ones with. */
+  hooks: { url: string; headers: Record<string, string>; body: string }[];
+  hookResponses: number[];
   token: (scopes?: readonly ApiScope[]) => Promise<string>;
   staff: (role: 'owner' | 'admin' | 'staff') => Promise<string>;
   request: (
@@ -108,12 +112,27 @@ export async function createTestStore(
   const uploads: { bucket: string; path: string; size: number }[] = [];
   const payments = fakePayments();
   const users = new Map<string, string>();
+  const invites: { email: string; redirectTo: string | null }[] = [];
+  const hooks: { url: string; headers: Record<string, string>; body: string }[] = [];
+  const hookResponses: number[] = [];
+  const webhookFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const headers = Object.fromEntries(new Headers(init?.headers).entries());
+    hooks.push({ url: String(input), headers, body: String(init?.body ?? '') });
+    return new Response('ok', { status: hookResponses.shift() ?? 200 });
+  };
   const secrets = { stripe: { secret_key: 'sk_test_fake', webhook_secret: 'whsec_test' } };
 
   const deps: Deps = {
     sql,
     storeId: async () => storeId,
     verifyUserJwt: async (jwt) => users.get(jwt) ?? null,
+    inviteUser: async (email, redirectTo) => {
+      const id = crypto.randomUUID();
+      await sql`insert into auth.users (id, email, aud, role, invited_at) values (${id}, ${email}, 'authenticated', 'authenticated', now())`;
+      invites.push({ email, redirectTo: redirectTo ?? null });
+      return id;
+    },
+    fetch: (input, init) => webhookFetch(input, init),
     secrets: async (_id, provider) =>
       provider === 'stripe' && options.paymentsConnected !== false ? secrets.stripe : null,
     payments: async () => (options.paymentsConnected === false ? null : payments.adapter),
@@ -141,6 +160,9 @@ export async function createTestStore(
     emails,
     uploads,
     payments,
+    invites,
+    hooks,
+    hookResponses,
     token: async (scopes = DEFAULT_AGENT_SCOPES) =>
       (await createApiToken(deps, { storeId, name: 'test', scopes })).token,
     staff: async (role) => {

@@ -2,7 +2,7 @@
 -- staff, admins/owners and strangers, across two stores.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(34);
+select plan(38);
 
 -- ── Fixtures ─────────────────────────────────────────────────────────────────
 insert into auth.users (id, email) values
@@ -52,6 +52,10 @@ insert into sellbase.integrations (store_id, provider, kind) values
   ('10000000-0000-4000-8000-00000000000b', 'stripe', 'payments');
 insert into sellbase.api_tokens (store_id, name, token_hash, prefix, scopes) values
   ('10000000-0000-4000-8000-00000000000a', 'agent', 'hash-a', 'sb_live_ab', array['catalog:read']);
+insert into sellbase.webhook_endpoints (id, store_id, url) values
+  ('60000000-0000-4000-8000-0000000000a1', '10000000-0000-4000-8000-00000000000a', 'https://erp.test/hooks');
+insert into sellbase.webhook_deliveries (store_id, endpoint_id, event_type, payload) values
+  ('10000000-0000-4000-8000-00000000000a', '60000000-0000-4000-8000-0000000000a1', 'order.paid', '{"email": "cust1@test.dev"}');
 
 -- ── anon ─────────────────────────────────────────────────────────────────────
 set local role anon;
@@ -103,6 +107,7 @@ select is_empty($$ select 1 from sellbase.products where store_id = '10000000-00
 select is_empty('select 1 from sellbase.integrations', 'staff role cannot read integrations');
 select is_empty('select 1 from sellbase.api_tokens', 'staff role cannot read api tokens');
 select is_empty('select 1 from sellbase.audit_log', 'staff role cannot read the audit log');
+select is_empty('select 1 from sellbase.webhook_deliveries', 'staff role cannot read webhook payloads');
 select ok((select count(*) > 0 from sellbase.schema_version), 'staff can read the schema version');
 select throws_ok($$ insert into sellbase.products (store_id, type, title, slug)
                     values ('10000000-0000-4000-8000-00000000000a', 'physical', 'X', 'x') $$,
@@ -115,12 +120,15 @@ select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-000000
 select results_eq('select count(*)::int from sellbase.integrations', array[1], 'owner reads integrations of their store only');
 select results_eq('select count(*)::int from sellbase.api_tokens', array[1], 'owner reads api tokens');
 select results_eq('select count(*)::int from sellbase.audit_log', array[1], 'owner reads the audit log');
+select results_eq('select count(*)::int from sellbase.webhook_endpoints', array[1], 'owner reads webhook endpoints');
+select results_eq('select count(*)::int from sellbase.webhook_deliveries', array[1], 'owner reads webhook deliveries');
 
 -- ── owner of store B ─────────────────────────────────────────────────────────
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-0000000000b1"}', true);
 
 select results_eq('select number from sellbase.orders', array[1], 'another store owner sees only their orders');
 select is_empty('select 1 from sellbase.customers', 'another store owner sees no customers of store A');
+select is_empty('select 1 from sellbase.webhook_endpoints', 'another store owner sees no webhooks of store A');
 
 -- ── signed-in stranger ───────────────────────────────────────────────────────
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-0000000000ff"}', true);

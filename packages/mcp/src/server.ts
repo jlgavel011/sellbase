@@ -11,6 +11,7 @@ import {
   productUpsertInput,
   storeUpdateInput,
   toErrorResponse,
+  WEBHOOK_EVENTS,
 } from '@sellbase/core';
 import type { Sellbase } from '@sellbase/sdk';
 import { readFile } from 'node:fs/promises';
@@ -660,6 +661,40 @@ export function createSellbaseMcpServer(sellbase: Sellbase, options: { version?:
           ? { dry_run: true, valid: true, would_create: order }
           : sellbase.admin.orders.create(order),
       ),
+  );
+
+  server.registerTool(
+    'webhook_setup',
+    {
+      title: 'Outbound webhooks',
+      description: `Send store events (orders, refunds, shipments, bookings, products) to another system such as an ERP, a sheet or an automation tool. action "list" shows endpoints and delivery health; "create" returns the signing secret ONCE (give it to the owner to store in the receiving system, never print it again); "test" sends a signed webhook.test now; "delete" removes one. Receivers verify the ${BRAND.name}-Signature header: t=<unix>,v1=HMAC-SHA256(secret, "<t>.<body>"). Events: ${WEBHOOK_EVENTS.join(', ')}.`,
+      inputSchema: {
+        action: z.enum(['list', 'create', 'test', 'delete']),
+        id: z.uuid().optional().describe('Endpoint id for test and delete.'),
+        url: z.url().optional(),
+        events: z
+          .array(z.enum(WEBHOOK_EVENTS))
+          .optional()
+          .describe('Empty or omitted = every event.'),
+        description: z.string().max(200).optional(),
+      },
+    },
+    ({ action, id, url, events, description }) =>
+      run(async () => {
+        if (action === 'list') return sellbase.admin.webhooks.list();
+        if (action === 'create') {
+          if (!url) throw new Error('Pass url.');
+          return sellbase.admin.webhooks.create({
+            url,
+            events: events ?? [],
+            description: description ?? '',
+          });
+        }
+        if (!id) throw new Error('Pass the endpoint id (see action "list").');
+        return action === 'test'
+          ? sellbase.admin.webhooks.test(id)
+          : sellbase.admin.webhooks.delete(id);
+      }),
   );
 
   server.registerTool(

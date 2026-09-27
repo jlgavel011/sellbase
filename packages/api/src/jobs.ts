@@ -14,6 +14,7 @@ import {
   loadOrderEmailProps,
   refreshOrderStatus,
 } from './fulfillment.js';
+import { deliverWebhooks, enqueueWebhooks } from './webhooks-out.js';
 
 const MAX_ATTEMPTS = 8;
 
@@ -21,7 +22,9 @@ interface OutboxEvent {
   id: string;
   type: string;
   store_id: string;
+  entity: string;
   entity_id: string | null;
+  created_at: Date;
   payload: {
     balance?: boolean;
     notify?: boolean;
@@ -43,7 +46,7 @@ export async function runJobs(deps: Deps, options: { limit?: number; storeId?: s
 
   const summary = { processed: 0, failed: 0 };
   const events = await sql<OutboxEvent[]>`
-    select id, type, store_id, entity_id, payload from sellbase.events
+    select id, type, store_id, entity, entity_id, payload, created_at from sellbase.events
      where processed_at is null and attempts < ${MAX_ATTEMPTS}
        ${options.storeId ? sql`and store_id = ${options.storeId}` : sql``}
      order by created_at limit ${options.limit ?? 50}`;
@@ -55,6 +58,7 @@ export async function runJobs(deps: Deps, options: { limit?: number; storeId?: s
           select id from sellbase.events where id = ${event.id} and processed_at is null for update skip locked`;
         if (!locked) return;
         await handle(deps, tx, event);
+        await enqueueWebhooks(tx, event);
         await tx`update sellbase.events set processed_at = now(), attempts = attempts + 1, last_error = null where id = ${event.id}`;
       });
       summary.processed += 1;
@@ -65,7 +69,8 @@ export async function runJobs(deps: Deps, options: { limit?: number; storeId?: s
     }
   }
   await sendReminders(deps, summary, options.storeId);
-  return summary;
+  const hooks = await deliverWebhooks(deps, options.storeId ? { storeId: options.storeId } : {});
+  return { ...summary, webhooks: hooks };
 }
 
 /**

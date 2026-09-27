@@ -5,7 +5,7 @@ import type { Deps } from '../deps.js';
 import { register, type AppOptions } from '../http.js';
 
 /** Latest migration this API version expects (`sellbase.schema_version`). */
-export const EXPECTED_SCHEMA_VERSION = '0006';
+export const EXPECTED_SCHEMA_VERSION = '0007';
 
 /** Providers that can be connected, with the kind of integration and how to test them. */
 const PROVIDERS = {

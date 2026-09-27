@@ -13,7 +13,9 @@ import { registerOrders } from './handlers/orders.js';
 import { registerReports } from './handlers/reports.js';
 import { registerStore } from './handlers/store.js';
 import { registerStorefront } from './handlers/storefront.js';
+import { registerTeam } from './handlers/team.js';
 import { registerTestPurchase } from './handlers/test-purchase.js';
+import { registerWebhookEndpoints } from './handlers/webhook-endpoints.js';
 import { installErrorHandler, type AppOptions } from './http.js';
 
 /** The public API (SPEC §7), mounted at /sellbase-api/v1 inside the Edge Function. */
@@ -40,6 +42,8 @@ export function createApiApp(deps: Deps, options: AppOptions = {}, basePath = '/
   registerMerchandising(app, deps, options);
   registerCustomers(app, deps, options);
   registerReports(app, deps, options);
+  registerTeam(app, deps, options);
+  registerWebhookEndpoints(app, deps, options);
   registerStore(app, deps, options);
   registerTestPurchase(app, deps, options);
   return app;
