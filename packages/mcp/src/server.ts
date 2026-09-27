@@ -336,6 +336,97 @@ export function createSellbaseMcpServer(sellbase: Sellbase, options: { version?:
   );
 
   server.registerTool(
+    'order_action',
+    {
+      title: 'Act on an order',
+      description:
+        'fulfill: mark items shipped with carrier/tracking (omit items to ship everything pending); cancel: cancel an unfulfilled or partially fulfilled order (restocks by default; needs confirm=true; refunding needs order_refund permissions); note: add an internal note; resend_notification: email the confirmation (or "order_shipped") again. Confirm cancellations with the owner first.',
+      inputSchema: {
+        order_id: z.uuid(),
+        action: z.enum(['fulfill', 'cancel', 'note', 'resend_notification']),
+        items: z
+          .array(z.object({ order_item_id: z.uuid(), quantity: z.number().int().positive() }))
+          .optional(),
+        carrier: z.string().optional(),
+        tracking_number: z.string().optional(),
+        tracking_url: z.url().optional(),
+        reason: z.string().optional().describe('Required for cancel.'),
+        refund: z
+          .boolean()
+          .optional()
+          .describe('cancel only: also refund what was paid (needs refunds:write).'),
+        restock: z.boolean().optional(),
+        note: z.string().optional().describe('Required for note.'),
+        template: z.enum(['order_confirmation', 'order_shipped']).optional(),
+        notify_customer: z.boolean().optional(),
+        confirm: z.boolean().optional().describe('Must be true to cancel.'),
+      },
+    },
+    (a) =>
+      run(async () => {
+        const notify =
+          a.notify_customer === undefined ? {} : { notify_customer: a.notify_customer };
+        switch (a.action) {
+          case 'fulfill':
+            return sellbase.admin.orders.fulfill(a.order_id, {
+              ...(a.items ? { items: a.items } : {}),
+              ...(a.carrier ? { carrier: a.carrier } : {}),
+              ...(a.tracking_number ? { tracking_number: a.tracking_number } : {}),
+              ...(a.tracking_url ? { tracking_url: a.tracking_url } : {}),
+              ...notify,
+            });
+          case 'cancel':
+            if (!a.reason || a.confirm !== true)
+              throw new Error(
+                'cancel needs reason and confirm=true (confirm with the owner first).',
+              );
+            return sellbase.admin.orders.cancel(a.order_id, {
+              reason: a.reason,
+              confirm: true,
+              ...(a.refund !== undefined ? { refund: a.refund } : {}),
+              ...(a.restock !== undefined ? { restock: a.restock } : {}),
+              ...notify,
+            });
+          case 'note':
+            if (!a.note) throw new Error('note needs `note`.');
+            return sellbase.admin.orders.note(a.order_id, a.note);
+          case 'resend_notification':
+            return sellbase.admin.orders.notify(a.order_id, a.template ?? 'order_confirmation');
+        }
+      }),
+  );
+
+  server.registerTool(
+    'order_refund',
+    {
+      title: 'Refund an order',
+      description: `Refund all or part of an order through the payment provider. Moves real money in live mode: get explicit approval from the owner and pass confirm=true. Needs the refunds:write scope (agent tokens do not have it unless the owner granted it). ${money}`,
+      inputSchema: {
+        order_id: z.uuid(),
+        amount: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe('Minor units; omit to refund everything left.'),
+        reason: z.string().min(1),
+        notify_customer: z.boolean().default(true),
+        confirm: z.literal(true),
+      },
+      annotations: { destructiveHint: true },
+    },
+    ({ order_id, amount, reason, notify_customer, confirm }) =>
+      run(() =>
+        sellbase.admin.orders.refund(order_id, {
+          reason,
+          confirm,
+          notify_customer,
+          ...(amount ? { amount } : {}),
+        }),
+      ),
+  );
+
+  server.registerTool(
     'test_purchase',
     {
       title: 'Test purchase',

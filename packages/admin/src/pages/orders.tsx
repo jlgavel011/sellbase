@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useAdmin } from '../context.js';
 import { Link } from '../router.js';
+import { OrderActions } from './order-actions.js';
 import { PageTitle, useSlot } from '../shell.js';
 import {
   Badge,
@@ -28,7 +29,7 @@ const TONES: Record<string, Tone> = {
   unpaid: 'amber',
   cancelled: 'red',
   refunded: 'red',
-  partially_refunded: 'red',
+  partially_refunded: 'amber',
 };
 
 export function StatusBadge({ value }: { value: string }) {
@@ -143,6 +144,35 @@ export function OrderDetailPage({ id }: { id: string }) {
   if (order.isLoading) return <Spinner label={t.common.loading} />;
   if (order.error || !order.data) return <ErrorAlert error={order.error} />;
   const o = order.data;
+  const ev = t.orders.events;
+  const num = (v: unknown) => (typeof v === 'number' ? v : 0);
+  const str = (v: unknown) => (typeof v === 'string' ? v : null);
+  /** Timeline text in the admin's language; the API message is the fallback. */
+  const eventText = (e: (typeof o.events)[number]) => {
+    const d = e.data;
+    switch (e.type) {
+      case 'order.created':
+        return ev['order.created'];
+      case 'digital.granted':
+        return ev['digital.granted'](num(d.count) || (Array.isArray(d.files) ? d.files.length : 0));
+      case 'test_purchase':
+        return ev.test_purchase;
+      case 'fulfillment.created':
+        return ev['fulfillment.created'](num(d.quantity), str(d.carrier), str(d.tracking_number));
+      case 'refund.created':
+        return ev['refund.created'](formatMoney(num(d.amount), o.currency), str(d.reason) ?? '');
+      case 'order.cancelled':
+        return ev['order.cancelled'](str(d.reason) ?? '');
+      case 'notification.requested':
+        return ev['notification.requested'];
+      case 'inventory.oversold':
+        return ev['inventory.oversold'](num(d.short_by));
+      case 'notification.sent':
+        return ev.emailSent(ev.templates[str(d.template) ?? ''] ?? str(d.template) ?? '');
+      default:
+        return e.message;
+    }
+  };
   const money = (n: number) => formatMoney(n, o.currency);
   const address = o.shipping_address;
 
@@ -204,8 +234,8 @@ export function OrderDetailPage({ id }: { id: string }) {
             <ol className="sb:flex sb:flex-col sb:gap-3 sb:text-sm">
               {o.events.map((e, i) => (
                 <li key={i} className="sb:flex sb:gap-3">
-                  <span className="sb:w-36 sb:shrink-0 sb:text-zinc-500">{date(e.created_at)}</span>
-                  <span>{e.message}</span>
+                  <span className="sb:w-44 sb:shrink-0 sb:text-zinc-500">{date(e.created_at)}</span>
+                  <span>{eventText(e)}</span>
                 </li>
               ))}
             </ol>
@@ -231,6 +261,44 @@ export function OrderDetailPage({ id }: { id: string }) {
               </div>
             )}
           </Card>
+          <OrderActions order={o} />
+          {o.fulfillments.some((f) => f.shipment) && (
+            <Card title={t.orders.shipments}>
+              <ul className="sb:flex sb:flex-col sb:gap-2 sb:text-sm">
+                {o.fulfillments
+                  .filter((f) => f.shipment)
+                  .map((f) => (
+                    <li key={f.id}>
+                      {[f.shipment?.carrier, f.shipment?.tracking_number]
+                        .filter(Boolean)
+                        .join(' · ') || '—'}
+                      {f.shipment?.tracking_url && (
+                        <a
+                          href={f.shipment.tracking_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="sb:ml-2 sb:text-[var(--sba-primary)] sb:underline"
+                        >
+                          {t.orders.track}
+                        </a>
+                      )}
+                    </li>
+                  ))}
+              </ul>
+            </Card>
+          )}
+          {o.refunds.length > 0 && (
+            <Card title={t.orders.refunds}>
+              <ul className="sb:flex sb:flex-col sb:gap-2 sb:text-sm">
+                {o.refunds.map((r) => (
+                  <li key={r.id} className="sb:flex sb:justify-between sb:gap-2">
+                    <span>{r.reason}</span>
+                    <span>−{money(r.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
           <Card title={t.orders.payments}>
             <ul className="sb:flex sb:flex-col sb:gap-2 sb:text-sm">
               {o.payments.map((p) => (

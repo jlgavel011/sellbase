@@ -4,6 +4,7 @@ import { createSql } from '../db.js';
 import type { Deps } from '../deps.js';
 
 declare const Deno: { env: { get(name: string): string | undefined } };
+declare const EdgeRuntime: { waitUntil(task: Promise<unknown>): void } | undefined;
 
 function env(name: string): string {
   const value = Deno.env.get(name);
@@ -84,6 +85,10 @@ export function edgeDeps(adapters: {
         if (error) throw new Error(`Could not upload ${bucket}/${path}: ${error.message}`);
       },
       publicUrl: (bucket, path) => `${publicUrl}/storage/v1/object/public/${bucket}/${path}`,
+    },
+    background: (task) => {
+      if (typeof EdgeRuntime !== 'undefined') EdgeRuntime.waitUntil(task);
+      else void task;
     },
     now: () => new Date(),
     publicApiUrl: `${publicUrl}/functions/v1/sellbase-api`,

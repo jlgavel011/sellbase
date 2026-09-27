@@ -19,6 +19,8 @@ export interface Deps {
     upload: (bucket: string, path: string, bytes: Uint8Array, contentType: string) => Promise<void>;
     publicUrl: (bucket: string, path: string) => string;
   };
+  /** Keeps work alive after the response (EdgeRuntime.waitUntil). Absent in tests. */
+  background?: (task: Promise<unknown>) => void;
   now: () => Date;
   /** Public base URL of the API function, used in links sent to customers. */
   publicApiUrl: string;

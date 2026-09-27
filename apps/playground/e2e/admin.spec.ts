@@ -117,3 +117,57 @@ test('a signed-in user who is not on the team is turned away', async ({ page }) 
   await signIn(page, email, password);
   await expect(page.getByText('no es parte del equipo')).toBeVisible();
 });
+
+test('order actions: ship with tracking and refund part of it through Stripe', async ({ page }) => {
+  const env = Object.fromEntries(
+    (await import('node:fs'))
+      .readFileSync(new URL('../../../.env', import.meta.url), 'utf8')
+      .split('\n')
+      .map((l) => /^([A-Z_]+)=(.*)$/.exec(l))
+      .filter((m): m is RegExpExecArray => Boolean(m))
+      .map((m) => [m[1], m[2]]),
+  ) as Record<string, string>;
+  test.skip(!env.SELLBASE_DEMO_TOKEN, 'run scripts/seed-demo.mjs first');
+  const purchase = await page.request.post(
+    'http://127.0.0.1:54321/functions/v1/sellbase-api/v1/test-purchase',
+    {
+      headers: {
+        authorization: `Bearer ${env.SELLBASE_DEMO_TOKEN}`,
+        'content-type': 'application/json',
+      },
+      data: { email: 'refund-e2e@example.com' },
+    },
+  );
+  const result = (await purchase.json()) as {
+    ok: boolean;
+    order_id: string;
+    order_number: number;
+    steps: { step: string; ok: boolean }[];
+  };
+  test.skip(!result.ok, `test_purchase not available: ${JSON.stringify(result.steps)}`);
+
+  const { email, password } = await createOwner();
+  await signIn(page, email, password);
+  await expect(page.getByRole('heading', { name: 'Inicio' })).toBeVisible();
+  await page.goto(`/admin/orders/${result.order_id}`);
+  await expect(page.getByRole('heading', { name: `Pedido #${result.order_number}` })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Marcar como enviado' }).first().click();
+  await page.getByLabel('Paquetería').fill('Estafeta');
+  await page.getByLabel('Número de guía').fill('EST-E2E-1');
+  await page.getByLabel('URL de rastreo').fill('https://rastreo.test/EST-E2E-1');
+  await page.getByRole('button', { name: 'Marcar como enviado' }).last().click();
+  await expect(page.getByText('Estafeta · EST-E2E-1')).toBeVisible();
+  await expect(page.getByText('Surtido', { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Reembolsar' }).first().click();
+  await page.getByLabel(/Monto a reembolsar/).fill('99.00');
+  await page.getByLabel('Motivo').fill('Envío con retraso');
+  await page.getByRole('button', { name: 'Reembolsar' }).last().click();
+  await expect(
+    page.getByText(/Se reembolsarán \$99\.00 a refund-e2e@example\.com vía Stripe/),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Confirmar' }).click();
+  await expect(page.getByText('Reembolso parcial')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText('−$99.00')).toBeVisible();
+});

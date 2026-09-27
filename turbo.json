@@ -22,6 +22,11 @@
     "test:integration": {
       "dependsOn": ["^build"],
       "cache": false
+    },
+    "@sellbase/api#build": {
+      "dependsOn": ["^build"],
+      "outputs": [],
+      "cache": false
     }
   }
 }

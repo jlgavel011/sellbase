@@ -21,6 +21,25 @@ export const messages = {
     total: 'Total',
     taxIncluded: (amount: string) => `Incluye ${amount} de impuestos`,
     questions: (email: string) => `¿Dudas? Escríbenos a ${email}.`,
+    shipped: {
+      subject: (n: number) => `Tu pedido #${n} va en camino`,
+      title: 'Tu pedido va en camino',
+      body: 'Ya enviamos tus productos.',
+      track: 'Rastrear envío',
+      carrier: (carrier: string, tracking: string) => `${carrier} · guía ${tracking}`,
+    },
+    refunded: {
+      subject: (n: number) => `Reembolso del pedido #${n}`,
+      title: 'Procesamos tu reembolso',
+      body: (amount: string) =>
+        `Te reembolsamos ${amount}. Puede tardar de 5 a 10 días hábiles en verse en tu estado de cuenta.`,
+    },
+    cancelled: {
+      subject: (n: number) => `Pedido #${n} cancelado`,
+      title: 'Tu pedido fue cancelado',
+      body: 'Cancelamos tu pedido.',
+      refundNote: (amount: string) => `Te reembolsamos ${amount}.`,
+    },
   },
   en: {
     subject: (n: number) => `Order #${n} confirmed`,
@@ -39,5 +58,24 @@ export const messages = {
     total: 'Total',
     taxIncluded: (amount: string) => `Includes ${amount} in taxes`,
     questions: (email: string) => `Questions? Write to ${email}.`,
+    shipped: {
+      subject: (n: number) => `Your order #${n} is on its way`,
+      title: 'Your order is on its way',
+      body: 'We shipped your items.',
+      track: 'Track shipment',
+      carrier: (carrier: string, tracking: string) => `${carrier} · tracking ${tracking}`,
+    },
+    refunded: {
+      subject: (n: number) => `Refund for order #${n}`,
+      title: 'We processed your refund',
+      body: (amount: string) =>
+        `We refunded ${amount}. It can take 5–10 business days to show on your statement.`,
+    },
+    cancelled: {
+      subject: (n: number) => `Order #${n} cancelled`,
+      title: 'Your order was cancelled',
+      body: 'We cancelled your order.',
+      refundNote: (amount: string) => `We refunded ${amount}.`,
+    },
   },
 } as const;

@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { Deps } from './deps.js';
 import { registerCatalog } from './handlers/catalog.js';
+import { registerOrderActions } from './handlers/order-actions.js';
 import { registerOrders } from './handlers/orders.js';
 import { registerStore } from './handlers/store.js';
 import { registerStorefront } from './handlers/storefront.js';
@@ -26,6 +27,7 @@ export function createApiApp(deps: Deps, options: AppOptions = {}, basePath = '/
   registerStorefront(app, deps, options);
   registerCatalog(app, deps, options);
   registerOrders(app, deps, options);
+  registerOrderActions(app, deps, options);
   registerStore(app, deps, options);
   registerTestPurchase(app, deps, options);
   return app;

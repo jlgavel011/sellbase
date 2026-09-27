@@ -51,6 +51,7 @@ try {
     values (${store.id}, 'demo seed', ${createHash('sha256').update(token).digest('hex')}, ${token.slice(0, 12)},
             array['catalog:read','catalog:write','orders:read','orders:write','customers:read','discounts:write','settings:write','integrations:write'])`;
 
+  await sql`select sellbase.configure_jobs('http://kong:8000/functions/v1/sellbase-jobs', ${status.SERVICE_ROLE_KEY})`;
   const url = `${status.API_URL}/functions/v1/sellbase-api`;
   const sb = createSellbase({ url, token });
   const existing = await sb.admin.products.search({ limit: 100 });

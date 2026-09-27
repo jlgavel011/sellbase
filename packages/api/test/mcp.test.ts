@@ -118,6 +118,28 @@ describe('mcp', () => {
     ]);
   });
 
+  it('fulfills and notes orders, and cannot refund without the scope', async () => {
+    const [{ id }] = (await call('orders_search', { limit: 1 })).data.data;
+    const shipped = await call('order_action', {
+      order_id: id,
+      action: 'fulfill',
+      carrier: 'DHL',
+      tracking_number: 'DHL9',
+    });
+    expect(shipped.isError, JSON.stringify(shipped.data)).toBe(false);
+    expect(shipped.data.fulfillment_status).toBe('fulfilled');
+    const noted = await call('order_action', {
+      order_id: id,
+      action: 'note',
+      note: 'Entregado en recepción',
+    });
+    expect(noted.data.notes).toContain('Entregado en recepción');
+    const refund = await call('order_refund', { order_id: id, reason: 'prueba', confirm: true });
+    expect(refund.isError).toBe(true);
+    expect(refund.data.code).toBe('FORBIDDEN');
+    expect(refund.data.hint).toContain('refunds:write');
+  });
+
   it('returns API errors with a hint the agent can act on', async () => {
     const res = await call('product_upsert', {
       product: {

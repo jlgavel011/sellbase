@@ -73,7 +73,7 @@ export async function fulfillDigital(
   await tx`
     insert into sellbase.order_events (store_id, order_id, type, message, data)
     values (${storeId}, ${orderId}, 'digital.granted', ${`Download links issued for ${links.length} file(s).`},
-            ${tx.json({ files: links.map((l) => l.file_name) } as never)})`;
+            ${tx.json({ files: links.map((l) => l.file_name), count: links.length } as never)})`;
   return links;
 }
 

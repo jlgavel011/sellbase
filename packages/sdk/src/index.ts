@@ -96,6 +96,20 @@ export function createSellbase(options: SellbaseClientOptions) {
       orders: {
         search: (query: Query<'ordersList'> = {}) => request('ordersList', { query }),
         get: (id: string) => request('orderGet', { params: { id } }),
+        fulfill: (id: string, body: Body<'orderFulfill'> = {}) =>
+          request('orderFulfill', { params: { id }, body }),
+        cancel: (id: string, body: Body<'orderCancel'>) =>
+          request('orderCancel', { params: { id }, body }),
+        refund: (id: string, body: Body<'orderRefund'>, idempotencyKey?: string) =>
+          request('orderRefund', {
+            params: { id },
+            body,
+            ...(idempotencyKey ? { idempotencyKey } : {}),
+          }),
+        note: (id: string, note: string) =>
+          request('orderNote', { params: { id }, body: { note } }),
+        notify: (id: string, template: Body<'orderNotify'>['template'] = 'order_confirmation') =>
+          request('orderNotify', { params: { id }, body: { template } }),
       },
       store: {
         get: () => request('storeGet', {}),

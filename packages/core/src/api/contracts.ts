@@ -220,13 +220,40 @@ export const orderListItem = order.pick({
   placed_at: true,
 });
 
+export const fulfillmentView = z.object({
+  id,
+  type: z.enum(['shipment', 'digital', 'booking']),
+  status: z.enum(['pending', 'fulfilled', 'cancelled']),
+  items: z.array(z.object({ order_item_id: id, quantity: z.number().int() })),
+  shipment: z
+    .object({
+      carrier: z.string().nullable(),
+      tracking_number: z.string().nullable(),
+      tracking_url: z.string().nullable(),
+      status: z.string(),
+    })
+    .nullable(),
+  created_at: timestamp,
+});
+
+export const refundView = z.object({
+  id,
+  amount,
+  reason: z.string(),
+  status: z.enum(['pending', 'succeeded', 'failed']),
+  created_at: timestamp,
+});
+
 export const orderDetail = order.extend({
-  items: z.array(orderItem),
+  items: z.array(orderItem.extend({ fulfilled_quantity: z.number().int() })),
   payments: z.array(payment),
+  fulfillments: z.array(fulfillmentView),
+  refunds: z.array(refundView),
   events: z.array(
     z.object({
       type: z.string(),
       message: z.string(),
+      data: z.record(z.string(), z.unknown()),
       actor_type: z.string(),
       created_at: timestamp,
     }),
@@ -570,6 +597,91 @@ export const routes = {
         }),
       ),
     }),
+  },
+
+  orderFulfill: {
+    id: 'orderFulfill',
+    method: 'POST',
+    path: '/orders/:id/fulfillments',
+    summary: 'Mark items as shipped (manual shipping) with carrier and tracking',
+    description:
+      'Omit `items` to ship everything still pending. The customer gets a "your order is on its way" email unless notify_customer is false.',
+    tag: 'orders',
+    auth: staff('orders:write'),
+    params: z.object({ id }),
+    body: z.object({
+      items: z
+        .array(z.object({ order_item_id: id, quantity: z.number().int().positive() }))
+        .optional(),
+      carrier: z.string().max(80).optional(),
+      tracking_number: z.string().max(120).optional(),
+      tracking_url: z.url().optional(),
+      notify_customer: z.boolean().default(true),
+    }),
+    response: orderDetail,
+  },
+  orderCancel: {
+    id: 'orderCancel',
+    method: 'POST',
+    path: '/orders/:id/cancel',
+    summary: 'Cancel an order, optionally refunding it and restocking items',
+    description:
+      'Money action: requires confirm=true. refund=true also needs the refunds:write scope. Download links are revoked.',
+    tag: 'orders',
+    auth: staff('orders:write'),
+    params: z.object({ id }),
+    body: z.object({
+      reason: z.string().min(1).max(500),
+      restock: z.boolean().default(true),
+      refund: z.boolean().default(false),
+      notify_customer: z.boolean().default(true),
+      confirm: z.literal(true).describe('Must be true. Confirm the impact with the owner first.'),
+    }),
+    response: orderDetail,
+  },
+  orderRefund: {
+    id: 'orderRefund',
+    method: 'POST',
+    path: '/orders/:id/refunds',
+    summary: 'Refund all or part of an order through the payment provider',
+    description:
+      'Money action: requires confirm=true and the refunds:write scope. Omit amount to refund everything still refundable.',
+    tag: 'orders',
+    auth: staff('refunds:write'),
+    params: z.object({ id }),
+    body: z.object({
+      amount: amount.refine((v) => v > 0, 'Refund amount must be positive').optional(),
+      reason: z.string().min(1).max(500),
+      notify_customer: z.boolean().default(true),
+      confirm: z
+        .literal(true)
+        .describe('Must be true. Refunds move real money; confirm with the owner first.'),
+    }),
+    response: orderDetail,
+  },
+  orderNote: {
+    id: 'orderNote',
+    method: 'POST',
+    path: '/orders/:id/notes',
+    summary: 'Add an internal note to the order timeline',
+    tag: 'orders',
+    auth: staff('orders:write'),
+    params: z.object({ id }),
+    body: z.object({ note: z.string().min(1).max(2000) }),
+    response: orderDetail,
+  },
+  orderNotify: {
+    id: 'orderNotify',
+    method: 'POST',
+    path: '/orders/:id/notifications',
+    summary: 'Send an order email again (confirmation or shipment)',
+    tag: 'orders',
+    auth: staff('orders:write'),
+    params: z.object({ id }),
+    body: z.object({
+      template: z.enum(['order_confirmation', 'order_shipped']).default('order_confirmation'),
+    }),
+    response: z.object({ queued: z.boolean(), to: z.string() }),
   },
 
   // Store and integrations

@@ -63,3 +63,35 @@ describe('order confirmation email', () => {
     expect(email.html).not.toContain('Envío');
   });
 });
+
+describe('order update emails', () => {
+  const base = {
+    brand: props.brand,
+    locale: 'es' as const,
+    order: { number: 1001, currency: 'MXN' },
+  };
+
+  it('renders shipped with tracking', async () => {
+    const { renderOrderUpdate } = await import('../src/index.js');
+    const email = await renderOrderUpdate({
+      ...base,
+      kind: 'shipped',
+      carrier: 'Estafeta',
+      tracking_number: 'EST123',
+      tracking_url: 'https://track.test/EST123',
+    });
+    expect(email.subject).toBe('Tu pedido #1001 va en camino');
+    expect(email.html).toContain('https://track.test/EST123');
+    expect(email.text).toContain('Estafeta · guía EST123');
+  });
+
+  it('renders refunds and cancellations with amounts', async () => {
+    const { renderOrderUpdate } = await import('../src/index.js');
+    expect((await renderOrderUpdate({ ...base, kind: 'refunded', amount: 34900 })).text).toContain(
+      '$349.00',
+    );
+    const cancelled = await renderOrderUpdate({ ...base, kind: 'cancelled', refunded_amount: 0 });
+    expect(cancelled.subject).toBe('Pedido #1001 cancelado');
+    expect(cancelled.text).not.toContain('reembolsamos');
+  });
+});

@@ -1,6 +1,7 @@
 import { render } from '@react-email/render';
 import { messages } from './i18n.js';
 import { OrderConfirmation, type OrderConfirmationProps } from './order-confirmation.js';
+import { OrderUpdate, type OrderUpdateProps } from './order-update.js';
 
 export {
   OrderConfirmation,
@@ -8,6 +9,7 @@ export {
   type EmailBrand,
 } from './order-confirmation.js';
 export { messages, toLocale, type Locale } from './i18n.js';
+export { OrderUpdate, type OrderUpdateProps } from './order-update.js';
 
 export interface RenderedEmail {
   subject: string;
@@ -21,4 +23,10 @@ export async function renderOrderConfirmation(
   const element = <OrderConfirmation {...props} />;
   const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
   return { subject: messages[props.locale].subject(props.order.number), html, text };
+}
+
+export async function renderOrderUpdate(props: OrderUpdateProps): Promise<RenderedEmail> {
+  const element = <OrderUpdate {...props} />;
+  const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
+  return { subject: messages[props.locale][props.kind].subject(props.order.number), html, text };
 }

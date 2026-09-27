@@ -5,7 +5,7 @@ import type { Deps } from '../deps.js';
 import { register, type AppOptions } from '../http.js';
 
 /** Latest migration this API version expects (`sellbase.schema_version`). */
-export const EXPECTED_SCHEMA_VERSION = '0002';
+export const EXPECTED_SCHEMA_VERSION = '0003';
 
 /** Providers that can be connected, with the kind of integration and how to test them. */
 const PROVIDERS = {
@@ -245,6 +245,18 @@ export async function runDoctor(deps: Deps, storeId: string): Promise<DoctorResp
       'warn',
       'No active products.',
       'Create one with product_upsert (status "active").',
+    );
+
+  const [jobs] = await sql<{ configured: boolean }[]>`
+    select exists (select 1 from vault.secrets where name = 'sellbase_jobs_url') as configured`;
+  if (jobs?.configured) add('jobs', 'Background jobs', 'ok', 'Scheduled every minute.');
+  else
+    add(
+      'jobs',
+      'Background jobs',
+      'fail',
+      'The jobs function is not scheduled: paid orders would not get files or emails.',
+      'Run `npx sellbase init` again, or `select sellbase.configure_jobs(<jobs function URL>, <service role key>)`.',
     );
 
   const [webhook] = await sql<{ n: number }[]>`

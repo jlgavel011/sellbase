@@ -208,6 +208,11 @@ export async function init(cwd: string, options: InitOptions) {
       locale: options.locale,
       contactEmail: options.ownerEmail ?? null,
     });
+    // pg_cron calls the jobs function from inside the database container.
+    const jobsUrl = conn.local
+      ? 'http://kong:8000/functions/v1/sellbase-jobs'
+      : `${conn.apiUrl.replace(/\/+$/, '')}/functions/v1/sellbase-jobs`;
+    await sql`select sellbase.configure_jobs(${jobsUrl}, ${conn.serviceRoleKey})`;
     if (options.ownerEmail)
       await inviteOwner(conn, sql, store.id, options.ownerEmail, 'http://localhost:3000/admin');
     return {

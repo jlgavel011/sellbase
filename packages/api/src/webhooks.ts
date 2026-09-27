@@ -2,6 +2,7 @@ import { sellbaseError, toErrorResponse } from '@sellbase/core';
 import { Hono } from 'hono';
 import type { Deps } from './deps.js';
 import { fromDbError } from './errors.js';
+import { kickJobs } from './jobs.js';
 
 /**
  * Payment provider webhooks (SPEC §8 step 3). Signature first, then the event id is
@@ -60,6 +61,8 @@ export function createWebhooksApp(deps: Deps, basePath = '/sellbase-webhooks') {
             return 'noted'; // deferred payments (OXXO/SPEI) arrive in Phase 2
         }
       });
+      // Deliver files and send the confirmation right away; pg_cron retries if this fails.
+      if (outcome === 'order_placed') kickJobs(deps);
       return c.json({ received: true, outcome });
     } catch (error) {
       const known = fromDbError(error);
