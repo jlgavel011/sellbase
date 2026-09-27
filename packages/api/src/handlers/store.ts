@@ -8,6 +8,7 @@ import {
   refreshStripeAccount,
   setupStripeWebhook,
   startLiveCheck,
+  stripeWebhookUrl,
   type StripeConfig,
 } from '../stripe-live.js';
 
@@ -398,6 +399,16 @@ export async function runDoctor(deps: Deps, storeId: string): Promise<DoctorResp
           ? 'Run payments_live_check to see one arrive.'
           : 'Run test_purchase or a real checkout in test mode.'
         : `Locally: stripe listen${stripeConfig.mode === 'live' ? ' --live' : ''} --forward-to ${webhooksUrl}, and connect Stripe again with its whsec_ as webhook_secret. Deployed: reconnect Stripe and the endpoint is created for you.`,
+    );
+
+  // The private-network escape hatch belongs to the local stack only.
+  if (deps.allowPrivateWebhooks && stripeWebhookUrl(deps) !== null)
+    add(
+      'webhook_guard',
+      'Webhook network guard',
+      'fail',
+      'SELLBASE_WEBHOOKS_ALLOW_PRIVATE is on in a deployed project: webhooks could reach your private network.',
+      'Remove it: npx supabase secrets unset SELLBASE_WEBHOOKS_ALLOW_PRIVATE.',
     );
 
   return { ok: checks.every((c) => c.status !== 'fail'), checks };

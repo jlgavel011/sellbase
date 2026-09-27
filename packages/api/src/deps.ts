@@ -26,6 +26,10 @@ export interface Deps {
   inviteUser: (email: string, redirectTo?: string) => Promise<string>;
   /** HTTP client for outbound webhooks; defaults to the global fetch. */
   fetch?: typeof fetch;
+  /** Resolves a host name to its addresses (webhook SSRF guard); defaults to DNS. */
+  resolveHost?: (host: string) => Promise<string[]>;
+  /** Local development only: let webhooks reach private addresses (host.docker.internal). */
+  allowPrivateWebhooks?: boolean;
   /** Keeps work alive after the response (EdgeRuntime.waitUntil). Absent in tests. */
   background?: (task: Promise<unknown>) => void;
   now: () => Date;

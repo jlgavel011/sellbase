@@ -47,7 +47,7 @@ const product = {
 describe('seo helpers', () => {
   it('builds Product JSON-LD with an aggregate offer and stock per variant', () => {
     const ld = productJsonLd(product, {
-      url: 'https://tienda.test/productos/playera',
+      url: 'https://tienda.test/products/playera',
       brand: 'Tienda',
     });
     expect(ld).toMatchObject({
@@ -72,12 +72,12 @@ describe('seo helpers', () => {
 
   it('builds page metadata with Open Graph images', () => {
     const meta = productMetadata(product, {
-      url: 'https://tienda.test/productos/playera',
+      url: 'https://tienda.test/products/playera',
       siteName: 'Tienda',
     });
     expect(meta).toMatchObject({
       title: 'Playera',
-      alternates: { canonical: 'https://tienda.test/productos/playera' },
+      alternates: { canonical: 'https://tienda.test/products/playera' },
       openGraph: {
         images: [{ url: 'https://cdn.test/a.jpg', alt: 'Playera' }],
         siteName: 'Tienda',
@@ -96,10 +96,10 @@ describe('seo helpers', () => {
     };
     const entries = await catalogSitemap(fake, { baseUrl: 'https://tienda.test/' });
     expect(entries.map((e) => e.url)).toEqual([
-      'https://tienda.test/productos/a',
-      'https://tienda.test/productos/b&c',
-      'https://tienda.test/colecciones/novedades',
+      'https://tienda.test/products/a',
+      'https://tienda.test/products/b&c',
+      'https://tienda.test/collections/novedades',
     ]);
-    expect(sitemapXml(entries)).toContain('<loc>https://tienda.test/productos/b&amp;c</loc>');
+    expect(sitemapXml(entries)).toContain('<loc>https://tienda.test/products/b&amp;c</loc>');
   });
 });

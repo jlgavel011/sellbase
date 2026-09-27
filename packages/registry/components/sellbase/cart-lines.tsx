@@ -12,7 +12,7 @@ import { useCart } from '@sellbase/react';
 
 export function CartLines({
   size = 'sm',
-  productHref = (slug) => `/productos/${slug}`,
+  productHref = (slug) => `/products/${slug}`,
 }: {
   size?: 'sm' | 'lg';
   productHref?: (slug: string) => string;

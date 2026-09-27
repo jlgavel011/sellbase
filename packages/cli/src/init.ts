@@ -84,8 +84,13 @@ async function configureFunctions(cwd: string, conn: SupabaseConnection): Promis
     }
   }
   if (conn.local) {
-    // Local stack only: a DB host alias Deno can resolve, and the address buyers can reach.
-    const secrets = { SELLBASE_DB_HOST: 'db.supabase.internal', SELLBASE_PUBLIC_URL: conn.apiUrl };
+    // Local stack only: a DB host alias Deno can resolve, the address buyers can reach, and
+    // webhooks to your own machine (host.docker.internal). Hosted projects get none of these.
+    const secrets = {
+      SELLBASE_DB_HOST: 'db.supabase.internal',
+      SELLBASE_PUBLIC_URL: conn.apiUrl,
+      SELLBASE_WEBHOOKS_ALLOW_PRIVATE: 'true',
+    };
     if (!/^\[edge_runtime\.secrets\]/m.test(toml)) toml += '\n[edge_runtime.secrets]\n';
     for (const [key, value] of Object.entries(secrets)) {
       if (!new RegExp(`^${key}\\s*=`, 'm').test(toml)) {

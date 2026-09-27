@@ -37,6 +37,6 @@ describe('storefront_scaffold', () => {
     const plan = scaffoldStorefront('quiero vender playeras');
     expect(plan.command).toContain('cart-drawer');
     expect(plan.command).toContain('product-card'); // dependency of product-grid
-    expect(plan.pages).toContain('/productos/[slug]');
+    expect(plan.pages).toContain('/products/[slug]');
   });
 });

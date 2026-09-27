@@ -97,8 +97,13 @@ El usuario pausó los evals. Antes se termina, en este orden:
      - Hooks.
      - e2e en el playground: colección, carrusel, variantes, página de carrito con descuento, regreso de pago con webhook firmado (pendiente → pagado), búsqueda de pedido, descarga, sitemap y JSON-LD.
      - Revisión de accesibilidad con axe.
-4. **Antes de 2g, bloqueo de webhooks a redes privadas**: en producción los webhooks salientes rechazan destinos privados o internos. Eso incluye loopback, 10/8, 172.16/12, 192.168/16, link-local y metadata 169.254.169.254, CGNAT 100.64/10, IPv6 ULA y link-local, y nombres que resuelvan ahí, como `localhost` o `kong`. Se valida al crear o editar el endpoint y otra vez justo antes de cada envío, para cubrir cambios de DNS. No se siguen redirecciones. Solo se permiten destinos privados con la variable `SELLBASE_WEBHOOKS_ALLOW_PRIVATE=true`, pensada para el stack local; `sellbase init` no la pone en la nube. Tendrá tests y actualización del ADR 0010.
+4. ✅ **Antes de 2g, bloqueo de webhooks a redes privadas** (`net-guard.ts`, ADR 0010):
+   - Se valida al guardar y al enviar; se resuelve DNS y no se siguen redirecciones.
+   - En local, `SELLBASE_WEBHOOKS_ALLOW_PRIVATE=true`; el doctor falla si esa variable queda activa en la nube.
 5. **2g. Instalación en un Supabase en la nube**: `sellbase init` contra un proyecto real (migraciones, functions, secretos, cron) y compra de prueba.
+   - **Acordado (2026-09-27):**
+     - Proyecto de Supabase **nuevo** creado por el usuario solo para esta prueba.
+     - La llave live de Stripe **no va en archivos**: el usuario la conecta desde el admin (Ajustes → Pagos), queda en Vault y se prueba el flujo real con la verificación live.
 6. **2h. Evals del agente**: se construyen después. **Solo corren cuando el usuario lo pide**; nada automático ni semanal en CI.
 
 Evals (cuando toque): `evals/` con 10+ escenarios (tienda física, curso digital, consultorio con citas, mixta, errores recuperables), agente real en un proyecto limpio, verificador vía `test_purchase` y `doctor`, métricas de éxito, tool calls y tiempo. Meta ≥ 80 %.

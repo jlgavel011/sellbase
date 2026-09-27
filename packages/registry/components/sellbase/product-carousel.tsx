@@ -16,7 +16,7 @@ export function ProductCarousel({
   collection,
   title,
   limit = 12,
-  hrefFor = (slug: string) => `/productos/${slug}`,
+  hrefFor = (slug: string) => `/products/${slug}`,
 }: {
   collection?: string;
   title?: string;

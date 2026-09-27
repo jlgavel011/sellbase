@@ -382,6 +382,8 @@ inspector_port = 8083
 deno_version = 2
 
 [edge_runtime.secrets]
+# Local stack only: lets webhooks reach host.docker.internal. Never set it in hosted projects.
+SELLBASE_WEBHOOKS_ALLOW_PRIVATE = "true"
 # The default local DB host (supabase_db_<project>) has underscores that Deno's resolver
 # rejects; this alias of the same container is a valid hostname. Local stack only.
 SELLBASE_DB_HOST = "db.supabase.internal"

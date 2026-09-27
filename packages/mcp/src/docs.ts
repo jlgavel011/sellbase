@@ -53,7 +53,7 @@ const INTENTS: { match: RegExp; components: string[]; pages: string[]; why: stri
       'order-status',
       'download-page',
     ],
-    pages: ['/', '/productos/[slug]', '/checkout', '/gracias', '/descargas/[token]'],
+    pages: ['/', '/products/[slug]', '/checkout', '/gracias', '/descargas/[token]'],
     why: 'digital products: files are emailed after payment, no shipping address',
   },
   {
@@ -69,9 +69,9 @@ const INTENTS: { match: RegExp; components: string[]; pages: string[]; why: stri
       'order-status',
     ],
     pages: [
-      '/productos',
-      '/productos/[slug]',
-      '/colecciones/[slug]',
+      '/products',
+      '/products/[slug]',
+      '/collections/[slug]',
       '/carrito',
       '/checkout',
       '/gracias',

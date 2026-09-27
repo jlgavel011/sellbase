@@ -5,6 +5,7 @@ import { actorRef, randomToken, type Actor } from '../auth.js';
 import type { Deps } from '../deps.js';
 import { notFound } from '../errors.js';
 import { register, type AppOptions } from '../http.js';
+import { assertWebhookDestination, defaultResolver } from '../net-guard.js';
 import { deliverWebhooks } from '../webhooks-out.js';
 
 type Db = Sql | TransactionSql;
@@ -61,6 +62,11 @@ function assertConfirmed(actor: Actor | null, confirm: boolean | undefined, url:
 
 export function registerWebhookEndpoints(app: Hono, deps: Deps, options: AppOptions) {
   const { sql } = deps;
+  const checkUrl = (url: string) =>
+    assertWebhookDestination(url, {
+      allowPrivate: deps.allowPrivateWebhooks === true,
+      resolve: deps.resolveHost ?? defaultResolver,
+    });
 
   register(app, deps, options, routes.webhooksList, async ({ storeId }) => {
     const rows = await sql`
@@ -71,6 +77,7 @@ export function registerWebhookEndpoints(app: Hono, deps: Deps, options: AppOpti
 
   register(app, deps, options, routes.webhookCreate, async ({ storeId, actor, body }) => {
     assertConfirmed(actor, body.confirm, body.url);
+    await checkUrl(body.url);
     const secret = `whsec_${randomToken(24)}`;
     const id = await sql.begin(async (tx) => {
       const [row] = await tx<{ id: string }[]>`
@@ -92,6 +99,7 @@ export function registerWebhookEndpoints(app: Hono, deps: Deps, options: AppOpti
 
   register(app, deps, options, routes.webhookUpdate, async ({ storeId, actor, params, body }) => {
     assertConfirmed(actor, body.confirm, body.url ?? null);
+    if (body.url) await checkUrl(body.url);
     const patch = {
       ...(body.url !== undefined ? { url: body.url } : {}),
       ...(body.description !== undefined ? { description: body.description } : {}),

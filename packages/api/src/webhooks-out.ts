@@ -1,6 +1,7 @@
 import { BRAND, WEBHOOK_EVENTS } from '@sellbase/core';
 import type { Sql, TransactionSql } from 'postgres';
 import type { Deps } from './deps.js';
+import { assertWebhookDestination, defaultResolver } from './net-guard.js';
 import { loadAdminProduct } from './handlers/catalog.js';
 import { loadOrderDetail } from './handlers/orders.js';
 import { loadBooking } from './services.js';
@@ -142,6 +143,11 @@ export async function deliverWebhooks(
     let error: string | null = null;
     try {
       if (!d.secret) throw new Error('The endpoint has no signing secret.');
+      // Checked again at send time: DNS can change after the endpoint was saved.
+      await assertWebhookDestination(d.url, {
+        allowPrivate: deps.allowPrivateWebhooks === true,
+        resolve: deps.resolveHost ?? defaultResolver,
+      });
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
       try {
@@ -156,9 +162,13 @@ export async function deliverWebhooks(
           },
           body,
           signal: controller.signal,
+          // A redirect could point anywhere, including the private network: never follow.
+          redirect: 'manual',
         });
         status = res.status;
-        if (!res.ok) error = `HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`;
+        if (res.status >= 300 && res.status < 400)
+          error = `HTTP ${res.status}: redirects are not followed; use the final URL.`;
+        else if (!res.ok) error = `HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`;
       } finally {
         clearTimeout(timer);
       }

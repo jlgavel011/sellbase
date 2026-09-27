@@ -7,7 +7,7 @@
 - Run `npx sellbase upgrade --dry-run`, then `npx sellbase upgrade`. Migrations 0003–0008 are additive.
 - Tokens created before 0008 keep their scopes; grant `webhooks:write` only to agents that must send data out.
 - If you edited storefront components, merge the diffs in `.sellbase/updates/` (skill `upgrade`).
-- Storefront: `cart-drawer` and `product-detail` now depend on `cart-lines`, `discount-input` and `variant-picker`. Add them with `npx sellbase add cart-drawer product-detail`. Your edited copies stay as they are, with a diff. The default product URL is `/productos/<slug>`; pass `hrefFor` if yours differs. Add `<CheckoutReturn />` to your thank-you page (skill `add-storefront`).
+- Storefront: `cart-drawer` and `product-detail` now depend on `cart-lines`, `discount-input` and `variant-picker`. Add them with `npx sellbase add cart-drawer product-detail`. Your edited copies stay as they are, with a diff. The default URLs are `/products/<slug>` and `/collections/<slug>`; pass `hrefFor`/`productHref` if yours differ. Add `<CheckoutReturn />` to your thank-you page (skill `add-storefront`).
 
 - Services and appointments: resources, weekly hours, exceptions, bookings with deposits, reminders and `.ics` invites (migrations 0004–0005).
 - Order operations: fulfill with tracking, cancel, refund (full or partial), notes and payment links for balances.
@@ -18,6 +18,7 @@
 - Settings: team invites and roles, API tokens with scopes and an AI agents activity log, outbound webhooks signed with HMAC and retried with backoff (migration 0007). MCP: `webhook_setup`.
 - Stripe live mode: live keys need confirmation, automatic webhook endpoint with a pinned API version, account status in the doctor and the admin, and a real-money check (minimum charge refunded automatically). MCP: `payments_live_check`. Guide: `docs/guides/stripe-live.md`.
 - `webhooks:write` scope (migration 0008), opt-in for agent tokens; agents confirm each webhook.
+- Outbound webhooks never reach private networks: private, loopback, link-local and metadata IPs and internal names are refused on save and before each delivery, and redirects are not followed. `SELLBASE_WEBHOOKS_ALLOW_PRIVATE=true` is for the local stack only; the doctor fails if it is on in a deployed project.
 - Agent experience: MCP `docs_search` and `storefront_scaffold`; `sellbase init` also writes `AGENTS.md`, `.cursor/mcp.json` and `.sellbase/manifest.json`; new skills `configure-shipping` and `upgrade`; `sellbase token list|revoke`; `docs/llms.txt`, `llms-full.txt` and a generated API reference.
 - `sellbase seed <giro>` and `init --seed` (ropa, curso, consultorio, cafeteria). `sellbase init` supports Vite + React projects (VITE_ env vars, components under `src/`, an admin page to mount at `/admin`).
 - `sellbase upgrade`: dry run of pending migrations in a rolled-back transaction, backup of the `sellbase` schema (`supabase db dump`), migrations and functions, components updated only when unedited (edited ones get a diff in `.sellbase/updates/`), refreshed agent files and doctor.

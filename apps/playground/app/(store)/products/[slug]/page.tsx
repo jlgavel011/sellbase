@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const product = await load((await params).slug);
   return product
     ? productMetadata(product, {
-        url: `${siteUrl}/productos/${product.slug}`,
+        url: `${siteUrl}/products/${product.slug}`,
         siteName: 'Sellbase Playground',
       })
     : { title: 'Producto no disponible' };
@@ -23,7 +23,7 @@ export default async function ProductPage({ params }: Props) {
   const product = await load(slug);
   return (
     <>
-      {product && <ProductJsonLd product={product} url={`${siteUrl}/productos/${slug}`} />}
+      {product && <ProductJsonLd product={product} url={`${siteUrl}/products/${slug}`} />}
       <ProductDetail slug={slug} />
     </>
   );

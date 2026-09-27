@@ -23,11 +23,11 @@ En dashboard.stripe.com/apikeys usa la **Secret key** (`sk_live_…`). La opció
 
 y de lectura en Account.
 
-Guárdala en `.env.sellbase` (`STRIPE_SECRET_KEY=`). No la pegues en chats.
+No la guardes en archivos ni la pegues en chats: la conectas tú en el admin (paso 4) y queda cifrada en Supabase Vault.
 
 ## 4. Conecta en modo real
 
-Desde el admin (Ajustes → Pagos) o pídeselo a tu agente. Conectar llaves live exige confirmación, porque a partir de ahí los clientes pagan dinero real.
+En el admin, **Ajustes → Pagos**: pega la llave y confirma. Conectar llaves live exige confirmación, porque a partir de ahí los clientes pagan dinero real. La llave va directo a Supabase Vault: no pasa por archivos del proyecto ni por tu agente.
 
 - **Desplegado:** Sellbase crea el webhook en tu cuenta de Stripe (`…/functions/v1/sellbase-webhooks/stripe`, con los 4 eventos de Checkout) y guarda su secreto en Vault. Si ya existía un endpoint con esa URL, lo reemplaza, porque Stripe solo muestra el secreto una vez.
 - **Local:** corre `stripe listen --live --forward-to http://127.0.0.1:54321/functions/v1/sellbase-webhooks/stripe` y conecta con el `whsec_…` que imprime.

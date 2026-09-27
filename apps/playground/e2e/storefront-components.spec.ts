@@ -45,13 +45,13 @@ test('home carousel and a collection page', async ({ page }) => {
   await carousel.getByRole('button', { name: 'Siguientes en Lo más nuevo' }).click();
   expect(await a11y(page)).toEqual([]);
 
-  await page.goto(`/colecciones/invierno-${tag}`);
+  await page.goto(`/collections/invierno-${tag}`);
   await expect(page.getByRole('heading', { name: `Invierno ${tag}` })).toBeVisible();
   await expect(page.getByRole('link', { name: new RegExp(`Sudadera ${tag}`) })).toBeVisible();
 });
 
 test('variant picker, SEO data and the cart page with a discount', async ({ page }) => {
-  await page.goto(`/productos/${hoodie.slug}`);
+  await page.goto(`/products/${hoodie.slug}`);
   await expect(page.getByRole('heading', { name: `Sudadera ${tag}` })).toBeVisible();
 
   // Search engines get Product/Offer data and Open Graph tags from the API.
@@ -142,6 +142,6 @@ test('download page explains invalid links, and the sitemap lists the catalog', 
   await expect(page.getByRole('main').getByRole('alert')).toContainText('no es válido');
 
   const sitemap = await (await request.get('/sitemap.xml')).text();
-  expect(sitemap).toContain(`/productos/${hoodie.slug}`);
-  expect(sitemap).toContain(`/colecciones/invierno-${tag}`);
+  expect(sitemap).toContain(`/products/${hoodie.slug}`);
+  expect(sitemap).toContain(`/collections/invierno-${tag}`);
 });

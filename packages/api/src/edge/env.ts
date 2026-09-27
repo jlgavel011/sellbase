@@ -97,6 +97,8 @@ export function edgeDeps(adapters: {
       if (typeof EdgeRuntime !== 'undefined') EdgeRuntime.waitUntil(task);
       else void task;
     },
+    // Only the local stack sets this (supabase/config.toml); never in hosted projects.
+    allowPrivateWebhooks: Deno.env.get('SELLBASE_WEBHOOKS_ALLOW_PRIVATE') === 'true',
     now: () => new Date(),
     publicApiUrl: `${publicUrl}/functions/v1/sellbase-api`,
     version: '0.1.0',

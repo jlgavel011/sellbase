@@ -135,6 +135,13 @@ export async function createTestStore(
       return id;
     },
     fetch: (input, init) => webhookFetch(input, init),
+    // Test domains: *.private.test resolves to a private address, other *.test to a public one.
+    resolveHost: async (host) =>
+      host.endsWith('.private.test')
+        ? ['10.0.0.8']
+        : host.endsWith('.test')
+          ? ['93.184.216.34']
+          : [],
     secrets: async (_id, provider) =>
       provider === 'stripe' && options.paymentsConnected !== false ? secrets.stripe : null,
     payments: async () => (options.paymentsConnected === false ? null : payments.adapter),

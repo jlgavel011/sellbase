@@ -231,6 +231,48 @@ describe('outbound webhooks', () => {
     expect(staffDenied.status).toBe(403);
   });
 
+  it('refuses private destinations on save and again before each delivery', async () => {
+    const res = await s.request('POST', '/webhooks', {
+      token: owner,
+      body: { url: 'http://169.254.169.254/latest/meta-data' },
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toContain('private address');
+    const internal = await s.request('POST', '/webhooks', {
+      token: owner,
+      body: { url: 'https://erp.private.test/hooks' },
+    });
+    expect(internal.status).toBe(400);
+
+    // Saved while public, later pointing inside the network: the delivery is refused.
+    const created = await s.request('POST', '/webhooks', {
+      token: owner,
+      body: { url: 'https://moving.test/hooks' },
+    });
+    const edit = await s.request('PATCH', `/webhooks/${created.body.id}`, {
+      token: owner,
+      body: { url: 'http://localhost:9000/hooks' },
+    });
+    expect(edit.status).toBe(400);
+    await sql`update sellbase.webhook_endpoints set url = 'https://moving.private.test/hooks' where id = ${created.body.id}`;
+    const sent = s.hooks.length;
+    const test = await s.request('POST', `/webhooks/${created.body.id}/test`, { token: owner });
+    expect(test.body).toMatchObject({ status: 'pending', attempts: 1 });
+    expect(test.body.last_error).toContain('private address');
+    expect(s.hooks).toHaveLength(sent); // nothing left the process
+  });
+
+  it('does not follow redirects', async () => {
+    const created = await s.request('POST', '/webhooks', {
+      token: owner,
+      body: { url: 'https://redirects.test/hooks' },
+    });
+    s.hookResponses.push(302);
+    const test = await s.request('POST', `/webhooks/${created.body.id}/test`, { token: owner });
+    expect(test.body).toMatchObject({ status: 'pending', last_status_code: 302 });
+    expect(test.body.last_error).toContain('redirects are not followed');
+  });
+
   it('pauses, edits and deletes endpoints with their secret', async () => {
     const created = await s.request('POST', '/webhooks', {
       token: owner,
@@ -247,5 +289,16 @@ describe('outbound webhooks', () => {
     expect(del.body.deleted).toBe(true);
     const [secret] = await sql`select 1 from vault.secrets where id = ${ref?.secret_ref ?? null}`;
     expect(secret).toBeUndefined();
+  });
+});
+
+describe('webhook network guard in the doctor', () => {
+  it('fails when private webhooks are allowed in a deployed project', async () => {
+    s.deps.allowPrivateWebhooks = true;
+    const doctor = await s.request('GET', '/doctor', { token: owner });
+    const check = doctor.body.checks.find((c: { id: string }) => c.id === 'webhook_guard');
+    expect(check).toMatchObject({ status: 'fail' });
+    expect(check.hint).toContain('secrets unset');
+    s.deps.allowPrivateWebhooks = false;
   });
 });

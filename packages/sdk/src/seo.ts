@@ -95,8 +95,8 @@ export async function catalogSitemap(
   },
 ) {
   const base = options.baseUrl.replace(/\/+$/, '');
-  const productPath = options.productPath ?? ((slug) => `/productos/${slug}`);
-  const collectionPath = options.collectionPath ?? ((slug) => `/colecciones/${slug}`);
+  const productPath = options.productPath ?? ((slug) => `/products/${slug}`);
+  const collectionPath = options.collectionPath ?? ((slug) => `/collections/${slug}`);
   const entries: { url: string }[] = [];
   let cursor: string | undefined;
   do {
