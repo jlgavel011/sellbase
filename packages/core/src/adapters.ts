@@ -21,6 +21,8 @@ export interface CreateCheckoutInput {
   checkout_session_id: string | null;
   /** Balance payments: the order being paid. */
   order_id?: string;
+  /** Live verification charge (no order): refunded as soon as it is paid. */
+  live_check_id?: string;
   store_id: string;
   currency: string;
   amount_total: number;
@@ -48,6 +50,8 @@ export interface ProviderEvent {
   id: string;
   type: string;
   data: unknown;
+  /** True for real-money events, false for test mode. */
+  livemode?: boolean;
 }
 
 export type NormalizedPaymentEvent =
@@ -83,7 +87,39 @@ export type NormalizedPaymentEvent =
       provider_event_id: string;
       checkout_session_id: string;
       reason: string;
+    }
+  | {
+      type: 'live_check.paid';
+      provider_event_id: string;
+      live_check_id: string;
+      provider_payment_id: string;
+      amount: number;
+      currency: string;
     };
+
+/** Provider account as the owner sees it in the provider dashboard. */
+export interface PaymentAccount {
+  id: string;
+  name: string | null;
+  country: string;
+  default_currency: string;
+  mode: 'test' | 'live';
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
+  details_submitted: boolean;
+}
+
+/** Smallest charge the provider accepts, in minor units (Stripe's documented minimums). */
+export const MIN_CHARGE: Record<string, number> = {
+  MXN: 1000,
+  USD: 50,
+  EUR: 50,
+  GBP: 30,
+  CAD: 50,
+  BRL: 50,
+  COP: 200000,
+  CLP: 50000,
+};
 
 export interface RefundRequest {
   provider_payment_id: string;
@@ -126,6 +162,19 @@ export interface PaymentsAdapter {
   sandboxCharge?(input: SandboxChargeInput): Promise<SandboxChargeResult>;
   /** Checks credentials; the message explains what to fix. */
   test(): Promise<{ ok: boolean; message: string }>;
+  /** Test or live credentials. */
+  mode?(): 'test' | 'live';
+  /** Account details for the doctor and the admin. */
+  account?(): Promise<PaymentAccount>;
+  /**
+   * Makes sure the provider sends the events Sellbase needs to `url`. Returns the signing
+   * secret when it created the endpoint (the provider only reveals it once). Without a
+   * stored secret an existing endpoint for the same URL is replaced.
+   */
+  ensureWebhook?(
+    url: string,
+    options: { haveSecret: boolean },
+  ): Promise<{ endpoint_id: string; secret: string | null; created: boolean }>;
 }
 
 // ── Shipping ─────────────────────────────────────────────────────────────────

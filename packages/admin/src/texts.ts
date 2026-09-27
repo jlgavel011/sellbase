@@ -324,6 +324,44 @@ const es = {
   settings: {
     title: 'Ajustes',
     tabs: { store: 'Tienda', team: 'Equipo', agents: 'Agentes IA', webhooks: 'Webhooks' },
+    pay: {
+      test: 'Modo prueba',
+      live: 'Cobrando de verdad',
+      account: 'Cuenta de Stripe',
+      charges: 'Estado',
+      testOnly: 'Solo pagos de prueba (tarjeta 4242…)',
+      chargesOn: 'Cobros activos',
+      chargesOff: 'Cobros sin activar',
+      payoutsOn: 'Depósitos activos',
+      payoutsOff: 'Depósitos pendientes',
+      webhook: 'Avisos de pago (webhook)',
+      webhookAuto: 'Configurado automáticamente',
+      webhookManual: 'Manual (stripe listen)',
+      lastEvent: (when: string) => `Último aviso: ${when}`,
+      noEvents: 'Aún no llega ningún aviso',
+      listenHint: 'En local, deja corriendo:',
+      keyHint: 'Prueba: sk_test_… · Real: sk_live_… o rk_live_…',
+      webhookSecretHint:
+        'Solo en local, el whsec_ que imprime stripe listen. Desplegado se configura solo.',
+      liveConfirm:
+        'Son llaves reales: desde ahora tus clientes pagarán dinero de verdad. ¿Confirmas que la tienda está lista para vender?',
+      goLive: 'Sí, cobrar de verdad',
+      back: 'Volver',
+      liveCheck: 'Verificación de cobro real',
+      liveCheckHint:
+        'Pagas el mínimo de Stripe con tu tarjeta y se te reembolsa en automático. Stripe se queda con su pequeña comisión.',
+      checkStart: 'Verificar cobro real',
+      checkConfirm:
+        'Se abrirá un pago real por el monto mínimo (10 MXN o 0.50 USD). Lo pagas tú y se reembolsa al instante.',
+      checkYes: 'Crear el cobro',
+      checkPay: 'Paga la verificación con tu tarjeta:',
+      openCheckout: 'abrir Stripe Checkout',
+      checkPending: 'Hay una verificación esperando pago.',
+      checkDone: (amount: string) =>
+        `Listo: se cobraron ${amount} de verdad y se reembolsaron. Tus pagos funcionan.`,
+      checkRefundFailed: (error: string) =>
+        `Se cobró pero el reembolso falló (${error}). Reembólsalo desde Stripe → Payments.`,
+    },
     store: 'Tienda',
     storeName: 'Nombre de la tienda',
     contactEmail: 'Correo de contacto',
@@ -855,6 +893,44 @@ const en: Texts = {
   settings: {
     title: 'Settings',
     tabs: { store: 'Store', team: 'Team', agents: 'AI agents', webhooks: 'Webhooks' },
+    pay: {
+      test: 'Test mode',
+      live: 'Taking real payments',
+      account: 'Stripe account',
+      charges: 'Status',
+      testOnly: 'Test payments only (card 4242…)',
+      chargesOn: 'Charges enabled',
+      chargesOff: 'Charges not enabled',
+      payoutsOn: 'Payouts enabled',
+      payoutsOff: 'Payouts pending',
+      webhook: 'Payment events (webhook)',
+      webhookAuto: 'Set up automatically',
+      webhookManual: 'Manual (stripe listen)',
+      lastEvent: (when: string) => `Last event: ${when}`,
+      noEvents: 'No events received yet',
+      listenHint: 'Locally, keep this running:',
+      keyHint: 'Test: sk_test_… · Live: sk_live_… or rk_live_…',
+      webhookSecretHint:
+        'Local only: the whsec_ printed by stripe listen. Deployed projects set it up automatically.',
+      liveConfirm:
+        'These are live keys: from now on customers pay real money. Confirm the store is ready to sell?',
+      goLive: 'Yes, take real payments',
+      back: 'Back',
+      liveCheck: 'Live payment check',
+      liveCheckHint:
+        'You pay Stripe’s minimum with your card and it is refunded automatically. Stripe keeps its small fee.',
+      checkStart: 'Verify a real payment',
+      checkConfirm:
+        'This opens a real payment for the minimum amount (10 MXN or 0.50 USD). You pay it and it is refunded right away.',
+      checkYes: 'Create the charge',
+      checkPay: 'Pay the check with your card:',
+      openCheckout: 'open Stripe Checkout',
+      checkPending: 'A live check is waiting to be paid.',
+      checkDone: (amount: string) =>
+        `Done: ${amount} was charged for real and refunded. Your payments work.`,
+      checkRefundFailed: (error: string) =>
+        `It was charged but the refund failed (${error}). Refund it from Stripe → Payments.`,
+    },
     store: 'Store',
     storeName: 'Store name',
     contactEmail: 'Contact email',

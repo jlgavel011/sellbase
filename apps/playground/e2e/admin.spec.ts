@@ -57,7 +57,8 @@ test('staff signs in, manages a product, and sees orders and settings', async ({
 
   // Settings: Stripe status comes from the integration.
   await page.getByRole('link', { name: /Ajustes/ }).click();
-  await expect(page.getByText('Stripe conectado')).toBeVisible();
+  await expect(page.getByTestId('payments-card')).toContainText('Cuenta de Stripe');
+  await expect(page.getByText('Modo prueba')).toBeVisible();
 
   // Sign out returns to the login screen.
   await page.getByRole('button', { name: 'Salir' }).click();

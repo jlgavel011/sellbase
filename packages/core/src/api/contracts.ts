@@ -1473,6 +1473,8 @@ export const routes = {
     method: 'POST',
     path: '/integrations/:provider/connect',
     summary: 'Connect a provider with API keys (stored in Vault) or get a connect URL',
+    description:
+      'Stripe: when the project has a public https URL and no webhook_secret is sent, the webhook endpoint is created in Stripe automatically and its secret stored in Vault. Locally, run `stripe listen --forward-to <webhooks URL>` and send its whsec_ as webhook_secret.',
     tag: 'integrations',
     auth: staff('integrations:write'),
     params: z.object({ provider: z.string().min(1) }),
@@ -1480,8 +1482,18 @@ export const routes = {
       secret_key: z.string().min(1).optional(),
       webhook_secret: z.string().min(1).optional(),
       config: z.record(z.string(), z.unknown()).optional(),
+      confirm: z
+        .boolean()
+        .optional()
+        .describe(
+          'Required (true) for live keys (sk_live_/rk_live_): customers will pay real money.',
+        ),
     }),
-    response: z.object({ integration: integrationView, connect_url: z.url().nullable() }),
+    response: z.object({
+      integration: integrationView,
+      connect_url: z.url().nullable(),
+      next_steps: z.array(z.string()).describe('What is still missing, in order.'),
+    }),
   },
   integrationTest: {
     id: 'integrationTest',
@@ -1492,6 +1504,29 @@ export const routes = {
     auth: staff('integrations:write'),
     params: z.object({ provider: z.string().min(1) }),
     response: z.object({ ok: z.boolean(), message: z.string() }),
+  },
+  integrationLiveCheck: {
+    id: 'integrationLiveCheck',
+    method: 'POST',
+    path: '/integrations/stripe/live-check',
+    summary: 'Real-money check: a minimum charge the owner pays, refunded automatically',
+    description:
+      'Live keys only. Returns a Stripe Checkout URL for the smallest amount Stripe allows (10 MXN, 0.50 USD). When its webhook arrives the charge is refunded and the integration is marked verified. Stripe keeps its fee. Needs confirm=true.',
+    tag: 'integrations',
+    auth: staff('integrations:write'),
+    body: z.object({
+      success_url: z.url().optional(),
+      confirm: z
+        .literal(true)
+        .describe('The owner agreed to pay the minimum amount with a real card.'),
+    }),
+    response: z.object({
+      live_check_id: id,
+      url: z.url(),
+      amount,
+      currency,
+      expires_at: timestamp,
+    }),
   },
   doctor: {
     id: 'doctor',

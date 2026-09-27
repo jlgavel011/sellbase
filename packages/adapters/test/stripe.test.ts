@@ -187,3 +187,110 @@ describe('stripePayments', () => {
     ).toBeNull();
   });
 });
+
+describe('live mode helpers', () => {
+  function mockStripe(routes: Record<string, (body: URLSearchParams) => unknown>) {
+    const calls: { method: string; path: string; body: URLSearchParams; version: string }[] = [];
+    const fetchImpl = (async (url: string, init: RequestInit) => {
+      const path = url.replace('https://api.stripe.com/v1', '');
+      const method = init.method ?? 'GET';
+      const body = new URLSearchParams(String(init.body ?? ''));
+      calls.push({
+        method,
+        path,
+        body,
+        version: (init.headers as Record<string, string>)['stripe-version'] ?? '',
+      });
+      const handler = routes[`${method} ${path}`];
+      if (!handler)
+        return new Response(JSON.stringify({ error: { message: 'no route' } }), { status: 404 });
+      return new Response(JSON.stringify(handler(body)), { status: 200 });
+    }) as unknown as typeof fetch;
+    return { calls, fetchImpl };
+  }
+
+  it('reads the account, knows its mode and pins the API version', async () => {
+    const { calls, fetchImpl } = mockStripe({
+      'GET /account': () => ({
+        id: 'acct_1',
+        country: 'MX',
+        default_currency: 'mxn',
+        charges_enabled: false,
+        payouts_enabled: false,
+        details_submitted: true,
+        business_profile: { name: 'Tienda Real' },
+      }),
+    });
+    const live = stripePayments({ secretKey: 'sk_live_abc', fetch: fetchImpl });
+    expect(live.mode?.()).toBe('live');
+    expect(await live.account?.()).toMatchObject({
+      name: 'Tienda Real',
+      default_currency: 'MXN',
+      mode: 'live',
+      charges_enabled: false,
+    });
+    expect((await live.test()).message).toContain('live charges are not enabled');
+    expect(calls[0]?.version).toBe('2024-06-20');
+    expect(stripePayments({ secretKey: 'rk_test_x', fetch: fetchImpl }).mode?.()).toBe('test');
+  });
+
+  it('creates the webhook endpoint, or replaces it when the secret is lost', async () => {
+    const url = 'https://p.supabase.co/functions/v1/sellbase-webhooks/stripe';
+    let endpoints: { id: string; url: string }[] = [];
+    const { calls, fetchImpl } = mockStripe({
+      'GET /webhook_endpoints?limit=100': () => ({ data: endpoints }),
+      'POST /webhook_endpoints': (b) => {
+        endpoints = [{ id: 'we_2', url: b.get('url') ?? '' }];
+        return { id: 'we_2', secret: 'whsec_new' };
+      },
+      'DELETE /webhook_endpoints/we_1': () => ({ deleted: true }),
+      'POST /webhook_endpoints/we_2': () => ({ id: 'we_2' }),
+    });
+    const stripe = stripePayments({ secretKey: 'sk_live_abc', fetch: fetchImpl });
+
+    endpoints = [{ id: 'we_1', url }];
+    expect(await stripe.ensureWebhook?.(url, { haveSecret: false })).toEqual({
+      endpoint_id: 'we_2',
+      secret: 'whsec_new',
+      created: true,
+    });
+    expect(calls.map((c) => `${c.method} ${c.path}`)).toContain('DELETE /webhook_endpoints/we_1');
+    const created = calls.find((c) => c.method === 'POST' && c.path === '/webhook_endpoints');
+    expect(created?.body.getAll('enabled_events[0]')).toEqual(['checkout.session.completed']);
+    expect(created?.body.get('api_version')).toBe('2024-06-20');
+
+    expect(await stripe.ensureWebhook?.(url, { haveSecret: true })).toEqual({
+      endpoint_id: 'we_2',
+      secret: null,
+      created: false,
+    });
+  });
+
+  it('maps a paid live check and tags its checkout', async () => {
+    const stripe = stripePayments({ secretKey: 'sk_live_abc' });
+    const mapped = stripe.mapEvent({
+      id: 'evt_1',
+      type: 'checkout.session.completed',
+      livemode: true,
+      data: {
+        object: {
+          id: 'cs_1',
+          payment_status: 'paid',
+          amount_total: 1000,
+          currency: 'mxn',
+          payment_intent: 'pi_1',
+          client_reference_id: 'chk-1',
+          metadata: { sellbase_payment_kind: 'live_check', sellbase_live_check_id: 'chk-1' },
+        },
+      },
+    });
+    expect(mapped).toEqual({
+      type: 'live_check.paid',
+      provider_event_id: 'evt_1',
+      live_check_id: 'chk-1',
+      provider_payment_id: 'pi_1',
+      amount: 1000,
+      currency: 'MXN',
+    });
+  });
+});

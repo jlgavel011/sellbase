@@ -124,22 +124,44 @@ export function createSellbaseMcpServer(sellbase: Sellbase, options: { version?:
     {
       title: 'Connect a provider',
       description:
-        'Connect Stripe (payments) or Resend (email) with API keys. Keys are stored encrypted in Supabase Vault. For Stripe also pass webhook_secret (whsec_…) so paid orders arrive. Use test keys (sk_test_…) until the owner says to go live.',
+        'Connect Stripe (payments) or Resend (email) with API keys, stored encrypted in Supabase Vault. Stripe: when the project is deployed (public https URL) the webhook endpoint is created in Stripe for you; locally run `stripe listen --forward-to <webhooks URL>` and pass its whsec_ as webhook_secret. Use test keys (sk_test_…) until the owner says to go live; live keys (sk_live_…/rk_live_…) need confirm: true after the owner confirms customers will pay real money. Follow next_steps in the response.',
       inputSchema: {
         provider: z.enum(['stripe', 'resend']),
         secret_key: z.string().min(1),
         webhook_secret: z.string().optional(),
+        confirm: z
+          .boolean()
+          .optional()
+          .describe('true only for live Stripe keys, after the owner approved going live.'),
       },
       annotations: { idempotentHint: true },
     },
-    ({ provider, secret_key, webhook_secret }) =>
+    ({ provider, secret_key, webhook_secret, confirm }) =>
       run(async () => {
-        const { integration } = await sellbase.admin.integrations.connect(provider, {
+        const { integration, next_steps } = await sellbase.admin.integrations.connect(provider, {
           secret_key,
           ...(webhook_secret ? { webhook_secret } : {}),
+          ...(confirm !== undefined ? { confirm } : {}),
         });
-        return integration;
+        return { integration, next_steps };
       }),
+  );
+
+  server.registerTool(
+    'payments_live_check',
+    {
+      title: 'Verify real payments',
+      description:
+        'After connecting live Stripe keys: creates a Checkout for the smallest amount Stripe allows (10 MXN / 0.50 USD). The OWNER pays it with a real card; when the webhook arrives it is refunded automatically and store_status shows "Live payment check" as ok. Stripe keeps its small fee. Ask the owner before calling (confirm: true), give them the URL, then check store_status.',
+      inputSchema: {
+        success_url: z
+          .url()
+          .optional()
+          .describe('Where to land after paying; defaults to settings.site_url.'),
+        confirm: z.literal(true),
+      },
+    },
+    (body) => run(() => sellbase.admin.integrations.liveCheck(body)),
   );
 
   server.registerTool(

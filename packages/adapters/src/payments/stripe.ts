@@ -2,6 +2,7 @@ import {
   sellbaseError,
   type CreateCheckoutInput,
   type NormalizedPaymentEvent,
+  type PaymentAccount,
   type PaymentMethod,
   type PaymentsAdapter,
   type ProviderEvent,
@@ -14,6 +15,15 @@ import {
  */
 
 const API = 'https://api.stripe.com/v1';
+/** Pinned so payloads do not change when the account's default version moves. */
+export const STRIPE_API_VERSION = '2024-06-20';
+/** Checkout events Sellbase needs (orders, balances, expiry, live checks). */
+export const STRIPE_WEBHOOK_EVENTS = [
+  'checkout.session.completed',
+  'checkout.session.async_payment_succeeded',
+  'checkout.session.async_payment_failed',
+  'checkout.session.expired',
+];
 /** Stripe Checkout sessions must live at least 30 minutes. */
 const MIN_SESSION_MS = 31 * 60_000;
 /** Reject webhook timestamps older than this (replay protection). */
@@ -137,6 +147,8 @@ interface CheckoutSessionObject {
   payment_method_types?: string[];
 }
 
+const isTestKey = (key: string) => /^(sk|rk)_test_/.test(key);
+
 export function stripePayments(options: {
   secretKey: string;
   fetch?: typeof fetch;
@@ -146,7 +158,7 @@ export function stripePayments(options: {
   const now = options.now ?? (() => new Date());
 
   async function call<T>(
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'DELETE',
     path: string,
     body?: URLSearchParams,
     idempotencyKey?: string,
@@ -155,6 +167,7 @@ export function stripePayments(options: {
       method,
       headers: {
         authorization: `Bearer ${options.secretKey}`,
+        'stripe-version': STRIPE_API_VERSION,
         ...(body ? { 'content-type': 'application/x-www-form-urlencoded' } : {}),
         ...(idempotencyKey ? { 'idempotency-key': idempotencyKey } : {}),
       },
@@ -184,20 +197,27 @@ export function stripePayments(options: {
 
     async createCheckout(input) {
       const expiresAt = Math.max(input.expires_at.getTime(), now().getTime() + MIN_SESSION_MS);
-      const metadata: Record<string, string> = input.order_id
+      const metadata: Record<string, string> = input.live_check_id
         ? {
-            sellbase_order_id: input.order_id,
-            sellbase_payment_kind: 'balance',
+            sellbase_live_check_id: input.live_check_id,
+            sellbase_payment_kind: 'live_check',
             sellbase_store_id: input.store_id,
           }
-        : {
-            sellbase_checkout_session_id: input.checkout_session_id ?? '',
-            sellbase_store_id: input.store_id,
-          };
+        : input.order_id
+          ? {
+              sellbase_order_id: input.order_id,
+              sellbase_payment_kind: 'balance',
+              sellbase_store_id: input.store_id,
+            }
+          : {
+              sellbase_checkout_session_id: input.checkout_session_id ?? '',
+              sellbase_store_id: input.store_id,
+            };
       const body = toStripeForm({
         mode: 'payment',
         customer_email: input.email,
-        client_reference_id: input.order_id ?? input.checkout_session_id ?? undefined,
+        client_reference_id:
+          input.live_check_id ?? input.order_id ?? input.checkout_session_id ?? undefined,
         success_url: input.success_url,
         cancel_url: input.cancel_url,
         expires_at: Math.floor(expiresAt / 1000),
@@ -247,13 +267,37 @@ export function stripePayments(options: {
         secret,
         Math.floor(now().getTime() / 1000),
       );
-      const event = JSON.parse(payload) as { id: string; type: string; data: unknown };
-      return { id: event.id, type: event.type, data: event.data };
+      const event = JSON.parse(payload) as {
+        id: string;
+        type: string;
+        data: unknown;
+        livemode?: boolean;
+      };
+      return {
+        id: event.id,
+        type: event.type,
+        data: event.data,
+        ...(event.livemode !== undefined ? { livemode: event.livemode } : {}),
+      };
     },
 
     mapEvent(evt: ProviderEvent): NormalizedPaymentEvent | null {
       const obj = (evt.data as { object?: CheckoutSessionObject }).object;
       if (!obj || !evt.type.startsWith('checkout.session.')) return null;
+      if (obj.metadata?.sellbase_payment_kind === 'live_check') {
+        const id = obj.metadata.sellbase_live_check_id;
+        if (id && evt.type === 'checkout.session.completed' && obj.payment_status === 'paid') {
+          return {
+            type: 'live_check.paid',
+            provider_event_id: evt.id,
+            live_check_id: id,
+            provider_payment_id: obj.payment_intent ?? obj.id,
+            amount: obj.amount_total,
+            currency: obj.currency.toUpperCase(),
+          };
+        }
+        return null;
+      }
       if (obj.metadata?.sellbase_payment_kind === 'balance' && obj.metadata.sellbase_order_id) {
         if (evt.type === 'checkout.session.completed' && obj.payment_status === 'paid') {
           return {
@@ -334,7 +378,7 @@ export function stripePayments(options: {
     },
 
     async sandboxCharge(input) {
-      if (!options.secretKey.startsWith('sk_test_') && !options.secretKey.startsWith('rk_test_')) {
+      if (!isTestKey(options.secretKey)) {
         throw sellbaseError(
           'FORBIDDEN',
           'Test purchases only run with Stripe test keys.',
@@ -371,16 +415,71 @@ export function stripePayments(options: {
       };
     },
 
-    async test() {
-      const account = await call<{ id: string; country: string; charges_enabled: boolean }>(
+    mode() {
+      return isTestKey(options.secretKey) ? 'test' : 'live';
+    },
+
+    async account(): Promise<PaymentAccount> {
+      const a = await call<{
+        id: string;
+        country: string;
+        default_currency: string;
+        charges_enabled: boolean;
+        payouts_enabled: boolean;
+        details_submitted: boolean;
+        business_profile?: { name?: string | null };
+        settings?: { dashboard?: { display_name?: string | null } };
+      }>('GET', '/account');
+      return {
+        id: a.id,
+        name: a.business_profile?.name ?? a.settings?.dashboard?.display_name ?? null,
+        country: a.country,
+        default_currency: a.default_currency.toUpperCase(),
+        mode: isTestKey(options.secretKey) ? 'test' : 'live',
+        charges_enabled: a.charges_enabled,
+        payouts_enabled: a.payouts_enabled,
+        details_submitted: a.details_submitted,
+      };
+    },
+
+    async ensureWebhook(url, { haveSecret }) {
+      const list = await call<{ data: { id: string; url: string }[] }>(
         'GET',
-        '/account',
+        '/webhook_endpoints?limit=100',
       );
-      const mode = options.secretKey.includes('_test_') ? 'test mode' : 'live mode';
+      const existing = list.data.find((e) => e.url === url);
+      if (existing && haveSecret) {
+        await call(
+          'POST',
+          `/webhook_endpoints/${existing.id}`,
+          toStripeForm({ enabled_events: STRIPE_WEBHOOK_EVENTS, disabled: false }),
+        );
+        return { endpoint_id: existing.id, secret: null, created: false };
+      }
+      // Stripe only shows a signing secret at creation: without ours, start over.
+      if (existing) await call('DELETE', `/webhook_endpoints/${existing.id}`);
+      const created = await call<{ id: string; secret: string }>(
+        'POST',
+        '/webhook_endpoints',
+        toStripeForm({
+          url,
+          enabled_events: STRIPE_WEBHOOK_EVENTS,
+          api_version: STRIPE_API_VERSION,
+          description: 'Sellbase: orders and payments',
+          metadata: { sellbase: 'true' },
+        }),
+      );
+      return { endpoint_id: created.id, secret: created.secret, created: true };
+    },
+
+    async test() {
+      const account = await this.account?.();
+      if (!account) return { ok: false, message: 'Could not read the Stripe account.' };
+      const mode = account.mode === 'test' ? 'test mode' : 'live mode';
       return {
         ok: true,
-        message: `Connected to Stripe account ${account.id} (${account.country}, ${mode})${
-          !account.charges_enabled && mode === 'live mode'
+        message: `Connected to Stripe account ${account.name ?? account.id} (${account.country}, ${mode})${
+          !account.charges_enabled && account.mode === 'live'
             ? '. Warning: live charges are not enabled yet; finish activation in the Stripe dashboard.'
             : ''
         }.`,

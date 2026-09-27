@@ -3,8 +3,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useAdmin } from '../context.js';
 import { PageTitle, useSlot } from '../shell.js';
+import { PaymentsCard } from './payments-card.js';
 import { SettingsTabs } from './settings-sections.js';
-import { Alert, Badge, Button, Card, ErrorAlert, Field, Input } from '../ui.js';
+import { Button, Card, ErrorAlert, Field, Input } from '../ui.js';
 
 interface ShippingSettings {
   flat_rate_amount?: number;
@@ -19,10 +20,6 @@ export function SettingsPage() {
     queryKey: ['sellbase-admin', 'store'],
     queryFn: () => sellbase.admin.store.get(),
   });
-  const integrations = useQuery({
-    queryKey: ['sellbase-admin', 'integrations'],
-    queryFn: () => sellbase.admin.integrations.list(),
-  });
   const bottom = useSlot('settings.bottom');
 
   const [name, setName] = useState('');
@@ -33,8 +30,6 @@ export function SettingsPage() {
   const [flat, setFlat] = useState('');
   const [freeOver, setFreeOver] = useState('');
   const [pickup, setPickup] = useState(false);
-  const [secretKey, setSecretKey] = useState('');
-  const [webhookSecret, setWebhookSecret] = useState('');
 
   useEffect(() => {
     const s = store.data;
@@ -84,22 +79,6 @@ export function SettingsPage() {
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['sellbase-admin', 'store'] }),
   });
-
-  const stripe = integrations.data?.data.find((i) => i.provider === 'stripe');
-  const connect = useMutation({
-    mutationFn: () =>
-      sellbase.admin.integrations.connect('stripe', {
-        secret_key: secretKey,
-        ...(webhookSecret ? { webhook_secret: webhookSecret } : {}),
-      }),
-    onSuccess: () => {
-      setSecretKey('');
-      setWebhookSecret('');
-      void qc.invalidateQueries({ queryKey: ['sellbase-admin', 'integrations'] });
-      void qc.invalidateQueries({ queryKey: ['sellbase-admin', 'doctor'] });
-    },
-  });
-  const test = useMutation({ mutationFn: () => sellbase.admin.integrations.test('stripe') });
 
   function submitStore(e: FormEvent) {
     e.preventDefault();
@@ -185,56 +164,7 @@ export function SettingsPage() {
           </Card>
         </form>
 
-        <Card
-          title={t.settings.payments}
-          actions={
-            stripe?.status === 'connected' ? (
-              <Badge tone="green">{t.settings.stripeConnected}</Badge>
-            ) : (
-              <Badge tone="amber">{t.settings.stripeNotConnected}</Badge>
-            )
-          }
-        >
-          {stripe?.last_error && <Alert>{stripe.last_error}</Alert>}
-          <form
-            className="sb:mt-2 sb:grid sb:gap-4 sb:md:grid-cols-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              connect.mutate();
-            }}
-          >
-            <Field label={t.settings.secretKey}>
-              <Input
-                type="password"
-                autoComplete="off"
-                value={secretKey}
-                onChange={(e) => setSecretKey(e.target.value)}
-              />
-            </Field>
-            <Field label={t.settings.webhookSecret}>
-              <Input
-                type="password"
-                autoComplete="off"
-                value={webhookSecret}
-                onChange={(e) => setWebhookSecret(e.target.value)}
-              />
-            </Field>
-            <div className="sb:flex sb:flex-wrap sb:gap-2 sb:md:col-span-2">
-              <Button type="submit" disabled={!secretKey || connect.isPending}>
-                {t.settings.connect}
-              </Button>
-              {stripe && (
-                <Button variant="outline" onClick={() => test.mutate()} disabled={test.isPending}>
-                  {t.settings.test}
-                </Button>
-              )}
-            </div>
-          </form>
-          <div className="sb:mt-3 sb:flex sb:flex-col sb:gap-2">
-            <ErrorAlert error={connect.error} />
-            {test.data && <Alert tone={test.data.ok ? 'green' : 'red'}>{test.data.message}</Alert>}
-          </div>
-        </Card>
+        <PaymentsCard />
         {bottom}
       </div>
     </>

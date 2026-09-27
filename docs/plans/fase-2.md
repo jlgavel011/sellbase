@@ -52,7 +52,14 @@ Alcance original:
 
 El usuario pausó los evals. Antes se termina, en este orden:
 
-1. **2d. Stripe real**: modo live de punta a punta (llaves live en Vault, webhook de producción, compra y reembolso reales de bajo monto, guía para pasar de test a live).
+1. **2d. Stripe real**: modo live de punta a punta.
+   - Conectar llaves live exige `confirm: true`. La integración guarda el modo (`test`/`live`) y el estado de la cuenta (cobros y pagos habilitados, país, moneda).
+   - Webhook automático: si la URL pública es https, Sellbase crea el endpoint en Stripe con los eventos que necesita y guarda su secreto en Vault. En local se usa `stripe listen` y se pasa el `webhook_secret`.
+   - Versión de la API de Stripe fija en cada llamada.
+   - Doctor: modo de prueba o real, cuenta sin activar, webhook sin eventos desde que se conectó. `test_purchase` en live explica que no cobra y remite a la verificación.
+   - Verificación live (`POST /integrations/stripe/live-check`): un cobro real del monto mínimo (10 MXN / 0.50 USD), pagado por el dueño, que al llegar el webhook se reembolsa solo y deja la integración marcada como verificada.
+   - Admin → Ajustes → Pagos: modo, cuenta, webhook y verificación. MCP: `payments_live_check`. Guía `docs/guides/stripe-live.md`.
+   - Prueba real: con las llaves live del usuario, vía `stripe listen --live` en local o en la nube en 2g.
 2. **2e. `sellbase init` + MCP completo + archivos para el agente**: el init deja el proyecto listo, con el MCP conectado a todas las herramientas y las skills y `CLAUDE.md`/reglas copiadas al proyecto del usuario.
 3. **2f. Componentes del storefront**: el set completo del registry, pulido y probado.
 4. **Antes de 2g, bloqueo de webhooks a redes privadas**: en producción los webhooks salientes rechazan destinos privados o internos. Eso incluye loopback, 10/8, 172.16/12, 192.168/16, link-local y metadata 169.254.169.254, CGNAT 100.64/10, IPv6 ULA y link-local, y nombres que resuelvan ahí, como `localhost` o `kong`. Se valida al crear o editar el endpoint y otra vez justo antes de cada envío, para cubrir cambios de DNS. No se siguen redirecciones. Solo se permiten destinos privados con la variable `SELLBASE_WEBHOOKS_ALLOW_PRIVATE=true`, pensada para el stack local; `sellbase init` no la pone en la nube. Tendrá tests y actualización del ADR 0010.

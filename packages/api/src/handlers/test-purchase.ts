@@ -57,6 +57,17 @@ export function registerTestPurchase(app: Hono, deps: Deps, options: AppOptions)
       steps,
     });
 
+    // Live keys: never run a purchase against real money.
+    const livePayments = await deps.payments(storeId);
+    if (livePayments?.mode?.() === 'live') {
+      fail(
+        'payments',
+        new Error('Stripe is in live mode: test_purchase never charges real money.'),
+        'Use payments_live_check to verify real payments (a minimum charge refunded automatically), or run test_purchase in a project connected with test keys.',
+      );
+      return result(null);
+    }
+
     // 1. Catalog
     const store = await loadStore(sql, storeId);
     const variantIds = body.variant_ids?.length

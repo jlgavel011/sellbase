@@ -11,8 +11,19 @@ test('team invites, agent tokens with activity, and signed webhooks', async ({ p
   await signIn(page, email, password);
   const tag = Date.now().toString(36);
 
-  // Team: invite a staff member by email.
+  // Payments: test mode is explicit, and live keys ask before connecting.
   await page.getByRole('link', { name: /Ajustes/ }).click();
+  const payments = page.getByTestId('payments-card');
+  await expect(page.getByText('Modo prueba')).toBeVisible();
+  await expect(payments).toContainText('Cuenta de Stripe');
+  await payments.getByLabel('Llave secreta (sk_…)').fill('sk_live_not_a_real_key');
+  await payments.getByRole('button', { name: 'Conectar' }).click();
+  await expect(payments).toContainText('Son llaves reales');
+  await page.screenshot({ path: 'test-results/admin-payments.png', fullPage: true });
+  await payments.getByRole('button', { name: 'Volver' }).click();
+  await payments.getByLabel('Llave secreta (sk_…)').fill('');
+
+  // Team: invite a staff member by email.
   await page.getByRole('link', { name: 'Equipo' }).click();
   const invitee = `equipo-${tag}@example.com`;
   await page.getByLabel('Correo').fill(invitee);

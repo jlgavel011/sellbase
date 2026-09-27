@@ -3,6 +3,13 @@ import type { Hono } from 'hono';
 import { actorRef } from '../auth.js';
 import type { Deps } from '../deps.js';
 import { register, type AppOptions } from '../http.js';
+import {
+  loadStripeConfig,
+  refreshStripeAccount,
+  setupStripeWebhook,
+  startLiveCheck,
+  type StripeConfig,
+} from '../stripe-live.js';
 
 /** Latest migration this API version expects (`sellbase.schema_version`). */
 export const EXPECTED_SCHEMA_VERSION = '0008';
@@ -102,6 +109,15 @@ export function registerStore(app: Hono, deps: Deps, options: AppOptions) {
           spec.keyHint,
         );
       }
+      const live = provider === 'stripe' && /^(sk|rk)_live_/.test(body.secret_key);
+      if (live && body.confirm !== true) {
+        throw sellbaseError(
+          'VALIDATION_ERROR',
+          'These are live Stripe keys: customers will pay real money.',
+          'Confirm with the owner that the store is ready to sell, then send the same request with confirm: true.',
+          { requires_confirmation: true },
+        );
+      }
       const secret: Record<string, string> = { secret_key: body.secret_key };
       if (body.webhook_secret) secret.webhook_secret = body.webhook_secret;
 
@@ -116,28 +132,72 @@ export function registerStore(app: Hono, deps: Deps, options: AppOptions) {
         await tx`
         insert into sellbase.audit_log (store_id, actor_type, actor_id, action, entity, diff)
         values (${storeId}, ${actor_type}, ${actor_id}, 'integration.connect', 'integration',
-                ${tx.json({ provider, has_webhook_secret: Boolean(body.webhook_secret) } as never)})`;
+                ${tx.json({ provider, live, has_webhook_secret: Boolean(body.webhook_secret) } as never)})`;
       });
 
-      const result = await testProvider(deps, storeId, provider);
+      let result = await testProvider(deps, storeId, provider);
+      const nextSteps: string[] = [];
+      if (provider === 'stripe' && result.ok) {
+        const adapter = await deps.payments(storeId);
+        try {
+          if (adapter) {
+            // A new key starts from a clean slate: no webhook seen, no live check yet.
+            await sql`
+              update sellbase.integrations
+                 set config = config - 'last_webhook_at' - 'last_webhook_livemode' - 'live_check' - 'webhook'
+               where store_id = ${storeId} and provider = 'stripe'`;
+            const account = await refreshStripeAccount(deps, storeId, adapter);
+            const hook = await setupStripeWebhook(deps, storeId, adapter, secret);
+            if (hook.setup === 'manual' && !body.webhook_secret)
+              nextSteps.push(
+                `Forward Stripe events: stripe listen${live ? ' --live' : ''} --forward-to ${hook.url}, then connect again with its whsec_ as webhook_secret.`,
+              );
+            if (live && account && !account.charges_enabled)
+              nextSteps.push(
+                'Finish activating the Stripe account (dashboard.stripe.com) so it can take live charges.',
+              );
+            if (live)
+              nextSteps.push(
+                'Run the live check: POST /integrations/stripe/live-check (payments_live_check).',
+              );
+            else nextSteps.push('Run test_purchase to check the whole flow in test mode.');
+          }
+        } catch (error) {
+          result = { ok: false, message: error instanceof Error ? error.message : String(error) };
+        }
+      }
       const [integration] = await sql`
       update sellbase.integrations
          set status = ${result.ok ? 'connected' : 'error'}, last_error = ${result.ok ? null : result.message},
              connected_at = ${result.ok ? sql`now()` : sql`connected_at`}
        where store_id = ${storeId} and provider = ${provider}
       returning provider, kind, status, config, connected_at, last_error`;
-      return { integration, connect_url: null } as never;
+      return { integration, connect_url: null, next_steps: nextSteps } as never;
     },
   );
 
   register(app, deps, options, routes.integrationTest, async ({ storeId, params }) => {
     assertProvider(params.provider);
     const result = await testProvider(deps, storeId, params.provider);
+    if (params.provider === 'stripe' && result.ok) {
+      const adapter = await deps.payments(storeId);
+      if (adapter) await refreshStripeAccount(deps, storeId, adapter).catch(() => null);
+    }
     await sql`
       update sellbase.integrations set status = ${result.ok ? 'connected' : 'error'},
              last_error = ${result.ok ? null : result.message}
        where store_id = ${storeId} and provider = ${params.provider}`;
     return result;
+  });
+
+  register(app, deps, options, routes.integrationLiveCheck, async ({ storeId, actor, body }) => {
+    const check = await startLiveCheck(deps, storeId, body.success_url);
+    const { actor_type, actor_id } = actorRef(actor);
+    await sql`
+      insert into sellbase.audit_log (store_id, actor_type, actor_id, action, entity, diff)
+      values (${storeId}, ${actor_type}, ${actor_id}, 'integration.live_check_start', 'integration',
+              ${sql.json({ live_check_id: check.live_check_id, amount: check.amount } as never)})`;
+    return check;
   });
 
   register(app, deps, options, routes.doctor, ({ storeId }) => runDoctor(deps, storeId));
@@ -212,8 +272,9 @@ export async function runDoctor(deps: Deps, storeId: string): Promise<DoctorResp
     select provider, status, last_error from sellbase.integrations where store_id = ${storeId}`;
   const byProvider = new Map(integrations.map((i) => [i.provider, i]));
   const stripe = byProvider.get('stripe');
-  if (stripe?.status === 'connected') add('payments', 'Payments', 'ok', 'Stripe connected.');
-  else
+  const stripeConfig: StripeConfig = stripe ? await loadStripeConfig(deps, storeId) : {};
+  const account = stripeConfig.account;
+  if (stripe?.status !== 'connected')
     add(
       'payments',
       'Payments',
@@ -221,8 +282,60 @@ export async function runDoctor(deps: Deps, storeId: string): Promise<DoctorResp
       stripe
         ? `Stripe error: ${stripe.last_error ?? 'unknown'}.`
         : 'No payment provider connected.',
-      'Connect Stripe: POST /integrations/stripe/connect with your secret_key and webhook_secret.',
+      'Connect Stripe: POST /integrations/stripe/connect with your secret_key.',
     );
+  else if (stripeConfig.mode === 'live' && account && !account.charges_enabled)
+    add(
+      'payments',
+      'Payments',
+      'fail',
+      `Stripe live account ${account.name ?? account.id} cannot take charges yet.`,
+      'Finish activating the account in dashboard.stripe.com (business details and bank account), then POST /integrations/stripe/test.',
+    );
+  else if (stripeConfig.mode === 'live')
+    add(
+      'payments',
+      'Payments',
+      'ok',
+      `Stripe live: ${account?.name ?? account?.id ?? 'account'} (${account?.country ?? '?'})${account && !account.payouts_enabled ? ', payouts not enabled yet' : ''}.`,
+    );
+  else
+    add(
+      'payments',
+      'Payments',
+      'warn',
+      'Stripe is in test mode: nobody can pay real money yet.',
+      'When the store is ready, connect live keys (sk_live_…) with confirm: true. Guide: docs/guides/stripe-live.md.',
+    );
+
+  if (stripeConfig.mode === 'live') {
+    const check = stripeConfig.live_check;
+    if (check?.status === 'refunded')
+      add(
+        'live_check',
+        'Live payment check',
+        'ok',
+        `A real ${check.currency} charge went through and was refunded.`,
+      );
+    else if (check?.status === 'refund_failed')
+      add(
+        'live_check',
+        'Live payment check',
+        'warn',
+        `The check was paid but the refund failed: ${check.error ?? 'unknown error'}.`,
+        'Refund it from the Stripe dashboard (Payments), then run the check again if needed.',
+      );
+    else
+      add(
+        'live_check',
+        'Live payment check',
+        'warn',
+        check?.status === 'pending'
+          ? 'A live check is waiting to be paid.'
+          : 'No real charge has been verified yet.',
+        'Run payments_live_check (POST /integrations/stripe/live-check) and pay the minimum amount; it is refunded automatically.',
+      );
+  }
 
   const resend = byProvider.get('resend');
   if (resend?.status === 'connected') add('email', 'Order emails', 'ok', 'Resend connected.');
@@ -259,17 +372,32 @@ export async function runDoctor(deps: Deps, storeId: string): Promise<DoctorResp
       'Run `npx sellbase init` again, or `select sellbase.configure_jobs(<jobs function URL>, <service role key>)`.',
     );
 
-  const [webhook] = await sql<{ n: number }[]>`
-    select count(*)::int as n from sellbase.processed_webhooks where provider = 'stripe'`;
-  if ((webhook?.n ?? 0) > 0)
-    add('webhooks', 'Payment webhooks', 'ok', 'Stripe webhooks are arriving.');
-  else
+  const hook = stripeConfig.webhook;
+  const webhooksUrl = deps.publicApiUrl.replace(/sellbase-api.*$/, 'sellbase-webhooks/stripe');
+  const seen =
+    Boolean(stripeConfig.last_webhook_at) &&
+    (stripeConfig.last_webhook_livemode === undefined ||
+      stripeConfig.last_webhook_livemode === (stripeConfig.mode === 'live'));
+  if (seen)
+    add(
+      'webhooks',
+      'Payment webhooks',
+      'ok',
+      `Stripe webhooks are arriving (last ${stripeConfig.last_webhook_at}).`,
+    );
+  else if (stripe?.status === 'connected')
     add(
       'webhooks',
       'Payment webhooks',
       'warn',
-      'No Stripe webhook received yet.',
-      `Point a Stripe webhook to ${deps.publicApiUrl.replace(/sellbase-api.*$/, 'sellbase-webhooks/stripe')} and run test_purchase.`,
+      hook?.setup === 'auto'
+        ? `Stripe webhook ${hook.endpoint_id ?? ''} is set up; no event received yet.`
+        : 'No Stripe webhook received yet in this mode.',
+      hook?.setup === 'auto'
+        ? stripeConfig.mode === 'live'
+          ? 'Run payments_live_check to see one arrive.'
+          : 'Run test_purchase or a real checkout in test mode.'
+        : `Locally: stripe listen${stripeConfig.mode === 'live' ? ' --live' : ''} --forward-to ${webhooksUrl}, and connect Stripe again with its whsec_ as webhook_secret. Deployed: reconnect Stripe and the endpoint is created for you.`,
     );
 
   return { ok: checks.every((c) => c.status !== 'fail'), checks };

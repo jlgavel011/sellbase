@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import type { Deps } from './deps.js';
 import { fromDbError } from './errors.js';
 import { kickJobs } from './jobs.js';
+import { completeLiveCheck } from './stripe-live.js';
 
 /**
  * Payment provider webhooks (SPEC §8 step 3). Signature first, then the event id is
@@ -39,6 +40,11 @@ export function createWebhooksApp(deps: Deps, basePath = '/sellbase-webhooks') {
           insert into sellbase.processed_webhooks (provider, event_id) values (${provider}, ${event.id})
           on conflict do nothing returning event_id`;
         if (fresh.length === 0) return 'duplicate';
+        // What the doctor shows: events are arriving, in the mode of the connected key.
+        await tx`
+          update sellbase.integrations
+             set config = config || ${tx.json({ last_webhook_at: deps.now().toISOString(), ...(event.livemode !== undefined ? { last_webhook_livemode: event.livemode } : {}) } as never)}
+           where store_id = ${storeId} and provider = ${provider}`;
         if (!normalized) return 'ignored';
         switch (normalized.type) {
           case 'checkout.paid':
@@ -66,6 +72,8 @@ export function createWebhooksApp(deps: Deps, basePath = '/sellbase-webhooks') {
           case 'checkout.expired':
             await tx`select sellbase.release_checkout_session(${normalized.checkout_session_id})`;
             return 'released';
+          case 'live_check.paid':
+            return 'live_check';
           case 'checkout.pending':
           case 'payment.failed':
             return 'noted'; // deferred payments (OXXO/SPEI) arrive in Phase 2
@@ -73,6 +81,8 @@ export function createWebhooksApp(deps: Deps, basePath = '/sellbase-webhooks') {
       });
       // Deliver files and send the confirmation right away; pg_cron retries if this fails.
       if (outcome === 'order_placed' || outcome === 'balance_recorded') kickJobs(deps);
+      if (outcome === 'live_check' && normalized?.type === 'live_check.paid')
+        await completeLiveCheck(deps, storeId, normalized);
       return c.json({ received: true, outcome });
     } catch (error) {
       const known = fromDbError(error);

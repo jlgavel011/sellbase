@@ -206,6 +206,9 @@ export function createSellbase(options: SellbaseClientOptions) {
         connect: (provider: string, body: Body<'integrationConnect'>) =>
           request('integrationConnect', { params: { provider }, body }),
         test: (provider: string) => request('integrationTest', { params: { provider } }),
+        /** Live keys only: a minimum real charge the owner pays; refunded automatically. */
+        liveCheck: (body: Body<'integrationLiveCheck'>) =>
+          request('integrationLiveCheck', { body }),
       },
       doctor: () => request('doctor', {}),
       /** Real purchase in payment test mode; reports every step. */
