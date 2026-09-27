@@ -60,7 +60,7 @@ El usuario pausó los evals. Antes se termina, en este orden:
    - Verificación live (`POST /integrations/stripe/live-check`): un cobro real del monto mínimo (10 MXN / 0.50 USD), pagado por el dueño, que al llegar el webhook se reembolsa solo y deja la integración marcada como verificada.
    - Admin → Ajustes → Pagos: modo, cuenta, webhook y verificación. MCP: `payments_live_check`. Guía `docs/guides/stripe-live.md`.
    - Prueba real: con las llaves live del usuario, vía `stripe listen --live` en local o en la nube en 2g.
-2. **2e. `sellbase init` + MCP completo + archivos para el agente** (SPEC §13–14), en tres entregas:
+2. ✅ **2e. `sellbase init` + MCP completo + archivos para el agente** (SPEC §13–14), en tres entregas:
    - ✅ **2e-1. MCP y archivos del agente**
      - Herramientas `storefront_scaffold` (componentes según la intención) y `docs_search` (guías, skills y referencia empaquetadas con el MCP).
      - `docs/llms.txt` y `llms-full.txt` generados.
@@ -72,7 +72,7 @@ El usuario pausó los evals. Antes se termina, en este orden:
    - ✅ **2e-2. Giros y Vite**
      - `sellbase seed <giro>` y `init --seed` (ropa, curso digital, consultorio, cafetería).
      - `init` en proyectos Vite + React: variables `VITE_`, provider y página del admin para montar en `/admin`, con instrucciones al agente.
-   - **2e-3. `sellbase upgrade`**
+   - ✅ **2e-3. `sellbase upgrade`**
      - Calcula migraciones pendientes con `schema_version`.
      - Respaldo con `pg_dump` del schema `sellbase` si está disponible.
      - Prueba en seco: aplica y hace rollback en una transacción.

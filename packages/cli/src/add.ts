@@ -41,6 +41,7 @@ export async function addComponents(
   names.forEach(visit);
 
   const written: string[] = [];
+  const tracked: [string, string][] = [];
   const kept: string[] = [];
   for (const name of wanted) {
     for (const source of byName.get(name)?.files ?? []) {
@@ -53,9 +54,10 @@ export async function addComponents(
       await mkdir(dirname(target), { recursive: true });
       await cp(join(assetsDir, 'registry', source), target);
       written.push(file);
+      tracked.push([file, `registry/${source}`]);
     }
   }
-  await trackFiles(cwd, written);
+  await trackFiles(cwd, tracked);
   if (!options.quiet) {
     written.forEach((f) => log.step(`Added ${f}`));
     kept.forEach((f) => log.info(`Kept your version of ${f} (use --overwrite to replace)`));

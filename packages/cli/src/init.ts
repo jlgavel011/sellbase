@@ -51,7 +51,7 @@ export interface InitOptions {
 
 export const FUNCTIONS = ['sellbase-api', 'sellbase-webhooks', 'sellbase-jobs'] as const;
 
-async function copyBackendFiles(cwd: string) {
+export async function copyBackendFiles(cwd: string) {
   const migrations = join(cwd, 'supabase/migrations');
   await mkdir(migrations, { recursive: true });
   const files = (await readdir(join(assetsDir, 'migrations'))).filter((f) => f.endsWith('.sql'));
@@ -100,10 +100,10 @@ async function configureFunctions(cwd: string, conn: SupabaseConnection): Promis
   return toml !== before;
 }
 
-async function applyBackend(
+export async function applyBackend(
   cwd: string,
   conn: SupabaseConnection,
-  options: InitOptions,
+  options: { supabaseCli: string },
   configChanged: boolean,
 ) {
   const [cmd, ...base] = options.supabaseCli.split(' ');
@@ -121,7 +121,11 @@ async function applyBackend(
   }
 }
 
-async function installPackages(cwd: string, project: ProjectInfo, options: InitOptions) {
+export async function installPackages(
+  cwd: string,
+  project: ProjectInfo,
+  options: { packagesFrom?: string | undefined },
+) {
   let deps = ['@sellbase/react', '@sellbase/admin'];
   let devDeps = ['sellbase'];
   if (options.packagesFrom) {
@@ -202,10 +206,10 @@ async function writeFrontendFiles(cwd: string, project: ProjectInfo) {
         ['components/sellbase/provider.tsx', 'templates/provider.tsx'],
         [`${project.appDir}/admin/[[...path]]/page.tsx`, 'templates/admin-page.tsx'],
       ];
-  const written: string[] = [];
+  const written: [string, string][] = [];
   for (const [target, template] of files) {
     if (await writeIfMissing(join(cwd, target), await readFile(join(assetsDir, template), 'utf8')))
-      written.push(target);
+      written.push([target, template]);
   }
   await trackFiles(cwd, written);
 }

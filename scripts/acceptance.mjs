@@ -18,6 +18,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { packSellbase } from './lib/pack.mjs';
 
@@ -273,6 +274,72 @@ try {
   // 6. The generated admin page and components compile in the user's app.
   say('next build of the user project…');
   sh('pnpm', ['build'], app, { quiet: true });
+
+  // 7. Upgrade from an older install: the 0008 migration and two components are "old".
+  say('Simulating an older install for `sellbase upgrade`…');
+  const dbUrl = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+  const db = (query) => sh('psql', [dbUrl, '-Atc', query], app, { quiet: true }).toString().trim();
+  // Documented rollback of 0008 (see the migration header).
+  db(`update sellbase.api_tokens set scopes = array_remove(scopes, 'webhooks:write') where 'webhooks:write' = any(scopes);
+      alter table sellbase.api_tokens drop constraint api_tokens_scopes_check;
+      alter table sellbase.api_tokens add constraint api_tokens_scopes_check check (scopes <@ array['catalog:read','catalog:write','orders:read','orders:write','refunds:write','customers:read','discounts:write','settings:write','integrations:write']);
+      delete from sellbase.schema_version where version = '0008';
+      delete from supabase_migrations.schema_migrations where version = '0008';`);
+  const manifestPath = join(app, '.sellbase/manifest.json');
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  const sha = (t) => createHash('sha256').update(t).digest('hex');
+  // "Previous release": the same file without its header comment.
+  const oldVersion = (t) => t.replace(/\/\*[\s\S]*?\*\/\n/, '');
+  const card = 'components/sellbase/product-card.tsx';
+  const checkout = 'components/sellbase/checkout.tsx';
+  const oldCard = oldVersion(readFileSync(join(app, card), 'utf8'));
+  await writeFile(join(app, card), oldCard);
+  await writeFile(join(app, '.sellbase/base', card), oldCard);
+  manifest.files[card].sha256 = sha(oldCard);
+  const oldCheckout = oldVersion(readFileSync(join(app, checkout), 'utf8'));
+  const edited = `${oldCheckout}\n// Cambio del dueño: no lo sobrescribas\n`;
+  await writeFile(join(app, checkout), edited);
+  await writeFile(join(app, '.sellbase/base', checkout), oldCheckout);
+  manifest.files[checkout].sha256 = sha(oldCheckout);
+  await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+
+  const cli = (args) =>
+    sh(
+      'node',
+      [join(repo, 'packages/cli/dist/cli.js'), ...args, '--supabase-cli', supabaseBin],
+      app,
+      {
+        quiet: true,
+      },
+    ).toString();
+  const dry = cli(['upgrade', '--dry-run', '--skip-install']);
+  for (const expected of [
+    '0008_webhooks_scope.sql',
+    'applies cleanly',
+    `Update ${card}`,
+    `Edited ${checkout}`,
+  ])
+    if (!dry.includes(expected))
+      throw new Error(`upgrade --dry-run did not report: ${expected}\n${dry}`);
+  if (db('select max(version) from sellbase.schema_version') !== '0007')
+    throw new Error('the dry run changed the database');
+  say(
+    'upgrade --dry-run: 1 pending migration (applies cleanly), 1 update, 1 diff; database untouched',
+  );
+
+  cli(['upgrade', '--skip-install']);
+  if (db('select max(version) from sellbase.schema_version') !== '0008')
+    throw new Error('upgrade did not apply 0008');
+  if (readFileSync(join(app, card), 'utf8') === oldCard) throw new Error(`${card} was not updated`);
+  if (readFileSync(join(app, checkout), 'utf8') !== edited)
+    throw new Error(`${checkout} was overwritten`);
+  if (!existsSync(join(app, '.sellbase/updates', `${checkout}.diff`)))
+    throw new Error('no diff for the edited file');
+  if (!readdirSync(join(app, '.sellbase/backups')).some((f) => f.endsWith('-data.sql')))
+    throw new Error('no backup was written');
+  say(
+    'upgrade: migration applied after a backup, untouched component updated, edited one kept with a diff',
+  );
 
   const seconds = (Date.now() - started) / 1000;
   say(

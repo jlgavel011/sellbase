@@ -4,19 +4,26 @@ import { dirname, join } from 'node:path';
 import { sha256Hex } from './util.js';
 
 /**
- * `.sellbase/manifest.json`: what Sellbase installed in the project and the hash of each
- * copied file at install time. `sellbase upgrade` uses it to update only the files the
- * owner has not edited and to know which migrations are Sellbase's.
+ * `.sellbase/manifest.json`: what Sellbase installed in the project. For each copied
+ * file it keeps the source in the package and the hash of what was written, and
+ * `.sellbase/base/<path>` keeps that content. `sellbase upgrade` updates files the owner
+ * did not edit and, for edited ones, writes the upstream change (base → new) as a diff.
  */
+export interface TrackedFile {
+  /** Path inside the package assets, e.g. registry/components/sellbase/checkout.tsx. */
+  source: string;
+  sha256: string;
+}
+
 export interface Manifest {
   version: string;
   migrations: string[];
   functions: string[];
-  /** Project-relative path → sha256 of the content Sellbase wrote. */
-  files: Record<string, string>;
+  files: Record<string, TrackedFile>;
 }
 
 export const MANIFEST_PATH = '.sellbase/manifest.json';
+export const BASE_DIR = '.sellbase/base';
 
 export async function readManifest(cwd: string): Promise<Manifest> {
   const path = join(cwd, MANIFEST_PATH);
@@ -27,20 +34,22 @@ export async function readManifest(cwd: string): Promise<Manifest> {
 export async function writeManifest(cwd: string, manifest: Manifest) {
   const path = join(cwd, MANIFEST_PATH);
   await mkdir(dirname(path), { recursive: true });
-  const sorted = Object.fromEntries(
+  const files = Object.fromEntries(
     Object.entries(manifest.files).sort(([a], [b]) => a.localeCompare(b)),
   );
-  await writeFile(path, `${JSON.stringify({ ...manifest, files: sorted }, null, 2)}\n`);
+  await writeFile(path, `${JSON.stringify({ ...manifest, files }, null, 2)}\n`);
 }
 
-export async function hashFile(path: string) {
-  return sha256Hex(await readFile(path, 'utf8'));
-}
-
-/** Records files Sellbase just wrote (paths relative to `cwd`). */
-export async function trackFiles(cwd: string, paths: string[]) {
-  if (paths.length === 0) return;
+/** Records files Sellbase just wrote: `[project path, asset source]`. */
+export async function trackFiles(cwd: string, entries: [path: string, source: string][]) {
+  if (entries.length === 0) return;
   const manifest = await readManifest(cwd);
-  for (const p of paths) manifest.files[p] = await hashFile(join(cwd, p));
+  for (const [path, source] of entries) {
+    const content = await readFile(join(cwd, path), 'utf8');
+    manifest.files[path] = { source, sha256: sha256Hex(content) };
+    const base = join(cwd, BASE_DIR, path);
+    await mkdir(dirname(base), { recursive: true });
+    await writeFile(base, content);
+  }
   await writeManifest(cwd, manifest);
 }

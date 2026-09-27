@@ -13,13 +13,15 @@
   ],
   "scripts": {
     "build": "node scripts/copy-assets.mjs && tsc -p tsconfig.build.json && chmod +x dist/cli.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@sellbase/core": "workspace:*",
     "@sellbase/mcp": "workspace:*",
     "@sellbase/sdk": "workspace:*",
     "commander": "^15.0.0",
+    "diff": "^8.0.4",
     "postgres": "^3.4.9"
   },
   "devDependencies": {

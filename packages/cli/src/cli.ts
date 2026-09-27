@@ -5,6 +5,7 @@ import { addComponents } from './add.js';
 import { printDoctor } from './doctor.js';
 import { init } from './init.js';
 import { PRESETS, seed } from './seed.js';
+import { upgrade } from './upgrade.js';
 import { createToken, detectProject, readSellbaseEnv, resolveSupabase, withDb } from './project.js';
 import { cliError, isCliError, log } from './util.js';
 import { VERSION } from './version.js';
@@ -61,6 +62,24 @@ program
   .action(async (giro: string) => {
     await seed(await readSellbaseEnv(process.cwd()), giro);
   });
+
+program
+  .command('upgrade')
+  .description('Update Sellbase: migrations (dry run + backup), functions, components, skills')
+  .option(
+    '--dry-run',
+    'show what would change and test migrations in a rolled-back transaction',
+    false,
+  )
+  .option('--skip-backup', 'do not dump the sellbase schema before migrating', false)
+  .option('--skip-install', 'do not update npm packages', false)
+  .option('--supabase-url <url>', 'hosted project URL (otherwise the local stack is used)')
+  .option('--anon-key <key>', 'hosted project anon/publishable key')
+  .option('--service-role-key <key>', 'hosted project service role key')
+  .option('--db-url <url>', 'hosted project database URL')
+  .option('--supabase-cli <cmd>', 'how to run the Supabase CLI', 'npx supabase')
+  .option('--packages-from <dir>', 'install Sellbase packages from local .tgz files (development)')
+  .action((opts) => upgrade(process.cwd(), opts).then(() => undefined));
 
 const token = program.command('token').description('Manage API tokens');
 token
