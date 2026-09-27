@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { STRIPE_CONNECTED } from './store-helpers';
 import { createHmac } from 'node:crypto';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -14,8 +15,12 @@ test('team invites, agent tokens with activity, and signed webhooks', async ({ p
   // Payments: test mode is explicit, and live keys ask before connecting.
   await page.getByRole('link', { name: /Ajustes/ }).click();
   const payments = page.getByTestId('payments-card');
-  await expect(page.getByText('Modo prueba')).toBeVisible();
-  await expect(payments).toContainText('Cuenta de Stripe');
+  if (STRIPE_CONNECTED) {
+    await expect(page.getByText('Modo prueba')).toBeVisible();
+    await expect(payments).toContainText('Cuenta de Stripe');
+  } else {
+    await expect(payments).toContainText('Stripe no está conectado');
+  }
   await payments.getByLabel('Llave secreta (sk_…)').fill('sk_live_not_a_real_key');
   await payments.getByRole('button', { name: 'Conectar' }).click();
   await expect(payments).toContainText('Son llaves reales');

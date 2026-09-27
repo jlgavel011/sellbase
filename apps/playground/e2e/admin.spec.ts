@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { STRIPE_CONNECTED } from './store-helpers';
 import { createOwner, SERVICE_KEY, signIn, SUPABASE_URL } from './admin-helpers';
 
 test.skip(!SERVICE_KEY, 'SUPABASE_SERVICE_ROLE_KEY is required to create the staff user');
@@ -57,8 +58,12 @@ test('staff signs in, manages a product, and sees orders and settings', async ({
 
   // Settings: Stripe status comes from the integration.
   await page.getByRole('link', { name: /Ajustes/ }).click();
-  await expect(page.getByTestId('payments-card')).toContainText('Cuenta de Stripe');
-  await expect(page.getByText('Modo prueba')).toBeVisible();
+  if (STRIPE_CONNECTED) {
+    await expect(page.getByText('Modo prueba')).toBeVisible();
+    await expect(page.getByTestId('payments-card')).toContainText('Cuenta de Stripe');
+  } else {
+    await expect(page.getByTestId('payments-card')).toContainText('Stripe no está conectado');
+  }
 
   // Sign out returns to the login screen.
   await page.getByRole('button', { name: 'Salir' }).click();

@@ -18,6 +18,8 @@ function repoEnv(): Record<string, string> {
 const env = { ...repoEnv(), ...process.env } as Record<string, string | undefined>;
 export const DEMO_TOKEN = env.SELLBASE_DEMO_TOKEN ?? '';
 export const WEBHOOK_SECRET = env.STRIPE_WEBHOOK_SECRET ?? '';
+/** seed-demo connects Stripe only when test keys exist (local .env or CI secrets). */
+export const STRIPE_CONNECTED = Boolean(env.STRIPE_SECRET_KEY);
 const base = (env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321').replace(/\/+$/, '');
 export const API = `${base}/functions/v1/sellbase-api/v1`;
 const WEBHOOKS = `${base}/functions/v1/sellbase-webhooks/stripe`;
