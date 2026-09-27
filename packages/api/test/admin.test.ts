@@ -142,17 +142,30 @@ describe('product_upsert', () => {
     expect(res.body.slug).toBe('sudadera-arbol-2');
   });
 
-  it('explains that services are not available yet', async () => {
+  it('creates service products with their specs', async () => {
     const res = await s.request('POST', '/products', {
       token,
       body: {
         type: 'service',
         title: 'Consulta',
-        variants: [{ price_amount: 80000, service: { duration_min: 60, location_type: 'online' } }],
+        variants: [
+          {
+            price_amount: 80000,
+            service: {
+              duration_min: 45,
+              location_type: 'online',
+              online_meeting_url: 'https://meet.test/x',
+            },
+          },
+        ],
       },
     });
-    expect(res.status).toBe(400);
-    expect(res.body.error.hint).toContain('physical or digital');
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    expect(res.body.variants[0].service).toMatchObject({
+      duration_min: 45,
+      location_type: 'online',
+      capacity: 1,
+    });
   });
 
   it('audits every change', async () => {

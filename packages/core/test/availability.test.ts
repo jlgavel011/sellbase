@@ -355,6 +355,29 @@ describe('computeSlots — notice, window and exceptions', () => {
     expect(iso(slots)).toEqual(['2026-10-10T16:00:00.000Z', '2026-10-10T17:00:00.000Z']);
   });
 
+  it('keeps the slot grid when the range starts mid-window', () => {
+    const slots = computeSlots({
+      now,
+      from: new Date('2026-10-05T16:23:00Z'),
+      to: MON.to,
+      service: service(),
+      resources: [resource()],
+    });
+    expect(iso(slots)).toEqual(['17:00', '18:00', '19:00'].map((h) => `2026-10-05T${h}:00.000Z`));
+  });
+
+  it('confirms an exact start in a narrow range (checkout validation)', () => {
+    const start = new Date('2026-10-05T17:00:00Z');
+    const slots = computeSlots({
+      now,
+      from: new Date(start.getTime() - 1),
+      to: new Date(start.getTime() + 1),
+      service: service(),
+      resources: [resource()],
+    });
+    expect(iso(slots)).toEqual(['2026-10-05T17:00:00.000Z']);
+  });
+
   it('respects the requested range', () => {
     const slots = computeSlots({
       now,

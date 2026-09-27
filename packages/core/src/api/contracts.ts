@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   address,
   amount,
+  bookingSlot,
   apiScope,
   currency,
   email,
@@ -90,6 +91,13 @@ export const storefrontVariant = z.object({
   currency,
   available: z.boolean(),
   available_quantity: z.number().int().nullable(),
+  service: z
+    .object({
+      duration_min: z.number().int(),
+      deposit_amount: amount.nullable(),
+      location_type: z.enum(['in_person', 'online']),
+    })
+    .nullable(),
 });
 
 export const storefrontProductDetail = storefrontProductSummary.extend({
@@ -121,6 +129,15 @@ export const cartLineView = z.object({
   discount_amount: amount,
   total_amount: amount,
   available: z.boolean(),
+  booking: z
+    .object({
+      starts_at: timestamp,
+      ends_at: timestamp,
+      resource_id: id.nullable(),
+      resource_name: z.string().nullable(),
+      timezone: z.string(),
+    })
+    .nullable(),
 });
 
 export const totalsView = z.object({
@@ -200,10 +217,25 @@ export const adminVariantView = variant.extend({
     })
     .nullable(),
   digital_assets: z.array(z.object({ id, file_name: z.string(), size_bytes: z.number().int() })),
+  service: z
+    .object({
+      duration_min: z.number().int(),
+      buffer_before_min: z.number().int(),
+      buffer_after_min: z.number().int(),
+      capacity: z.number().int(),
+      deposit_amount: amount.nullable(),
+      location_type: z.enum(['in_person', 'online']),
+      online_meeting_url: z.string().nullable(),
+      booking_window_days: z.number().int(),
+      min_notice_min: z.number().int(),
+      slot_interval_min: z.number().int().nullable(),
+    })
+    .nullable(),
 });
 
 export const adminProductView = product.extend({
   variants: z.array(adminVariantView),
+  resource_ids: z.array(id),
   media: z.array(z.object({ id, url: z.string(), alt: z.string(), position: z.number().int() })),
 });
 
@@ -281,6 +313,53 @@ export const integrationView = z.object({
 
 const cartTokenParam = z.object({ token: z.string().min(20) });
 
+export const resourceView = z.object({
+  id,
+  name: z.string(),
+  kind: z.enum(['staff', 'room', 'equipment']),
+  timezone: z.string(),
+  email: z.string().nullable(),
+  active: z.boolean(),
+  rules: z.array(
+    z.object({ weekday: z.number().int(), start_time: z.string(), end_time: z.string() }),
+  ),
+  exceptions: z.array(
+    z.object({
+      id,
+      starts_at: timestamp,
+      ends_at: timestamp,
+      kind: z.enum(['closed', 'open']),
+      note: z.string().nullable(),
+    }),
+  ),
+  product_ids: z.array(id),
+});
+
+export const bookingView = z.object({
+  id,
+  status: z.enum([
+    'held',
+    'confirmed',
+    'completed',
+    'no_show',
+    'cancelled',
+    'rescheduled',
+    'expired',
+  ]),
+  starts_at: timestamp,
+  ends_at: timestamp,
+  timezone: z.string(),
+  resource: z.object({ id, name: z.string() }),
+  product: z.object({ id, title: z.string() }).nullable(),
+  order: z.object({ id, number: z.number().int() }).nullable(),
+  email: z.string().nullable(),
+  meeting_url: z.string().nullable(),
+  rescheduled_from: id.nullable(),
+  notes: z.string().nullable(),
+});
+
+const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$|^24:00$/, 'Use HH:MM (24h), e.g. 09:00');
+
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 export const routes = {
@@ -329,15 +408,44 @@ export const routes = {
     params: cartTokenParam,
     response: cartView,
   },
+  availabilityGet: {
+    id: 'availabilityGet',
+    method: 'GET',
+    path: '/storefront/availability',
+    summary: 'Free start times for a service variant',
+    description:
+      'Times are instants (ISO 8601, UTC); show them in `timezone`. Defaults to the next 14 days; at most 62 days per request.',
+    tag: 'storefront',
+    auth: publicAuth,
+    query: z.object({ variant_id: id, from: timestamp.optional(), to: timestamp.optional() }),
+    response: z.object({
+      timezone: z.string(),
+      resources: z.array(z.object({ id, name: z.string() })),
+      slots: z.array(
+        z.object({
+          starts_at: timestamp,
+          ends_at: timestamp,
+          resource_ids: z.array(id),
+          remaining: z.number().int(),
+        }),
+      ),
+    }),
+  },
   cartItemAdd: {
     id: 'cartItemAdd',
     method: 'POST',
     path: '/storefront/carts/:token/items',
     summary: 'Add a variant to the cart (adds to the quantity if already present)',
+    description:
+      'Services need `booking_slot` with a start time from GET /storefront/availability; each booking is its own line with quantity 1.',
     tag: 'storefront',
     auth: publicAuth,
     params: cartTokenParam,
-    body: z.object({ variant_id: id, quantity: z.number().int().min(1).max(999).default(1) }),
+    body: z.object({
+      variant_id: id,
+      quantity: z.number().int().min(1).max(999).default(1),
+      booking_slot: bookingSlot.optional(),
+    }),
     response: cartView,
   },
   cartItemUpdate: {
@@ -682,6 +790,137 @@ export const routes = {
       template: z.enum(['order_confirmation', 'order_shipped']).default('order_confirmation'),
     }),
     response: z.object({ queued: z.boolean(), to: z.string() }),
+  },
+
+  resourcesList: {
+    id: 'resourcesList',
+    method: 'GET',
+    path: '/resources',
+    summary: 'People, rooms or equipment that deliver services, with their weekly hours',
+    tag: 'catalog',
+    auth: staff('catalog:read'),
+    response: z.object({ data: z.array(resourceView) }),
+  },
+  resourceUpsert: {
+    id: 'resourceUpsert',
+    method: 'POST',
+    path: '/resources',
+    summary: 'Create or update a resource, its weekly hours and the services it delivers',
+    description:
+      'rules replace the weekly hours (weekday 0 = Sunday … 6 = Saturday, local times in `timezone`); product_ids replace the services it delivers.',
+    tag: 'catalog',
+    auth: staff('catalog:write'),
+    body: z.object({
+      id: id.optional(),
+      name: z.string().min(1).max(120),
+      kind: z.enum(['staff', 'room', 'equipment']).default('staff'),
+      timezone: z.string().optional().describe('IANA zone; defaults to the store time zone.'),
+      email: email.nullable().optional(),
+      active: z.boolean().optional(),
+      rules: z
+        .array(
+          z.object({ weekday: z.number().int().min(0).max(6), start_time: hhmm, end_time: hhmm }),
+        )
+        .optional(),
+      product_ids: z.array(id).optional(),
+    }),
+    response: resourceView,
+  },
+  resourceExceptionAdd: {
+    id: 'resourceExceptionAdd',
+    method: 'POST',
+    path: '/resources/:id/exceptions',
+    summary: 'Block time off (closed) or add extra hours (open) for a resource',
+    tag: 'catalog',
+    auth: staff('catalog:write'),
+    params: z.object({ id }),
+    body: z.object({
+      starts_at: timestamp,
+      ends_at: timestamp,
+      kind: z.enum(['closed', 'open']).default('closed'),
+      note: z.string().max(200).optional(),
+    }),
+    response: resourceView,
+  },
+  resourceExceptionRemove: {
+    id: 'resourceExceptionRemove',
+    method: 'DELETE',
+    path: '/resources/:id/exceptions/:exception_id',
+    summary: 'Remove a time-off or extra-hours exception',
+    tag: 'catalog',
+    auth: staff('catalog:write'),
+    params: z.object({ id, exception_id: id }),
+    response: resourceView,
+  },
+  bookingsList: {
+    id: 'bookingsList',
+    method: 'GET',
+    path: '/bookings',
+    summary: 'Appointments in a date range (the agenda)',
+    tag: 'orders',
+    auth: staff('orders:read'),
+    query: z.object({
+      from: timestamp.optional(),
+      to: timestamp.optional(),
+      resource_id: id.optional(),
+      status: z.enum(['confirmed', 'completed', 'no_show', 'cancelled', 'rescheduled']).optional(),
+      limit: z.coerce.number().int().min(1).max(200).default(100),
+    }),
+    response: z.object({ data: z.array(bookingView) }),
+  },
+  bookingComplete: {
+    id: 'bookingComplete',
+    method: 'POST',
+    path: '/bookings/:id/complete',
+    summary: 'Mark an appointment as done',
+    tag: 'orders',
+    auth: staff('orders:write'),
+    params: z.object({ id }),
+    response: bookingView,
+  },
+  bookingNoShow: {
+    id: 'bookingNoShow',
+    method: 'POST',
+    path: '/bookings/:id/no-show',
+    summary: 'Mark that the customer did not come',
+    tag: 'orders',
+    auth: staff('orders:write'),
+    params: z.object({ id }),
+    response: bookingView,
+  },
+  bookingCancel: {
+    id: 'bookingCancel',
+    method: 'POST',
+    path: '/bookings/:id/cancel',
+    summary: 'Cancel an appointment, optionally refunding it',
+    description:
+      'refund=true refunds the booked line through the payment provider (needs refunds:write). Requires confirm=true.',
+    tag: 'orders',
+    auth: staff('orders:write'),
+    params: z.object({ id }),
+    body: z.object({
+      reason: z.string().min(1).max(500),
+      refund: z.boolean().default(false),
+      notify_customer: z.boolean().default(true),
+      confirm: z.literal(true),
+    }),
+    response: bookingView,
+  },
+  bookingReschedule: {
+    id: 'bookingReschedule',
+    method: 'POST',
+    path: '/bookings/:id/reschedule',
+    summary: 'Move an appointment to another free time',
+    description: 'Creates a new confirmed booking linked to the old one (status "rescheduled").',
+    tag: 'orders',
+    auth: staff('orders:write'),
+    params: z.object({ id }),
+    body: z.object({
+      starts_at: timestamp,
+      resource_id: id.optional(),
+      notify_customer: z.boolean().default(true),
+    }),
+    response: bookingView,
   },
 
   // Store and integrations

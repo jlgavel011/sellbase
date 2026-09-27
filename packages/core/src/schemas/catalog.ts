@@ -37,6 +37,14 @@ export const serviceSpecs = z.object({
   online_meeting_url: z.url().nullable().default(null),
   booking_window_days: z.number().int().positive().default(60),
   min_notice_min: z.number().int().nonnegative().default(60),
+  slot_interval_min: z
+    .number()
+    .int()
+    .min(5)
+    .max(1440)
+    .nullable()
+    .default(null)
+    .describe('Minutes between start times; defaults to the duration (max 60).'),
 });
 
 export const variant = z.object({
@@ -109,6 +117,10 @@ export const productUpsertInput = z
       .max(3)
       .optional(),
     variants: z.array(variantInput).min(1),
+    resource_ids: z
+      .array(id)
+      .optional()
+      .describe('Services: who or what can deliver it (replaces the current assignment).'),
     metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .superRefine((p, ctx) => {

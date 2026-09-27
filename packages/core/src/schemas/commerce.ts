@@ -88,7 +88,10 @@ export type DiscountInput = z.infer<typeof discountInput>;
 
 export const cartStatus = z.enum(['open', 'converted', 'abandoned', 'expired']);
 
-export const bookingSlot = z.object({ resource_id: id, starts_at: timestamp });
+export const bookingSlot = z.object({
+  starts_at: timestamp.describe('A start time from GET /storefront/availability.'),
+  resource_id: id.optional().describe('Pick a specific staff member/room; any free one otherwise.'),
+});
 
 export const cartItemInput = z.object({
   variant_id: id,

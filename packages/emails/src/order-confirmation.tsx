@@ -14,6 +14,7 @@ import {
   Text,
 } from '@react-email/components';
 import { formatMoney } from '@sellbase/core';
+import { BookingBlock, type EmailBooking } from './booking.js';
 import { messages, type Locale } from './i18n.js';
 
 export interface EmailBrand {
@@ -45,11 +46,18 @@ export interface OrderConfirmationProps {
     requires_shipping: boolean;
   };
   downloads: { file_name: string; url: string; expires_at: string }[];
+  bookings?: EmailBooking[];
 }
 
 const font = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
-export function OrderConfirmation({ brand, locale, order, downloads }: OrderConfirmationProps) {
+export function OrderConfirmation({
+  brand,
+  locale,
+  order,
+  downloads,
+  bookings = [],
+}: OrderConfirmationProps) {
   const t = messages[locale];
   const accent = brand.brand_color ?? '#111111';
   const money = (amount: number) =>
@@ -88,6 +96,15 @@ export function OrderConfirmation({ brand, locale, order, downloads }: OrderConf
           <Text style={{ color: '#555555', margin: '0 0 24px' }}>
             {t.orderNumber(order.number)} {order.requires_shipping ? t.willShip : ''}
           </Text>
+
+          {bookings.length > 0 && (
+            <Section style={{ marginBottom: 8 }}>
+              <Text style={{ fontWeight: 600, margin: '0 0 12px' }}>{t.appointment}</Text>
+              {bookings.map((b, i) => (
+                <BookingBlock key={i} booking={b} locale={locale} accent={accent} />
+              ))}
+            </Section>
+          )}
 
           {downloads.length > 0 && (
             <Section

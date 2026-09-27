@@ -93,12 +93,25 @@ export async function loadAdminProduct(sql: Db, storeId: string, id: string) {
                                       'requires_shipping', ps.requires_shipping)
               from sellbase.physical_specs ps where ps.variant_id = v.id) as physical,
            coalesce((select jsonb_agg(jsonb_build_object('id', a.id, 'file_name', a.file_name, 'size_bytes', a.size_bytes))
-                       from sellbase.digital_assets a where a.variant_id = v.id), '[]') as digital_assets
+                       from sellbase.digital_assets a where a.variant_id = v.id), '[]') as digital_assets,
+           (select jsonb_build_object('duration_min', s.duration_min, 'buffer_before_min', s.buffer_before_min,
+                                      'buffer_after_min', s.buffer_after_min, 'capacity', s.capacity,
+                                      'deposit_amount', s.deposit_amount, 'location_type', s.location_type,
+                                      'online_meeting_url', s.online_meeting_url, 'booking_window_days', s.booking_window_days,
+                                      'min_notice_min', s.min_notice_min, 'slot_interval_min', s.slot_interval_min)
+              from sellbase.service_specs s where s.variant_id = v.id) as service
       from sellbase.variants v where v.product_id = ${id}
      order by v.position, v.created_at`;
   const media = await sql`
     select id, url, alt, position from sellbase.product_media where product_id = ${id} order by position`;
-  return { ...product, variants, media } as never;
+  const resources = await sql<{ resource_id: string }[]>`
+    select resource_id from sellbase.service_resources where product_id = ${id}`;
+  return {
+    ...product,
+    variants,
+    media,
+    resource_ids: resources.map((r) => r.resource_id),
+  } as never;
 }
 
 async function uniqueSlug(tx: Db, storeId: string, base: string, exceptId: string | null) {
@@ -119,13 +132,6 @@ export async function upsertProduct(
   actor: Actor | null,
   input: ProductUpsertInput,
 ) {
-  if (input.type === 'service') {
-    throw sellbaseError(
-      'VALIDATION_ERROR',
-      'Service products (bookings) are not available yet.',
-      'Create it as a physical or digital product for now; bookings arrive in the next release.',
-    );
-  }
   const store = await loadStore(deps.sql, storeId);
   const currency = input.currency ?? store.default_currency;
 
@@ -207,12 +213,41 @@ export async function upsertProduct(
             width_cm = excluded.width_cm, height_cm = excluded.height_cm,
             requires_shipping = excluded.requires_shipping, hs_code = excluded.hs_code`;
       }
+      if (v.service) {
+        await tx`
+          insert into sellbase.service_specs (variant_id, store_id, duration_min, buffer_before_min, buffer_after_min, capacity,
+                                              deposit_amount, location_type, online_meeting_url, booking_window_days,
+                                              min_notice_min, slot_interval_min)
+          values (${variantId}, ${storeId}, ${v.service.duration_min}, ${v.service.buffer_before_min}, ${v.service.buffer_after_min},
+                  ${v.service.capacity}, ${v.service.deposit_amount}, ${v.service.location_type}, ${v.service.online_meeting_url},
+                  ${v.service.booking_window_days}, ${v.service.min_notice_min}, ${v.service.slot_interval_min})
+          on conflict (variant_id) do update set duration_min = excluded.duration_min, buffer_before_min = excluded.buffer_before_min,
+            buffer_after_min = excluded.buffer_after_min, capacity = excluded.capacity, deposit_amount = excluded.deposit_amount,
+            location_type = excluded.location_type, online_meeting_url = excluded.online_meeting_url,
+            booking_window_days = excluded.booking_window_days, min_notice_min = excluded.min_notice_min,
+            slot_interval_min = excluded.slot_interval_min`;
+      }
       if (v.inventory) {
         const [current] = await tx<{ on_hand: number }[]>`
           select coalesce(sum(on_hand), 0)::int as on_hand from sellbase.inventory_levels where variant_id = ${variantId}`;
         const delta = v.inventory.on_hand - (current?.on_hand ?? 0);
         const { actor_type, actor_id } = actorRef(actor);
         await tx`select sellbase.adjust_inventory(${variantId}, ${delta}, 'product_upsert', ${actor_type}, ${actor_id}, ${v.inventory.policy})`;
+      }
+    }
+    if (input.resource_ids) {
+      const found = await tx<{ id: string }[]>`
+        select id from sellbase.resources where store_id = ${storeId} and id = any(${tx.array(input.resource_ids)}::uuid[])`;
+      if (found.length !== new Set(input.resource_ids).size) {
+        throw sellbaseError(
+          'VALIDATION_ERROR',
+          'Some resource_ids do not exist in this store.',
+          'Create them first with POST /resources (or service_setup).',
+        );
+      }
+      await tx`delete from sellbase.service_resources where product_id = ${id}`;
+      for (const r of found) {
+        await tx`insert into sellbase.service_resources (store_id, product_id, resource_id) values (${storeId}, ${id}, ${r.id})`;
       }
     }
     await tx`

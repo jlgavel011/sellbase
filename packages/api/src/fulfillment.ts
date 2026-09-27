@@ -1,5 +1,13 @@
-import { toLocale, type OrderConfirmationProps } from '@sellbase/emails';
 import {
+  formatWhen,
+  toLocale,
+  type EmailBooking,
+  type Locale,
+  type OrderConfirmationProps,
+} from '@sellbase/emails';
+import {
+  googleCalendarUrl,
+  toIcs,
   deriveFulfillmentStatus,
   shouldCompleteOrder,
   type FulfillmentStatus,
@@ -99,11 +107,72 @@ export async function refreshOrderStatus(tx: TransactionSql, orderId: string) {
   }
 }
 
+export interface BookingForEmail {
+  id: string;
+  title: string;
+  starts_at: Date;
+  ends_at: Date;
+  resource_name: string;
+  timezone: string;
+  meeting_url: string | null;
+  store_name: string;
+  contact_email: string | null;
+}
+
+export async function loadBookingsForEmail(
+  tx: TransactionSql,
+  where: { orderId?: string; bookingId?: string },
+) {
+  return tx<BookingForEmail[]>`
+    select b.id, coalesce(p.title, 'Cita') as title, b.starts_at, b.ends_at, r.name as resource_name, s.timezone,
+           coalesce(b.meeting_url, ss.online_meeting_url) as meeting_url, s.name as store_name, s.contact_email::text as contact_email
+      from sellbase.bookings b
+      join sellbase.resources r on r.id = b.resource_id
+      join sellbase.stores s on s.id = b.store_id
+      left join sellbase.products p on p.id = b.product_id
+      left join sellbase.service_specs ss on ss.variant_id = b.variant_id
+     where ${where.bookingId ? tx`b.id = ${where.bookingId}` : tx`b.order_id = ${where.orderId ?? null} and b.status = 'confirmed'`}
+     order by b.starts_at`;
+}
+
+/** Email view of a booking plus its .ics invitation. */
+export function bookingEmail(b: BookingForEmail, locale: Locale) {
+  const event = {
+    uid: `${b.id}@sellbase`,
+    starts_at: b.starts_at,
+    ends_at: b.ends_at,
+    summary: `${b.title} · ${b.store_name}`,
+    description: b.meeting_url ? b.meeting_url : `${b.title} (${b.resource_name})`,
+    ...(b.meeting_url ? { url: b.meeting_url, location: b.meeting_url } : {}),
+    ...(b.contact_email ? { organizer: { name: b.store_name, email: b.contact_email } } : {}),
+  };
+  const view: EmailBooking = {
+    title: b.title,
+    when: formatWhen(b.starts_at, b.timezone, locale),
+    resource_name: b.resource_name,
+    meeting_url: b.meeting_url,
+    calendar_url: googleCalendarUrl(event),
+  };
+  const bytes = new TextEncoder().encode(toIcs(event));
+  const attachment = {
+    filename: 'cita.ics',
+    content_base64: btoa(String.fromCharCode(...bytes)),
+    content_type: 'text/calendar; method=REQUEST',
+  };
+  return { view, attachment };
+}
+
 export async function loadOrderEmailProps(
   tx: TransactionSql,
   orderId: string,
   links: DownloadLink[],
-): Promise<(OrderConfirmationProps & { email: string }) | null> {
+): Promise<
+  | (Omit<OrderConfirmationProps, 'bookings'> & {
+      email: string;
+      bookings: ReturnType<typeof bookingEmail>[];
+    })
+  | null
+> {
   const [order] = await tx<
     {
       number: number;
@@ -168,5 +237,8 @@ export async function loadOrderEmailProps(
       url: l.url,
       expires_at: l.expires_at.toISOString(),
     })),
+    bookings: (await loadBookingsForEmail(tx, { orderId })).map((b) =>
+      bookingEmail(b, toLocale(order.default_locale)),
+    ),
   };
 }

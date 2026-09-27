@@ -46,6 +46,11 @@ export function createSellbase(options: SellbaseClientOptions) {
   return {
     baseUrl,
     request,
+    availability: {
+      /** Free start times for a service variant (instants; show them in `timezone`). */
+      get: (variantId: string, range: { from?: string; to?: string } = {}) =>
+        request('availabilityGet', { query: { variant_id: variantId, ...range } }),
+    },
     products: {
       list: (query: Query<'storefrontProductsList'> = {}) =>
         request('storefrontProductsList', { query }),
@@ -54,8 +59,20 @@ export function createSellbase(options: SellbaseClientOptions) {
     cart: {
       create: (body: Body<'cartCreate'> = {}) => request('cartCreate', { body }),
       get: (token: string) => request('cartGet', { params: { token } }),
-      add: (token: string, variantId: string, quantity = 1) =>
-        request('cartItemAdd', { params: { token }, body: { variant_id: variantId, quantity } }),
+      add: (
+        token: string,
+        variantId: string,
+        quantity = 1,
+        bookingSlot?: { starts_at: string; resource_id?: string },
+      ) =>
+        request('cartItemAdd', {
+          params: { token },
+          body: {
+            variant_id: variantId,
+            quantity,
+            ...(bookingSlot ? { booking_slot: bookingSlot } : {}),
+          },
+        }),
       update: (token: string, itemId: string, quantity: number) =>
         request('cartItemUpdate', { params: { token, item_id: itemId }, body: { quantity } }),
       remove: (token: string, itemId: string) =>
@@ -89,6 +106,23 @@ export function createSellbase(options: SellbaseClientOptions) {
         /** Attach the file buyers receive (base64, max 10 MB) to a digital variant. */
         uploadFile: (variantId: string, body: Body<'digitalAssetUpload'>) =>
           request('digitalAssetUpload', { params: { id: variantId }, body }),
+      },
+      resources: {
+        list: () => request('resourcesList', {}),
+        upsert: (body: Body<'resourceUpsert'>) => request('resourceUpsert', { body }),
+        addException: (id: string, body: Body<'resourceExceptionAdd'>) =>
+          request('resourceExceptionAdd', { params: { id }, body }),
+        removeException: (id: string, exceptionId: string) =>
+          request('resourceExceptionRemove', { params: { id, exception_id: exceptionId } }),
+      },
+      bookings: {
+        search: (query: Query<'bookingsList'> = {}) => request('bookingsList', { query }),
+        complete: (id: string) => request('bookingComplete', { params: { id } }),
+        noShow: (id: string) => request('bookingNoShow', { params: { id } }),
+        cancel: (id: string, body: Body<'bookingCancel'>) =>
+          request('bookingCancel', { params: { id }, body }),
+        reschedule: (id: string, body: Body<'bookingReschedule'>) =>
+          request('bookingReschedule', { params: { id }, body }),
       },
       inventory: {
         adjust: (body: Body<'inventoryAdjust'>) => request('inventoryAdjust', { body }),

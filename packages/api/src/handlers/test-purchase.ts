@@ -6,6 +6,7 @@ import { fromDbError } from '../errors.js';
 import { register, type AppOptions } from '../http.js';
 import { runJobs } from '../jobs.js';
 import { loadCartLines, loadStore } from '../pricing-context.js';
+import { loadService, slotsFor, withBookings } from '../services.js';
 
 interface Step {
   step: string;
@@ -65,7 +66,7 @@ export function registerTestPurchase(app: Hono, deps: Deps, options: AppOptions)
               select v.id, p.type as product_type, v.position, p.created_at
                 from sellbase.storefront_variants v join sellbase.products p on p.id = v.product_id
                where v.store_id = ${storeId} and v.available and v.currency = ${store.default_currency}
-                 and p.type in ('physical', 'digital')
+                 and p.type in ('physical', 'digital', 'service')
             ) sv order by sv.product_type, sv.created_at, sv.position`
         ).map((r) => r.id);
     if (variantIds.length === 0) {
@@ -95,12 +96,50 @@ export function registerTestPurchase(app: Hono, deps: Deps, options: AppOptions)
       insert into sellbase.carts (store_id, token, currency, email)
       values (${storeId}, ${token}, ${store.default_currency}, ${body.email}) returning id`;
     if (!cart) throw new Error('cart insert returned no row');
+    const skipped: string[] = [];
     for (const variantId of variantIds) {
-      await sql`insert into sellbase.cart_items (store_id, cart_id, variant_id, quantity)
-                select ${storeId}, ${cart.id}, id, 1 from sellbase.variants where id = ${variantId} and store_id = ${storeId}`;
+      const service = await loadService(sql, storeId, variantId);
+      if (service) {
+        // Services: book the first free slot, as a customer would.
+        const { slots } = await slotsFor(
+          sql,
+          service,
+          deps.now(),
+          new Date(deps.now().getTime() + 30 * 86_400_000),
+          deps.now(),
+        );
+        const first = slots[0];
+        if (!first) {
+          skipped.push(
+            `${service.title}: no free slots in the next 30 days (check the resource hours with GET /resources)`,
+          );
+          continue;
+        }
+        await sql`insert into sellbase.cart_items (store_id, cart_id, variant_id, quantity, booking_slot)
+                  values (${storeId}, ${cart.id}, ${variantId}, 1, ${sql.json({ starts_at: first.starts_at.toISOString() } as never)})`;
+      } else {
+        await sql`insert into sellbase.cart_items (store_id, cart_id, variant_id, quantity)
+                  select ${storeId}, ${cart.id}, id, 1 from sellbase.variants where id = ${variantId} and store_id = ${storeId}`;
+      }
     }
     const lines = await loadCartLines(sql, cart.id);
+    if (lines.length === 0) {
+      steps.push({
+        step: 'cart',
+        ok: false,
+        detail: skipped.join('; ') || 'Nothing could be added to the cart.',
+        hint: 'Give the service resources with weekly hours, or pass other variant_ids.',
+      });
+      return result(null);
+    }
     ok('cart', `Cart with ${lines.map((l) => l.title).join(', ')}.`);
+    for (const note of skipped)
+      steps.push({
+        step: 'booking',
+        ok: false,
+        detail: note,
+        hint: 'Set weekly hours for the resources with POST /resources.',
+      });
 
     // 4. Shipping
     const needsShipping = lines.some((l) => l.product_type === 'physical' && l.requires_shipping);
@@ -143,10 +182,18 @@ export function registerTestPurchase(app: Hono, deps: Deps, options: AppOptions)
         shipping_amount: shippingAmount,
         tax: store.tax,
       });
+      const booked = await withBookings(
+        sql,
+        storeId,
+        plan.lines,
+        lines.map((l) => l.booking_slot),
+        deps.now(),
+      );
       const [created] = await sql<{ id: string }[]>`
-        select sellbase.create_checkout_session(${cart.id}, ${payments.id}, ${sql.json(plan.lines as never)},
+        select sellbase.create_checkout_session(${cart.id}, ${payments.id}, ${sql.json(booked.snapshot as never)},
           ${sql.json(plan.totals as never)}, ${body.email}, ${needsShipping ? sql.json(TEST_ADDRESS as never) : null},
-          ${shippingSelection ? sql.json(shippingSelection as never) : null}, '{}'::uuid[]) as id`;
+          ${shippingSelection ? sql.json(shippingSelection as never) : null}, '{}'::uuid[],
+          ${booked.hasBookings ? '35 minutes' : '15 minutes'}::interval) as id`;
       sessionId = created?.id ?? '';
       ok(
         'checkout',
@@ -203,7 +250,7 @@ export function registerTestPurchase(app: Hono, deps: Deps, options: AppOptions)
     });
 
     // 8–9. Delivery and email run through the same outbox jobs as real orders.
-    await runJobs(deps);
+    await runJobs(deps, { storeId });
     const grants = await sql<{ storage_path: string; file_name: string }[]>`
       select a.storage_path, a.file_name from sellbase.digital_grants g
         join sellbase.digital_assets a on a.id = g.digital_asset_id where g.order_id = ${order.id}`;
@@ -220,6 +267,17 @@ export function registerTestPurchase(app: Hono, deps: Deps, options: AppOptions)
     }
     if (needsShipping)
       ok('fulfillment', 'Physical items are waiting to be shipped (fulfill them from the admin).');
+    const bookings = await sql<{ starts_at: Date; status: string; resource: string }[]>`
+      select b.starts_at, b.status, r.name as resource from sellbase.bookings b join sellbase.resources r on r.id = b.resource_id
+       where b.order_id = ${order.id} order by b.starts_at`;
+    for (const b of bookings) {
+      steps.push({
+        step: 'booking',
+        ok: b.status === 'confirmed',
+        detail: `Appointment ${b.status} for ${b.starts_at.toISOString()} with ${b.resource}.`,
+        hint: b.status === 'confirmed' ? null : 'Check the booking in the agenda.',
+      });
+    }
 
     const [notification] = await sql<
       { status: string; error: string | null; provider_message_id: string | null }[]
@@ -255,7 +313,8 @@ export function registerTestPurchase(app: Hono, deps: Deps, options: AppOptions)
       }
     }
 
-    // Leave the catalog as it was: stock goes back, the order stays flagged as a test.
+    // Leave the catalog as it was: stock and slots go back, the order stays flagged as a test.
+    await sql`update sellbase.bookings set status = 'cancelled', notes = 'Test purchase' where order_id = ${order.id} and status = 'confirmed'`;
     const { actor_type, actor_id } = actorRef(actor);
     for (const line of plan.lines) {
       const [tracked] =

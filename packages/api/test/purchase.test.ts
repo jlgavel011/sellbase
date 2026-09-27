@@ -218,7 +218,7 @@ describe('purchase', () => {
   });
 
   it('delivers digital files and emails the buyer', async () => {
-    const summary = await runJobs(s.deps);
+    const summary = await runJobs(s.deps, { storeId: s.storeId });
     expect(summary.failed).toBe(0);
     const email = s.emails.find((m) => m.to === 'buyer@test.dev');
     expect(email?.subject).toContain('confirmado');
@@ -242,7 +242,7 @@ describe('purchase', () => {
 
   it('does not send the email twice when jobs run again', async () => {
     const before = s.emails.length;
-    await runJobs(s.deps);
+    await runJobs(s.deps, { storeId: s.storeId });
     expect(s.emails.length).toBe(before);
   });
 

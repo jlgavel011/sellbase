@@ -9,3 +9,4 @@ export * from './checkout.js';
 export * from './api/contracts.js';
 export * from './api/openapi.js';
 export * from './availability.js';
+export * from './ics.js';

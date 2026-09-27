@@ -41,7 +41,7 @@ async function paidOrder() {
       raw: {},
     },
   });
-  await runJobs(s.deps);
+  await runJobs(s.deps, { storeId: s.storeId });
   const orders = await s.request('GET', '/orders?limit=1', { token });
   return { id: orders.body.data[0].id as string, total };
 }
@@ -118,7 +118,7 @@ describe('fulfill', () => {
     const rest = await s.request('POST', `/orders/${id}/fulfillments`, { token, body: {} });
     expect(rest.body).toMatchObject({ fulfillment_status: 'fulfilled', status: 'completed' });
 
-    await runJobs(s.deps);
+    await runJobs(s.deps, { storeId: s.storeId });
     const shipped = s.emails.filter((m) => m.subject.includes('va en camino'));
     expect(shipped).toHaveLength(2);
     expect(shipped[0]?.html).toContain('https://track.test/EST1');
@@ -165,7 +165,7 @@ describe('refund', () => {
     expect(s.payments.refunds.length - before).toBe(1);
     expect(rest.body.payment_status).toBe('refunded');
 
-    await runJobs(s.deps);
+    await runJobs(s.deps, { storeId: s.storeId });
     expect(
       s.emails.some((m) => m.subject.includes('Reembolso') && m.text.includes('$100.00')),
     ).toBe(true);
@@ -212,7 +212,7 @@ describe('cancel', () => {
     >`select expires_at <= now() as expired from sellbase.digital_grants where order_id = ${id}`;
     expect(grant?.expired).toBe(true);
 
-    await runJobs(s.deps);
+    await runJobs(s.deps, { storeId: s.storeId });
     const email = s.emails.find((m) => m.subject.includes('cancelado'));
     expect(email?.text).toContain('reembolsamos');
 
@@ -255,7 +255,7 @@ describe('notes and notifications', () => {
       body: { template: 'order_confirmation' },
     });
     expect(resend.body).toMatchObject({ queued: true, to: 'buyer@test.dev' });
-    await runJobs(s.deps);
+    await runJobs(s.deps, { storeId: s.storeId });
     expect(s.emails.filter((m) => m.subject.includes('confirmado')).length).toBe(count + 1);
   });
 });

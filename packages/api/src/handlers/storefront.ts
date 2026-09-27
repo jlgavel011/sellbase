@@ -14,8 +14,10 @@ import {
   loadStore,
 } from '../pricing-context.js';
 import { decodeCursor, encodeCursor } from '../pagination.js';
+import { loadService, resolveBooking, withBookings } from '../services.js';
 
 const CHECKOUT_TTL_MINUTES = 15;
+const BOOKING_TTL_MINUTES = 35;
 
 export function registerStorefront(app: Hono, deps: Deps, options: AppOptions) {
   const { sql } = deps;
@@ -57,9 +59,12 @@ export function registerStorefront(app: Hono, deps: Deps, options: AppOptions) {
     if (!product)
       throw notFound('Product', params.slug, 'List products with GET /storefront/products.');
     const variants = await sql`
-      select id, sku, title, option_values, price_amount, compare_at_amount, currency::text as currency,
-             available, available_quantity
-        from sellbase.storefront_variants where product_id = ${product.id} order by position, id`;
+      select sv.id, sv.sku, sv.title, sv.option_values, sv.price_amount, sv.compare_at_amount, sv.currency::text as currency,
+             sv.available, sv.available_quantity,
+             case when ss.variant_id is null then null
+                  else jsonb_build_object('duration_min', ss.duration_min, 'deposit_amount', ss.deposit_amount, 'location_type', ss.location_type) end as service
+        from sellbase.storefront_variants sv left join sellbase.service_specs ss on ss.variant_id = sv.id
+       where sv.product_id = ${product.id} order by sv.position, sv.id`;
     const options = await sql`
       select o.name, array_agg(v.value order by v.position) as values
         from sellbase.product_options o join sellbase.product_option_values v on v.option_id = o.id
@@ -104,11 +109,41 @@ export function registerStorefront(app: Hono, deps: Deps, options: AppOptions) {
         `Create a cart in ${variant.currency} for this product.`,
       );
     }
-    await sql`
-      insert into sellbase.cart_items (store_id, cart_id, variant_id, quantity)
-      values (${storeId}, ${cart.id}, ${body.variant_id}, ${body.quantity})
-      on conflict (cart_id, variant_id) where booking_slot is null
-      do update set quantity = least(sellbase.cart_items.quantity + excluded.quantity, 999)`;
+    const service = await loadService(sql, storeId, body.variant_id);
+    if (service) {
+      if (!body.booking_slot) {
+        throw sellbaseError(
+          'VALIDATION_ERROR',
+          `${service.title} is a service: choose a time.`,
+          `Send booking_slot.starts_at from GET /storefront/availability?variant_id=${body.variant_id}.`,
+        );
+      }
+      // Soft check now; the hold at checkout is the real guarantee.
+      const booking = await resolveBooking(
+        sql,
+        service,
+        new Date(body.booking_slot.starts_at),
+        deps.now(),
+        body.booking_slot.resource_id,
+      );
+      await sql`
+        insert into sellbase.cart_items (store_id, cart_id, variant_id, quantity, booking_slot)
+        values (${storeId}, ${cart.id}, ${body.variant_id}, 1,
+                ${sql.json({ starts_at: booking.starts_at.toISOString(), ...(body.booking_slot.resource_id ? { resource_id: body.booking_slot.resource_id } : {}) } as never)})`;
+    } else {
+      if (body.booking_slot) {
+        throw sellbaseError(
+          'VALIDATION_ERROR',
+          'booking_slot is only for services.',
+          'Remove booking_slot for this product.',
+        );
+      }
+      await sql`
+        insert into sellbase.cart_items (store_id, cart_id, variant_id, quantity)
+        values (${storeId}, ${cart.id}, ${body.variant_id}, ${body.quantity})
+        on conflict (cart_id, variant_id) where booking_slot is null
+        do update set quantity = least(sellbase.cart_items.quantity + excluded.quantity, 999)`;
+    }
     await sql`update sellbase.carts set updated_at = now() where id = ${cart.id}`;
     return cartView(sql, storeId, params.token, deps.now());
   });
@@ -255,14 +290,25 @@ export function registerStorefront(app: Hono, deps: Deps, options: AppOptions) {
       );
     }
 
+    // Services: resolve each chosen time into a resource and occupied range to hold.
+    const { snapshot, hasBookings } = await withBookings(
+      sql,
+      storeId,
+      plan.lines,
+      lines.map((l) => l.booking_slot),
+      deps.now(),
+    );
+    // Bookings are held longer than Stripe's minimum session (ADR 0008).
+    const ttlMinutes = hasBookings ? BOOKING_TTL_MINUTES : CHECKOUT_TTL_MINUTES;
+
     const appliedIds = plan.totals.applied_discounts.map((d) => d.id);
     // Two statements on purpose: a volatile function in WHERE would run once per scanned row.
     const [created] = await sql<{ id: string }[]>`
       select sellbase.create_checkout_session(
-         ${cart.id}, ${payments.id}, ${sql.json(plan.lines as never)}, ${sql.json(plan.totals as never)},
+         ${cart.id}, ${payments.id}, ${sql.json(snapshot as never)}, ${sql.json(plan.totals as never)},
          ${body.email}, ${body.shipping_address ? sql.json(body.shipping_address as never) : null},
          ${shippingSelection ? sql.json(shippingSelection as never) : null},
-         ${sql.array(appliedIds)}::uuid[], ${`${CHECKOUT_TTL_MINUTES} minutes`}::interval) as id`;
+         ${sql.array(appliedIds)}::uuid[], ${`${ttlMinutes} minutes`}::interval) as id`;
     const [session] = await sql<{ id: string; expires_at: Date }[]>`
       select id, expires_at from sellbase.checkout_sessions where id = ${created?.id ?? null}`;
     if (!session) throw new Error('checkout session was not created');

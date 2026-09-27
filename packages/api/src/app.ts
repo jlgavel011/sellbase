@@ -2,6 +2,7 @@ import { buildOpenApi } from '@sellbase/core';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { Deps } from './deps.js';
+import { registerBookings } from './handlers/bookings.js';
 import { registerCatalog } from './handlers/catalog.js';
 import { registerOrderActions } from './handlers/order-actions.js';
 import { registerOrders } from './handlers/orders.js';
@@ -28,6 +29,7 @@ export function createApiApp(deps: Deps, options: AppOptions = {}, basePath = '/
   registerCatalog(app, deps, options);
   registerOrders(app, deps, options);
   registerOrderActions(app, deps, options);
+  registerBookings(app, deps, options);
   registerStore(app, deps, options);
   registerTestPurchase(app, deps, options);
   return app;

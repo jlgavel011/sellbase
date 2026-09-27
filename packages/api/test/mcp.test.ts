@@ -146,11 +146,12 @@ describe('mcp', () => {
         type: 'service',
         title: 'Consulta',
         variants: [{ price_amount: 1000, service: { duration_min: 60, location_type: 'online' } }],
+        resource_ids: [crypto.randomUUID()],
       },
     });
     expect(res.isError).toBe(true);
     expect(res.data.code).toBe('VALIDATION_ERROR');
-    expect(res.data.hint).toContain('physical or digital');
+    expect(res.data.hint).toContain('POST /resources');
   });
 
   it('rejects input that breaks the tool schema, naming the field', async () => {

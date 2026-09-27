@@ -21,6 +21,26 @@ export const messages = {
     total: 'Total',
     taxIncluded: (amount: string) => `Incluye ${amount} de impuestos`,
     questions: (email: string) => `¿Dudas? Escríbenos a ${email}.`,
+    appointment: 'Tu cita',
+    joinOnline: 'Entrar a la reunión',
+    addToCalendar: 'Agregar a Google Calendar',
+    withResource: (name: string) => `con ${name}`,
+    reminder: {
+      subject: (title: string, when: string) => `Recordatorio: ${title}, ${when}`,
+      title: 'Te esperamos',
+      body: 'Te recordamos tu cita:',
+    },
+    rescheduled: {
+      subject: (title: string) => `Tu cita de ${title} cambió de horario`,
+      title: 'Cambiamos tu cita',
+      body: 'Este es el nuevo horario:',
+    },
+    bookingCancelled: {
+      subject: (title: string) => `Tu cita de ${title} fue cancelada`,
+      title: 'Tu cita fue cancelada',
+      body: 'Cancelamos esta cita:',
+      refundNote: (amount: string) => `Te reembolsamos ${amount}.`,
+    },
     shipped: {
       subject: (n: number) => `Tu pedido #${n} va en camino`,
       title: 'Tu pedido va en camino',
@@ -58,6 +78,26 @@ export const messages = {
     total: 'Total',
     taxIncluded: (amount: string) => `Includes ${amount} in taxes`,
     questions: (email: string) => `Questions? Write to ${email}.`,
+    appointment: 'Your appointment',
+    joinOnline: 'Join the meeting',
+    addToCalendar: 'Add to Google Calendar',
+    withResource: (name: string) => `with ${name}`,
+    reminder: {
+      subject: (title: string, when: string) => `Reminder: ${title}, ${when}`,
+      title: 'See you soon',
+      body: 'A reminder of your appointment:',
+    },
+    rescheduled: {
+      subject: (title: string) => `Your ${title} appointment was rescheduled`,
+      title: 'Your appointment moved',
+      body: 'This is the new time:',
+    },
+    bookingCancelled: {
+      subject: (title: string) => `Your ${title} appointment was cancelled`,
+      title: 'Your appointment was cancelled',
+      body: 'We cancelled this appointment:',
+      refundNote: (amount: string) => `We refunded ${amount}.`,
+    },
     shipped: {
       subject: (n: number) => `Your order #${n} is on its way`,
       title: 'Your order is on its way',

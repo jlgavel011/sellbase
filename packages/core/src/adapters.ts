@@ -174,6 +174,7 @@ export interface NotifyMessage {
   reply_to?: string;
   /** Provider-level idempotency so retries never double send. */
   idempotency_key: string;
+  attachments?: { filename: string; content_base64: string; content_type: string }[];
 }
 
 export interface NotifyAdapter {

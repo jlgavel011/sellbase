@@ -139,6 +139,10 @@ type LineRow = CartLineWithCatalog & {
   product_slug: string;
   available_quantity: number | null;
   tracked_available: boolean;
+  booking_slot: { starts_at: string; resource_id?: string } | null;
+  duration_min: number | null;
+  resource_name: string | null;
+  store_timezone: string;
 };
 
 export async function loadCartLines(sql: Sql, cartId: string): Promise<LineRow[]> {
@@ -151,12 +155,15 @@ export async function loadCartLines(sql: Sql, cartId: string): Promise<LineRow[]
                       where cp.product_id = p.id), '{}') as collection_ids,
            coalesce(ps.requires_shipping, p.type = 'physical') as requires_shipping,
            (select m.url from sellbase.product_media m where m.product_id = p.id order by m.position limit 1) as image_url,
-           inv.available as available_quantity,
+           inv.available as available_quantity, ci.booking_slot, ss.duration_min,
+           (select r.name from sellbase.resources r where r.id = (ci.booking_slot ->> 'resource_id')::uuid) as resource_name,
+           (select st.timezone from sellbase.stores st where st.id = p.store_id) as store_timezone,
            (inv.tracked is not true or inv.backorder or inv.available >= ci.quantity) as tracked_available
       from sellbase.cart_items ci
       join sellbase.variants v on v.id = ci.variant_id
       join sellbase.products p on p.id = v.product_id
       left join sellbase.physical_specs ps on ps.variant_id = v.id
+      left join sellbase.service_specs ss on ss.variant_id = v.id
       left join lateral (
         select count(*) > 0 as tracked, sum(il.on_hand - il.reserved)::int as available,
                bool_or(il.policy = 'continue') as backorder
@@ -210,6 +217,18 @@ export async function cartView(
       total_amount: totals.lines[i]?.total_amount ?? 0,
       available:
         l.product_status === 'active' && l.variant_status === 'active' && l.tracked_available,
+      booking:
+        l.booking_slot && l.duration_min
+          ? {
+              starts_at: new Date(l.booking_slot.starts_at).toISOString(),
+              ends_at: new Date(
+                new Date(l.booking_slot.starts_at).getTime() + l.duration_min * 60_000,
+              ).toISOString(),
+              resource_id: l.booking_slot.resource_id ?? null,
+              resource_name: l.resource_name,
+              timezone: l.store_timezone,
+            }
+          : null,
     })),
     discount_codes: cart.discount_codes,
     rejected_discounts: totals.rejected_discounts.map(({ code, reason, hint }) => ({

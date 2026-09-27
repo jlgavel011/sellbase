@@ -242,12 +242,9 @@ export function openWindows(
   for (const ex of resource.exceptions.filter((x) => x.kind === 'closed')) {
     windows = subtract(windows, { start: ex.starts_at.getTime(), end: ex.ends_at.getTime() });
   }
-  return windows
-    .map((w) => ({
-      start: Math.max(w.start, from.getTime()),
-      end: Math.min(w.end, to.getTime() + DAY),
-    }))
-    .filter((w) => w.end > w.start);
+  // Keep each window's real start: the slot grid aligns to it (09:00, 10:00…). The
+  // requested range only filters candidates, it never shifts them.
+  return windows.filter((w) => w.end > from.getTime() && w.start < to.getTime() + DAY);
 }
 
 // ── Slots ────────────────────────────────────────────────────────────────────

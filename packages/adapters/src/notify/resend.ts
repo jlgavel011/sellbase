@@ -51,6 +51,15 @@ export function resendNotify(options: {
           html: message.html,
           text: message.text,
           ...(message.reply_to ? { reply_to: message.reply_to } : {}),
+          ...(message.attachments?.length
+            ? {
+                attachments: message.attachments.map((f) => ({
+                  filename: f.filename,
+                  content: f.content_base64,
+                  content_type: f.content_type,
+                })),
+              }
+            : {}),
         },
         message.idempotency_key,
       );

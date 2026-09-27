@@ -95,3 +95,47 @@ describe('order update emails', () => {
     expect(cancelled.text).not.toContain('reembolsamos');
   });
 });
+
+describe('booking emails', () => {
+  const booking = {
+    title: 'Masaje relajante',
+    when: 'lunes, 5 de octubre de 2026, 9:00',
+    resource_name: 'Ana',
+    meeting_url: 'https://meet.test/abc',
+    calendar_url: 'https://calendar.google.com/calendar/render?action=TEMPLATE',
+  };
+
+  it('shows the appointment in the order confirmation', async () => {
+    const { renderOrderConfirmation } = await import('../src/index.js');
+    const email = await renderOrderConfirmation({ ...props, bookings: [booking] });
+    expect(email.html).toContain('Tu cita');
+    expect(email.html).toContain('con Ana');
+    expect(email.html).toContain('https://meet.test/abc');
+  });
+
+  it('renders reminders, reschedules and cancellations', async () => {
+    const { renderBookingNotice } = await import('../src/index.js');
+    const base = { brand: props.brand, locale: 'es' as const, booking };
+    expect((await renderBookingNotice({ ...base, kind: 'reminder' })).subject).toBe(
+      'Recordatorio: Masaje relajante, lunes, 5 de octubre de 2026, 9:00',
+    );
+    expect((await renderBookingNotice({ ...base, kind: 'rescheduled' })).text).toContain(
+      'nuevo horario',
+    );
+    const cancelled = await renderBookingNotice({
+      ...base,
+      kind: 'cancelled',
+      refunded_amount: 80000,
+      currency: 'MXN',
+    });
+    expect(cancelled.text).toContain('$800.00');
+    expect(cancelled.html).not.toContain('meet.test');
+  });
+
+  it('formats times in the store time zone', async () => {
+    const { formatWhen } = await import('../src/index.js');
+    expect(formatWhen(new Date('2026-10-05T15:00:00Z'), 'America/Mexico_City', 'es')).toContain(
+      '9:00',
+    );
+  });
+});

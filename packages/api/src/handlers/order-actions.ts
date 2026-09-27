@@ -49,7 +49,7 @@ async function timeline(
  * Refunds through the provider. A pending row is written first so its id can be the
  * provider idempotency key: a retried request never refunds twice.
  */
-async function refund(
+export async function refundOrder(
   deps: Deps,
   storeId: string,
   orderId: string,
@@ -221,7 +221,15 @@ export function registerOrderActions(app: Hono, deps: Deps, options: AppOptions)
   });
 
   register(app, deps, options, routes.orderRefund, async ({ storeId, actor, params, body }) => {
-    await refund(deps, storeId, params.id, actor, body.amount, body.reason, body.notify_customer);
+    await refundOrder(
+      deps,
+      storeId,
+      params.id,
+      actor,
+      body.amount,
+      body.reason,
+      body.notify_customer,
+    );
     kickJobs(deps);
     return loadOrderDetail(sql, storeId, params.id);
   });
@@ -242,7 +250,7 @@ export function registerOrderActions(app: Hono, deps: Deps, options: AppOptions)
     let refunded = 0;
     if (body.refund && current.refundable > 0) {
       authorize(actor, { kind: 'staff', scope: 'refunds:write' });
-      refunded = await refund(
+      refunded = await refundOrder(
         deps,
         storeId,
         params.id,
