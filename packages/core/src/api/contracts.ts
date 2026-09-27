@@ -672,6 +672,22 @@ export const routes = {
     body: checkoutStartBody,
     response: checkoutStartResponse,
   },
+  checkoutStatus: {
+    id: 'checkoutStatus',
+    method: 'GET',
+    path: '/storefront/checkout/:id',
+    summary: 'Status of a checkout, for the page the buyer returns to after paying',
+    description:
+      'The success_url gets ?sellbase_checkout=<id>. The buyer may arrive before or after the payment webhook: show "confirming payment" while status is pending and poll every few seconds.',
+    tag: 'storefront',
+    auth: publicAuth,
+    params: z.object({ id }),
+    response: z.object({
+      checkout_session_id: id,
+      status: z.enum(['pending', 'paid', 'expired']),
+      order: z.object({ number: z.number().int(), email: z.string() }).nullable(),
+    }),
+  },
   downloadGet: {
     id: 'downloadGet',
     method: 'GET',

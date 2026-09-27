@@ -152,6 +152,20 @@ describe('stripePayments', () => {
       adapter.mapEvent({ id: 'evt_3', type: 'checkout.session.expired', data: { object } }),
     ).toMatchObject({ type: 'checkout.expired' });
     expect(
+      adapter.mapEvent({
+        id: 'evt_3b',
+        type: 'checkout.session.async_payment_failed',
+        data: { object: { ...object, payment_status: 'unpaid' } },
+      }),
+    ).toMatchObject({ type: 'payment.failed', checkout_session_id: 'sess-1' });
+    expect(
+      adapter.mapEvent({
+        id: 'evt_3c',
+        type: 'checkout.session.async_payment_succeeded',
+        data: { object },
+      }),
+    ).toMatchObject({ type: 'checkout.paid', checkout_session_id: 'sess-1' });
+    expect(
       adapter.mapEvent({ id: 'evt_4', type: 'charge.succeeded', data: { object } }),
     ).toBeNull();
     expect(

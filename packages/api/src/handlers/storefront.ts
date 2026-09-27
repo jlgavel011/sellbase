@@ -20,6 +20,19 @@ import { loadService, resolveBooking, withBookings } from '../services.js';
 const CHECKOUT_TTL_MINUTES = 15;
 const BOOKING_TTL_MINUTES = 35;
 
+/** The return page learns which checkout to ask about: ?sellbase_checkout=<id>. */
+function withCheckoutParam(url: string, sessionId: string) {
+  const u = new URL(url);
+  u.searchParams.set('sellbase_checkout', sessionId);
+  return u.toString();
+}
+
+/** b***@example.com: enough for the buyer to recognize it, not to harvest it. */
+function maskEmail(email: string) {
+  const [user = '', domain = ''] = email.split('@');
+  return `${user.slice(0, 1)}***@${domain}`;
+}
+
 export function registerStorefront(app: Hono, deps: Deps, options: AppOptions) {
   const { sql } = deps;
 
@@ -360,7 +373,7 @@ export function registerStorefront(app: Hono, deps: Deps, options: AppOptions) {
           ...(l.image_url ? { image_url: l.image_url } : {}),
         })),
         shipping_amount: plan.totals.shipping_amount - plan.totals.shipping_discount_amount,
-        success_url: body.success_url,
+        success_url: withCheckoutParam(body.success_url, session.id),
         cancel_url: body.cancel_url,
         expires_at: session.expires_at,
         locale: store.default_locale,
@@ -381,6 +394,29 @@ export function registerStorefront(app: Hono, deps: Deps, options: AppOptions) {
   });
 
   // ── Downloads ──────────────────────────────────────────────────────────────
+  register(app, deps, options, routes.checkoutStatus, async ({ storeId, params }) => {
+    const [row] = await sql<{ status: string; number: number | null; email: string | null }[]>`
+      select cs.status, o.number, o.email::text as email
+        from sellbase.checkout_sessions cs
+        left join sellbase.orders o on o.id = cs.order_id
+       where cs.id = ${params.id} and cs.store_id = ${storeId}`;
+    if (!row)
+      throw notFound('Checkout', params.id, 'Use the sellbase_checkout value from the return URL.');
+    return {
+      checkout_session_id: params.id,
+      status:
+        row.status === 'completed'
+          ? ('paid' as const)
+          : row.status === 'expired'
+            ? ('expired' as const)
+            : ('pending' as const),
+      order:
+        row.number !== null && row.email
+          ? { number: row.number, email: maskEmail(row.email) }
+          : null,
+    };
+  });
+
   register(app, deps, options, routes.downloadGet, async ({ storeId, params }) => {
     const hash = await sha256Hex(params.grant_token);
     const [grant] = await sql<

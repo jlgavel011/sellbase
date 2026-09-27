@@ -88,6 +88,12 @@ export function createSellbase(options: SellbaseClientOptions) {
       /** Reserves stock and returns where to pay. Redirect the buyer to `url`. */
       start: (input: CheckoutInput, idempotencyKey?: string) =>
         request('checkoutStart', { body: input, ...(idempotencyKey ? { idempotencyKey } : {}) }),
+      /**
+       * For the return page: pass the `sellbase_checkout` query value. "pending" means the
+       * payment webhook has not arrived yet; poll every few seconds.
+       */
+      status: (checkoutSessionId: string) =>
+        request('checkoutStatus', { params: { id: checkoutSessionId } }),
     },
     downloads: {
       url: (grantToken: string) =>

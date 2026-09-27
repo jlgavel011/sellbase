@@ -74,9 +74,12 @@ export function createWebhooksApp(deps: Deps, basePath = '/sellbase-webhooks') {
             return 'released';
           case 'live_check.paid':
             return 'live_check';
-          case 'checkout.pending':
           case 'payment.failed':
-            return 'noted'; // deferred payments (OXXO/SPEI) arrive in Phase 2
+            // The session can no longer be paid: give the stock and time slots back now.
+            await tx`select sellbase.release_checkout_session(${normalized.checkout_session_id})`;
+            return 'released';
+          case 'checkout.pending':
+            return 'noted'; // deferred payments (OXXO/SPEI) keep their hold until they expire
         }
       });
       // Deliver files and send the confirmation right away; pg_cron retries if this fails.

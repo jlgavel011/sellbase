@@ -25,6 +25,7 @@ export function fakePayments() {
     order_id?: string;
     amount_total: number;
     lines: { title: string; total_amount: number }[];
+    success_url: string;
   }[] = [];
   const refunds: { provider_payment_id: string; amount: number; idempotency_key: string }[] = [];
   const adapter: PaymentsAdapter = {
@@ -36,6 +37,7 @@ export function fakePayments() {
         ...(input.order_id ? { order_id: input.order_id } : {}),
         amount_total: input.amount_total,
         lines: input.lines,
+        success_url: input.success_url,
       });
       return {
         mode: 'redirect',
