@@ -53,6 +53,16 @@ export function createWebhooksApp(deps: Deps, basePath = '/sellbase-webhooks') {
               } as never,
             )})`;
             return 'order_placed';
+          case 'order.balance_paid':
+            await tx`select sellbase.record_order_payment(${normalized.order_id}, ${tx.json({
+              provider,
+              provider_payment_id: normalized.provider_payment_id,
+              method: normalized.method,
+              amount: normalized.amount,
+              currency: normalized.currency,
+              raw: normalized.raw,
+            } as never)})`;
+            return 'balance_recorded';
           case 'checkout.expired':
             await tx`select sellbase.release_checkout_session(${normalized.checkout_session_id})`;
             return 'released';
@@ -62,7 +72,7 @@ export function createWebhooksApp(deps: Deps, basePath = '/sellbase-webhooks') {
         }
       });
       // Deliver files and send the confirmation right away; pg_cron retries if this fails.
-      if (outcome === 'order_placed') kickJobs(deps);
+      if (outcome === 'order_placed' || outcome === 'balance_recorded') kickJobs(deps);
       return c.json({ received: true, outcome });
     } catch (error) {
       const known = fromDbError(error);

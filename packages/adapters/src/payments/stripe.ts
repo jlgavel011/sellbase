@@ -184,14 +184,20 @@ export function stripePayments(options: {
 
     async createCheckout(input) {
       const expiresAt = Math.max(input.expires_at.getTime(), now().getTime() + MIN_SESSION_MS);
-      const metadata = {
-        sellbase_checkout_session_id: input.checkout_session_id,
-        sellbase_store_id: input.store_id,
-      };
+      const metadata: Record<string, string> = input.order_id
+        ? {
+            sellbase_order_id: input.order_id,
+            sellbase_payment_kind: 'balance',
+            sellbase_store_id: input.store_id,
+          }
+        : {
+            sellbase_checkout_session_id: input.checkout_session_id ?? '',
+            sellbase_store_id: input.store_id,
+          };
       const body = toStripeForm({
         mode: 'payment',
         customer_email: input.email,
-        client_reference_id: input.checkout_session_id,
+        client_reference_id: input.order_id ?? input.checkout_session_id ?? undefined,
         success_url: input.success_url,
         cancel_url: input.cancel_url,
         expires_at: Math.floor(expiresAt / 1000),
@@ -248,6 +254,21 @@ export function stripePayments(options: {
     mapEvent(evt: ProviderEvent): NormalizedPaymentEvent | null {
       const obj = (evt.data as { object?: CheckoutSessionObject }).object;
       if (!obj || !evt.type.startsWith('checkout.session.')) return null;
+      if (obj.metadata?.sellbase_payment_kind === 'balance' && obj.metadata.sellbase_order_id) {
+        if (evt.type === 'checkout.session.completed' && obj.payment_status === 'paid') {
+          return {
+            type: 'order.balance_paid',
+            provider_event_id: evt.id,
+            order_id: obj.metadata.sellbase_order_id,
+            provider_payment_id: obj.payment_intent ?? obj.id,
+            method: paymentMethodFrom(obj),
+            amount: obj.amount_total,
+            currency: obj.currency.toUpperCase(),
+            raw: { stripe_checkout_session_id: obj.id },
+          };
+        }
+        return null;
+      }
       const sessionId = obj.metadata?.sellbase_checkout_session_id ?? obj.client_reference_id;
       if (!sessionId) return null; // not a Sellbase checkout
       const paid = {

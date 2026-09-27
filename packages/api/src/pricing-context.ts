@@ -141,6 +141,7 @@ type LineRow = CartLineWithCatalog & {
   tracked_available: boolean;
   booking_slot: { starts_at: string; resource_id?: string } | null;
   duration_min: number | null;
+  deposit_amount: number | null;
   resource_name: string | null;
   store_timezone: string;
 };
@@ -155,7 +156,7 @@ export async function loadCartLines(sql: Sql, cartId: string): Promise<LineRow[]
                       where cp.product_id = p.id), '{}') as collection_ids,
            coalesce(ps.requires_shipping, p.type = 'physical') as requires_shipping,
            (select m.url from sellbase.product_media m where m.product_id = p.id order by m.position limit 1) as image_url,
-           inv.available as available_quantity, ci.booking_slot, ss.duration_min,
+           inv.available as available_quantity, ci.booking_slot, ss.duration_min, ss.deposit_amount,
            (select r.name from sellbase.resources r where r.id = (ci.booking_slot ->> 'resource_id')::uuid) as resource_name,
            (select st.timezone from sellbase.stores st where st.id = p.store_id) as store_timezone,
            (inv.tracked is not true or inv.backorder or inv.available >= ci.quantity) as tracked_available
@@ -171,6 +172,25 @@ export async function loadCartLines(sql: Sql, cartId: string): Promise<LineRow[]
       ) inv on true
      where ci.cart_id = ${cartId}
      order by ci.created_at, ci.id`;
+}
+
+/**
+ * What a buyer pays now with pay_mode "deposit": each service line's deposit (capped at
+ * the line total) plus every other line in full. Null when no service line has a deposit.
+ */
+export function depositDue(
+  lines: readonly { product_type: string; deposit_amount: number | null }[],
+  lineTotals: readonly number[],
+): number | null {
+  const services = lines.filter((l) => l.product_type === 'service');
+  if (services.length === 0 || services.some((l) => !l.deposit_amount)) return null;
+  return lines.reduce((sum, l, i) => {
+    const total = lineTotals[i] ?? 0;
+    return (
+      sum +
+      (l.product_type === 'service' && l.deposit_amount ? Math.min(l.deposit_amount, total) : total)
+    );
+  }, 0);
 }
 
 /** The cart as the storefront sees it, with totals always computed on the server. */
@@ -245,6 +265,10 @@ export async function cartView(
       tax_amount: totals.tax_amount,
       tax_mode: totals.tax_mode,
       total_amount: totals.total_amount,
+      deposit_amount: depositDue(
+        lines,
+        totals.lines.map((l) => l.total_amount),
+      ),
     },
   };
 }

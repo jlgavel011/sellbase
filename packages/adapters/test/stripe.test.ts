@@ -162,4 +162,28 @@ describe('stripePayments', () => {
       }),
     ).toBeNull();
   });
+
+  it('maps balance payments on existing orders', () => {
+    const object = {
+      id: 'cs_2',
+      payment_status: 'paid',
+      amount_total: 50000,
+      currency: 'mxn',
+      payment_intent: 'pi_2',
+      client_reference_id: 'order-1',
+      metadata: { sellbase_order_id: 'order-1', sellbase_payment_kind: 'balance' },
+      payment_method_types: ['card'],
+    };
+    expect(
+      adapter.mapEvent({ id: 'evt_6', type: 'checkout.session.completed', data: { object } }),
+    ).toMatchObject({
+      type: 'order.balance_paid',
+      order_id: 'order-1',
+      amount: 50000,
+      currency: 'MXN',
+    });
+    expect(
+      adapter.mapEvent({ id: 'evt_7', type: 'checkout.session.expired', data: { object } }),
+    ).toBeNull();
+  });
 });

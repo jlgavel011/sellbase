@@ -5,6 +5,7 @@ import type { Deps } from '../deps.js';
 import { notFound } from '../errors.js';
 import { register, type AppOptions } from '../http.js';
 import {
+  depositDue,
   assertCartOpen,
   assertCodeUsable,
   cartView,
@@ -281,6 +282,20 @@ export function registerStorefront(app: Hono, deps: Deps, options: AppOptions) {
       );
     }
 
+    const depositNow =
+      body.pay_mode === 'deposit'
+        ? depositDue(
+            lines,
+            plan.lines.map((l) => l.total_amount),
+          )
+        : null;
+    if (body.pay_mode === 'deposit' && depositNow === null) {
+      throw sellbaseError(
+        'VALIDATION_ERROR',
+        'This cart has no deposit option.',
+        'Deposits apply only to services with deposit_amount; use pay_mode "full".',
+      );
+    }
     const payments = await deps.payments(storeId);
     if (!payments) {
       throw sellbaseError(
@@ -312,6 +327,15 @@ export function registerStorefront(app: Hono, deps: Deps, options: AppOptions) {
     const [session] = await sql<{ id: string; expires_at: Date }[]>`
       select id, expires_at from sellbase.checkout_sessions where id = ${created?.id ?? null}`;
     if (!session) throw new Error('checkout session was not created');
+    // Deposit: the session charges less than the order total, which stays in totals_snapshot.
+    const charge =
+      depositNow === null
+        ? plan.totals.total_amount
+        : depositNow +
+          (plan.totals.total_amount - plan.lines.reduce((n, l) => n + l.total_amount, 0));
+    if (depositNow !== null) {
+      await sql`update sellbase.checkout_sessions set amount_total = ${charge}, pay_mode = 'deposit' where id = ${session.id}`;
+    }
     await sql`update sellbase.carts set email = ${body.email} where id = ${cart.id}`;
 
     try {
@@ -319,12 +343,20 @@ export function registerStorefront(app: Hono, deps: Deps, options: AppOptions) {
         checkout_session_id: session.id,
         store_id: storeId,
         currency: cart.currency,
-        amount_total: plan.totals.total_amount,
+        amount_total: charge,
         email: body.email,
-        lines: plan.lines.map((l) => ({
-          title: l.variant_title ? `${l.title} — ${l.variant_title}` : l.title,
+        lines: plan.lines.map((l, i) => ({
+          title:
+            depositNow !== null && l.product_type === 'service'
+              ? `Anticipo · ${l.title}`
+              : l.variant_title
+                ? `${l.title} — ${l.variant_title}`
+                : l.title,
           quantity: l.quantity,
-          total_amount: l.total_amount,
+          total_amount:
+            depositNow !== null && l.product_type === 'service' && lines[i]?.deposit_amount
+              ? Math.min(lines[i]?.deposit_amount ?? 0, l.total_amount)
+              : l.total_amount,
           ...(l.image_url ? { image_url: l.image_url } : {}),
         })),
         shipping_amount: plan.totals.shipping_amount - plan.totals.shipping_discount_amount,

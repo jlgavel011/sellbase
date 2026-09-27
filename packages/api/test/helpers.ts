@@ -20,7 +20,12 @@ export const sql = createSql(DB_URL, { max: 4 });
 
 /** Fake Stripe-like provider: webhooks are JSON signed with a shared header. */
 export function fakePayments() {
-  const created: { checkout_session_id: string; amount_total: number }[] = [];
+  const created: {
+    checkout_session_id: string | null;
+    order_id?: string;
+    amount_total: number;
+    lines: { title: string; total_amount: number }[];
+  }[] = [];
   const refunds: { provider_payment_id: string; amount: number; idempotency_key: string }[] = [];
   const adapter: PaymentsAdapter = {
     id: 'stripe',
@@ -28,12 +33,14 @@ export function fakePayments() {
     async createCheckout(input) {
       created.push({
         checkout_session_id: input.checkout_session_id,
+        ...(input.order_id ? { order_id: input.order_id } : {}),
         amount_total: input.amount_total,
+        lines: input.lines,
       });
       return {
         mode: 'redirect',
-        provider_session_id: `cs_test_${input.checkout_session_id}`,
-        url: `https://pay.test/${input.checkout_session_id}`,
+        provider_session_id: `cs_test_${input.checkout_session_id ?? input.order_id}`,
+        url: `https://pay.test/${input.checkout_session_id ?? input.order_id}`,
       };
     },
     async verifyWebhook(req, secret) {

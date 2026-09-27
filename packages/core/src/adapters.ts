@@ -17,7 +17,10 @@ export interface CheckoutLineForProvider {
 }
 
 export interface CreateCheckoutInput {
-  checkout_session_id: string;
+  /** Sellbase checkout session, or null for a balance payment on an existing order. */
+  checkout_session_id: string | null;
+  /** Balance payments: the order being paid. */
+  order_id?: string;
   store_id: string;
   currency: string;
   amount_total: number;
@@ -59,6 +62,16 @@ export type NormalizedPaymentEvent =
       raw: unknown;
     }
   | { type: 'checkout.expired'; provider_event_id: string; checkout_session_id: string }
+  | {
+      type: 'order.balance_paid';
+      provider_event_id: string;
+      order_id: string;
+      provider_payment_id: string;
+      method: PaymentMethod;
+      amount: number;
+      currency: string;
+      raw: unknown;
+    }
   | {
       type: 'checkout.pending';
       provider_event_id: string;

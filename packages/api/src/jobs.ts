@@ -23,6 +23,7 @@ interface OutboxEvent {
   store_id: string;
   entity_id: string | null;
   payload: {
+    balance?: boolean;
     notify?: boolean;
     template?: string;
     amount?: number;
@@ -162,9 +163,14 @@ async function handle(deps: Deps, tx: TransactionSql, event: OutboxEvent) {
     case 'order.paid': {
       const links = await fulfillDigital(deps, tx, orderId);
       await refreshOrderStatus(tx, orderId);
-      await confirmation(deps, tx, event, orderId, links);
+      // A balance that completes a deposit order only emails again when it unlocks downloads.
+      if (!event.payload.balance || links.length > 0)
+        await confirmation(deps, tx, event, orderId, links);
       return;
     }
+    case 'order.deposit_paid':
+      await confirmation(deps, tx, event, orderId, []);
+      return;
     case 'notification.requested':
       if (event.payload.template === 'order_shipped')
         await update(deps, tx, event, orderId, 'shipped');

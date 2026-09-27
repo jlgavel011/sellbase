@@ -148,6 +148,8 @@ export const totalsView = z.object({
   tax_amount: amount,
   tax_mode: z.enum(['inclusive', 'exclusive']),
   total_amount: amount,
+  /** Amount due now with pay_mode "deposit"; null when no deposit applies. */
+  deposit_amount: amount.nullable(),
 });
 
 export const cartView = z.object({
@@ -185,6 +187,12 @@ export const checkoutStartBody = z.object({
     .describe('An id from POST /storefront/carts/:token/shipping-rates.'),
   success_url: z.url().describe('Where the provider sends the buyer after paying.'),
   cancel_url: z.url().describe('Where the provider sends the buyer if they go back.'),
+  pay_mode: z
+    .enum(['full', 'deposit'])
+    .default('full')
+    .describe(
+      'deposit: pay only the deposit of each service now (totals.deposit_amount); the rest is collected later.',
+    ),
 });
 
 export const checkoutStartResponse = z.discriminatedUnion('mode', [
@@ -766,6 +774,26 @@ export const routes = {
         .describe('Must be true. Refunds move real money; confirm with the owner first.'),
     }),
     response: orderDetail,
+  },
+  orderPaymentLink: {
+    id: 'orderPaymentLink',
+    method: 'POST',
+    path: '/orders/:id/payment-link',
+    summary: 'Create a payment link for the balance still owed on an order',
+    description:
+      'For orders paid with a deposit. Send the URL to the customer; when paid, the order becomes "paid".',
+    tag: 'orders',
+    auth: staff('orders:write'),
+    params: z.object({ id }),
+    body: z.object({
+      amount: amount
+        .refine((v) => v > 0, 'Amount must be positive')
+        .optional()
+        .describe('Defaults to the whole balance.'),
+      success_url: z.url().optional(),
+      cancel_url: z.url().optional(),
+    }),
+    response: z.object({ url: z.url(), amount, currency, expires_at: timestamp }),
   },
   orderNote: {
     id: 'orderNote',

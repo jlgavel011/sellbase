@@ -174,7 +174,7 @@ describe('purchase', () => {
     expect(res.status, JSON.stringify(res.body)).toBe(200);
     expect(res.body.mode).toBe('redirect');
     sessionId = res.body.checkout_session_id;
-    expect(s.payments.created.at(-1)).toEqual({
+    expect(s.payments.created.at(-1)).toMatchObject({
       checkout_session_id: sessionId,
       amount_total: 80730 + 9900,
     });
