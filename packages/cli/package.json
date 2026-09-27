@@ -1,0 +1,28 @@
+{
+  "name": "sellbase",
+  "version": "0.0.0",
+  "description": "Add commerce to any app your AI builds: `npx sellbase init`.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "sellbase": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "assets"
+  ],
+  "scripts": {
+    "build": "node scripts/copy-assets.mjs && tsc -p tsconfig.build.json && chmod +x dist/cli.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sellbase/core": "workspace:*",
+    "@sellbase/mcp": "workspace:*",
+    "@sellbase/sdk": "workspace:*",
+    "commander": "^15.0.0",
+    "postgres": "^3.4.9"
+  },
+  "devDependencies": {
+    "@sellbase/api": "workspace:*"
+  }
+}

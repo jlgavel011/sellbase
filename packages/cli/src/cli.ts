@@ -1,0 +1,99 @@
+#!/usr/bin/env node
+import { API_SCOPES, BRAND, isSellbaseError, type ApiScope } from '@sellbase/core';
+import { Command } from 'commander';
+import { addComponents } from './add.js';
+import { printDoctor } from './doctor.js';
+import { init } from './init.js';
+import { createToken, readSellbaseEnv, resolveSupabase, withDb } from './project.js';
+import { cliError, isCliError, log } from './util.js';
+
+const VERSION = '0.1.0';
+const program = new Command(BRAND.cli)
+  .description(`${BRAND.name}: commerce for apps built with AI`)
+  .version(VERSION);
+
+program
+  .command('init')
+  .description('Install Sellbase into this Next.js + Supabase project')
+  .option('-y, --yes', 'non-interactive, accept defaults (for agents)', false)
+  .option('--store-name <name>', 'store name', 'Mi tienda')
+  .option('--currency <code>', 'ISO 4217 currency', 'MXN')
+  .option('--country <code>', 'ISO 3166 country', 'MX')
+  .option('--locale <locale>', 'store locale', 'es')
+  .option('--owner-email <email>', 'invite this person as the store owner (magic link)')
+  .option('--supabase-url <url>', 'hosted project URL (otherwise the local stack is used)')
+  .option('--anon-key <key>', 'hosted project anon/publishable key')
+  .option('--service-role-key <key>', 'hosted project service role key (used only during init)')
+  .option('--db-url <url>', 'hosted project database URL')
+  .option('--supabase-cli <cmd>', 'how to run the Supabase CLI', 'npx supabase')
+  .option('--skip-migrations', 'copy files but do not apply migrations or restart Supabase', false)
+  .option('--skip-install', 'do not install npm packages', false)
+  .option('--packages-from <dir>', 'install Sellbase packages from local .tgz files (development)')
+  .action((opts) => init(process.cwd(), opts));
+
+program
+  .command('doctor')
+  .description('Setup checklist with the next step for each pending item')
+  .option('--json', 'machine-readable output', false)
+  .action(async (opts: { json: boolean }) => {
+    await printDoctor(await readSellbaseEnv(process.cwd()), { json: opts.json, exitOnFail: true });
+  });
+
+program
+  .command('add')
+  .description('Copy storefront components into components/sellbase')
+  .argument('<components...>', 'e.g. product-grid product-detail cart-drawer checkout')
+  .option('--overwrite', 'replace files you already have', false)
+  .action(async (names: string[], opts: { overwrite: boolean }) => {
+    await addComponents(process.cwd(), names, { overwrite: opts.overwrite });
+  });
+
+const token = program.command('token').description('Manage API tokens');
+token
+  .command('create')
+  .description('Create an API token (printed once; only its hash is stored)')
+  .option('--name <name>', 'label', 'API token')
+  .option('--scopes <list>', `comma separated: ${API_SCOPES.join(', ')}`)
+  .option('--db-url <url>', 'database URL (defaults to the local stack)')
+  .option('--supabase-cli <cmd>', 'how to run the Supabase CLI', 'npx supabase')
+  .action(async (opts: { name: string; scopes?: string; dbUrl?: string; supabaseCli: string }) => {
+    const scopes = opts.scopes?.split(',').map((s) => s.trim()) as ApiScope[] | undefined;
+    const invalid = scopes?.filter((s) => !(API_SCOPES as readonly string[]).includes(s)) ?? [];
+    if (invalid.length)
+      throw cliError(
+        `Unknown scope(s): ${invalid.join(', ')}.`,
+        `Valid scopes: ${API_SCOPES.join(', ')}.`,
+      );
+    const dbUrl =
+      opts.dbUrl ?? (await resolveSupabase(process.cwd(), { supabaseCli: opts.supabaseCli })).dbUrl;
+    const value = await withDb(dbUrl, async (sql) => {
+      const [store] = await sql<{ id: string }[]>`select sellbase.current_store_id() as id`;
+      if (!store?.id) throw cliError('No store found.', 'Run `npx sellbase init` first.');
+      return createToken(sql, store.id, opts.name, scopes);
+    });
+    console.log(value);
+  });
+
+program
+  .command('mcp')
+  .description('Start the MCP server over stdio (configured in .mcp.json by init)')
+  .action(async () => {
+    const { runStdioServer } = await import('@sellbase/mcp');
+    const { url, token: apiToken, anonKey } = await readSellbaseEnv(process.cwd());
+    await runStdioServer({
+      url,
+      token: apiToken,
+      version: VERSION,
+      ...(anonKey ? { anonKey } : {}),
+    });
+  });
+
+program.parseAsync().catch((error: unknown) => {
+  if (isCliError(error) || isSellbaseError(error)) {
+    log.error(error.message);
+    if (error.hint) console.error(`  → ${error.hint}`);
+  } else {
+    log.error(error instanceof Error ? error.message : String(error));
+  }
+  process.exitCode = 1;
+});

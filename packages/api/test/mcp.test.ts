@@ -1,0 +1,153 @@
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { createSellbaseMcpServer } from '@sellbase/mcp';
+import { createSellbase } from '@sellbase/sdk';
+import { mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { createTestStore, sql, type TestStore } from './helpers.js';
+
+/** An agent's session over MCP, against the real API and database. */
+let s: TestStore;
+let client: Client;
+
+async function call(name: string, args: Record<string, unknown> = {}) {
+  const res = (await client.callTool({ name, arguments: args })) as {
+    isError?: boolean;
+    content: { text: string }[];
+  };
+  return { isError: Boolean(res.isError), data: JSON.parse(res.content[0]?.text ?? 'null') };
+}
+
+beforeAll(async () => {
+  s = await createTestStore();
+  const sellbase = createSellbase({
+    url: 'http://local.test/sellbase-api',
+    token: await s.token(),
+    fetch: (input, init) => Promise.resolve(s.api.request(String(input), init)),
+  });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  await createSellbaseMcpServer(sellbase).connect(serverTransport);
+  client = new Client({ name: 'test-agent', version: '1.0.0' });
+  await client.connect(clientTransport);
+});
+
+afterAll(async () => {
+  await client.close();
+  await sql.end();
+});
+
+describe('mcp', () => {
+  it('lists the Phase 1 tools with descriptions', async () => {
+    const { tools } = await client.listTools();
+    const names = tools.map((t) => t.name);
+    expect(names).toEqual(
+      expect.arrayContaining([
+        'store_status',
+        'product_upsert',
+        'products_search',
+        'orders_search',
+        'order_get',
+        'test_purchase',
+      ]),
+    );
+    expect(tools.every((t) => (t.description ?? '').length > 30)).toBe(true);
+  });
+
+  it('sets up a store and sells, like an agent would', async () => {
+    const status = await call('store_status');
+    expect(status.data.checks.find((c: { id: string }) => c.id === 'catalog').status).toBe('warn');
+
+    const dry = await call('product_upsert', {
+      product: { type: 'physical', title: 'Taza', variants: [{ price_amount: 15900 }] },
+      dry_run: true,
+    });
+    expect(dry.data.dry_run).toBe(true);
+    expect((await call('products_search')).data.products).toHaveLength(0);
+
+    const mug = await call('product_upsert', {
+      product: {
+        type: 'physical',
+        title: 'Taza Sellbase',
+        status: 'active',
+        variants: [
+          {
+            price_amount: 15900,
+            inventory: { on_hand: 10 },
+            physical: { weight_g: 350, length_cm: 10, width_cm: 10, height_cm: 12 },
+          },
+        ],
+      },
+    });
+    expect(mug.isError, JSON.stringify(mug.data)).toBe(false);
+
+    const guide = await call('product_upsert', {
+      product: {
+        type: 'digital',
+        title: 'Guía de ventas',
+        status: 'active',
+        variants: [{ price_amount: 9900 }],
+      },
+    });
+    const dir = await mkdtemp(join(tmpdir(), 'sellbase-mcp-'));
+    const pdf = join(dir, 'guia.pdf');
+    await writeFile(pdf, '%PDF-1.4 guía');
+    const upload = await call('product_file_upload', {
+      variant_id: guide.data.variants[0].id,
+      file_path: pdf,
+      download_limit: 3,
+    });
+    expect(upload.data).toMatchObject({ file_name: 'guia.pdf' });
+
+    const image = await call('media_add', {
+      product_id: mug.data.id,
+      url: 'https://img.test/taza.jpg',
+    });
+    expect(image.data.images).toEqual(['https://img.test/taza.jpg']);
+
+    const purchase = await call('test_purchase');
+    expect(purchase.data.ok, JSON.stringify(purchase.data.steps, null, 2)).toBe(true);
+
+    const orders = await call('orders_search', { fulfillment_status: 'partially_fulfilled' });
+    expect(orders.data.data[0].number).toBe(purchase.data.order_number);
+    const order = await call('order_get', { id: purchase.data.order_id });
+    expect(order.data.items.map((i: { title: string }) => i.title).sort()).toEqual([
+      'Guía de ventas',
+      'Taza Sellbase',
+    ]);
+  });
+
+  it('returns API errors with a hint the agent can act on', async () => {
+    const res = await call('product_upsert', {
+      product: {
+        type: 'service',
+        title: 'Consulta',
+        variants: [{ price_amount: 1000, service: { duration_min: 60, location_type: 'online' } }],
+      },
+    });
+    expect(res.isError).toBe(true);
+    expect(res.data.code).toBe('VALIDATION_ERROR');
+    expect(res.data.hint).toContain('physical or digital');
+  });
+
+  it('rejects input that breaks the tool schema, naming the field', async () => {
+    const res = (await client.callTool({
+      name: 'product_upsert',
+      arguments: {
+        product: { type: 'service', title: 'Consulta', variants: [{ price_amount: 1000 }] },
+      },
+    })) as { isError?: boolean; content: { text: string }[] };
+    expect(res.isError).toBe(true);
+    expect(res.content[0]?.text).toContain('service specs');
+  });
+
+  it('reports missing local files clearly', async () => {
+    const res = await call('product_file_upload', {
+      variant_id: crypto.randomUUID(),
+      file_path: '/nope/missing.pdf',
+    });
+    expect(res.isError).toBe(true);
+    expect(res.data.message).toContain('ENOENT');
+  });
+});

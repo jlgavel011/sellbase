@@ -1,0 +1,9 @@
+---
+description: Sellbase commerce rules
+alwaysApply: true
+---
+This project sells with Sellbase. Use the `sellbase` MCP server; start with `store_status`.
+Money is integer minor units (19990 = $199.90). Never compute prices in the browser.
+Orders come only from payment webhooks; verify with `test_purchase`.
+Do not edit supabase/migrations/0000–0002_* or supabase/functions/sellbase-*; extend with `metadata`.
+Never expose the service role key or print `.env.sellbase`.

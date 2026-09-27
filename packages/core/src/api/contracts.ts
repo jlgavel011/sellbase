@@ -538,6 +538,40 @@ export const routes = {
     response: orderDetail,
   },
 
+  testPurchase: {
+    id: 'testPurchase',
+    method: 'POST',
+    path: '/test-purchase',
+    summary: 'Run a real end-to-end purchase in test mode and report every step',
+    description:
+      'Uses the payment provider test mode (never live keys): cart, checkout with stock reservation, payment, order, digital delivery, confirmation email and download link. Stock is restored afterwards and the order is flagged as a test.',
+    tag: 'orders',
+    auth: staff('orders:write'),
+    body: z.object({
+      variant_ids: z
+        .array(id)
+        .max(5)
+        .optional()
+        .describe('Defaults to one active physical and one active digital variant.'),
+      email: email.default('test-purchase@example.com'),
+    }),
+    response: z.object({
+      ok: z.boolean(),
+      order_id: id.nullable(),
+      order_number: z.number().int().nullable(),
+      total_amount: amount.nullable(),
+      currency: currency.nullable(),
+      steps: z.array(
+        z.object({
+          step: z.string(),
+          ok: z.boolean(),
+          detail: z.string(),
+          hint: z.string().nullable(),
+        }),
+      ),
+    }),
+  },
+
   // Store and integrations
   storeGet: {
     id: 'storeGet',

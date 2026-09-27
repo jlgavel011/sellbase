@@ -108,6 +108,8 @@ export function createSellbase(options: SellbaseClientOptions) {
         test: (provider: string) => request('integrationTest', { params: { provider } }),
       },
       doctor: () => request('doctor', {}),
+      /** Real purchase in payment test mode; reports every step. */
+      testPurchase: (body: Body<'testPurchase'> = {}) => request('testPurchase', { body }),
     },
   };
 }

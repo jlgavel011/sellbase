@@ -44,6 +44,10 @@ jobs:
   e2e:
     name: End-to-end (Playwright)
     runs-on: ubuntu-latest
+    env:
+      # Optional repo secrets; without them the checkout test stops before Stripe.
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_TEST_WEBHOOK_SECRET }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -52,6 +56,15 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec supabase start
+      - run: node scripts/seed-demo.mjs
+      - name: Playground env
+        run: |
+          pnpm exec supabase status -o env | sed -E 's/^ANON_KEY=/NEXT_PUBLIC_SUPABASE_ANON_KEY=/;t;d' > apps/playground/.env.local
+          echo "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321" >> apps/playground/.env.local
+          echo "NEXT_PUBLIC_SELLBASE_URL=http://127.0.0.1:54321/functions/v1/sellbase-api" >> apps/playground/.env.local
+          echo "SUPABASE_SERVICE_ROLE_KEY=$(pnpm exec supabase status -o env | sed -nE 's/^SERVICE_ROLE_KEY="?([^"]*)"?/\1/p')" >> $GITHUB_ENV
       - run: pnpm --filter @sellbase/playground exec playwright install --with-deps chromium
       - run: pnpm test:e2e
       - uses: actions/upload-artifact@v4
@@ -59,3 +72,24 @@ jobs:
         with:
           name: playwright-report
           path: apps/playground/playwright-report
+
+  acceptance:
+    name: Phase 1 acceptance (init + agent + test purchase)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+    env:
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_TEST_WEBHOOK_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec supabase start
+      - name: Acceptance
+        if: ${{ env.STRIPE_SECRET_KEY != '' }}
+        run: node scripts/acceptance.mjs

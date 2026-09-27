@@ -79,6 +79,20 @@ export interface RefundRequest {
   idempotency_key: string;
 }
 
+export interface SandboxChargeInput {
+  amount: number;
+  currency: string;
+  metadata: Record<string, string>;
+  idempotency_key: string;
+}
+
+export interface SandboxChargeResult {
+  provider_payment_id: string;
+  method: PaymentMethod;
+  amount: number;
+  currency: string;
+}
+
 export interface RefundResult {
   provider_refund_id: string;
   status: 'pending' | 'succeeded' | 'failed';
@@ -92,6 +106,11 @@ export interface PaymentsAdapter {
   verifyWebhook(req: Request, secret: string): Promise<ProviderEvent>;
   mapEvent(evt: ProviderEvent): NormalizedPaymentEvent | null;
   refund(input: RefundRequest): Promise<RefundResult>;
+  /**
+   * Test mode only: charges a provider test card server-side so `test_purchase` can run a
+   * real payment without a browser. Must refuse with live credentials.
+   */
+  sandboxCharge?(input: SandboxChargeInput): Promise<SandboxChargeResult>;
   /** Checks credentials; the message explains what to fix. */
   test(): Promise<{ ok: boolean; message: string }>;
 }

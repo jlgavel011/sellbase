@@ -14,6 +14,7 @@ export default tseslint.config(
       '**/test-results/**',
       '**/next-env.d.ts',
       'supabase/functions/**',
+      'packages/cli/assets/**',
     ],
   },
   js.configs.recommended,

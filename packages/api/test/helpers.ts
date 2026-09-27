@@ -42,6 +42,14 @@ export function fakePayments() {
     mapEvent(evt) {
       return (evt.data ?? null) as NormalizedPaymentEvent | null;
     },
+    async sandboxCharge(input) {
+      return {
+        provider_payment_id: `pi_test_${crypto.randomUUID()}`,
+        method: 'card',
+        amount: input.amount,
+        currency: input.currency,
+      };
+    },
     async refund() {
       return { provider_refund_id: 're_test', status: 'succeeded' };
     },

@@ -312,6 +312,44 @@ export function stripePayments(options: {
       };
     },
 
+    async sandboxCharge(input) {
+      if (!options.secretKey.startsWith('sk_test_') && !options.secretKey.startsWith('rk_test_')) {
+        throw sellbaseError(
+          'FORBIDDEN',
+          'Test purchases only run with Stripe test keys.',
+          'Connect a test key (sk_test_…) or run test_purchase in a staging project.',
+        );
+      }
+      const intent = await call<{ id: string; status: string; amount: number; currency: string }>(
+        'POST',
+        '/payment_intents',
+        toStripeForm({
+          amount: input.amount,
+          currency: input.currency.toLowerCase(),
+          payment_method: 'pm_card_visa',
+          confirm: true,
+          automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
+          description: 'Sellbase test purchase',
+          metadata: input.metadata,
+        }),
+        input.idempotency_key,
+      );
+      if (intent.status !== 'succeeded') {
+        throw sellbaseError(
+          'VALIDATION_ERROR',
+          `Stripe test payment ended as "${intent.status}".`,
+          'Check the Stripe dashboard (test mode) for this PaymentIntent.',
+          { payment_intent: intent.id },
+        );
+      }
+      return {
+        provider_payment_id: intent.id,
+        method: 'card',
+        amount: intent.amount,
+        currency: intent.currency.toUpperCase(),
+      };
+    },
+
     async test() {
       const account = await call<{ id: string; country: string; charges_enabled: boolean }>(
         'GET',
