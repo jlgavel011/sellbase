@@ -187,3 +187,14 @@ describe('useCheckoutStatus', () => {
     expect(calls).toBe(settled);
   });
 });
+
+describe('SellbaseProvider without a URL', () => {
+  it('renders and explains the missing configuration instead of crashing', async () => {
+    const bare = ({ children }: { children: ReactNode }) => (
+      <SellbaseProvider url="">{children}</SellbaseProvider>
+    );
+    const { result } = renderHook(() => useProducts(), { wrapper: bare });
+    await waitFor(() => expect(result.current.error).toBeTruthy(), { timeout: 5000 }); // one retry
+    expect((result.current.error as { hint?: string }).hint).toContain('SELLBASE_URL');
+  });
+});

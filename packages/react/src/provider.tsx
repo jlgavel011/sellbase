@@ -59,6 +59,27 @@ export interface SellbaseProviderProps {
  * Wrap the storefront once (e.g. in app/layout.tsx). Hooks read from it; components stay
  * headless so the AI that built the site can style them freely.
  */
+const NOT_CONFIGURED = {
+  error: {
+    code: 'VALIDATION_ERROR',
+    message: 'Sellbase is not configured: SellbaseProvider has no `url`.',
+    hint: 'Set NEXT_PUBLIC_SELLBASE_URL (Next.js) or VITE_SELLBASE_URL (Vite) to <SUPABASE_URL>/functions/v1/sellbase-api and rebuild.',
+    details: {},
+  },
+};
+
+/**
+ * Without a URL (e.g. the first build on a host before its env vars are set) the app must
+ * still build and render: every request fails with a hint instead of crashing the page.
+ */
+function unconfiguredClient() {
+  if (typeof window !== 'undefined') console.warn(`[sellbase] ${NOT_CONFIGURED.error.hint}`);
+  return createSellbase({
+    url: 'https://sellbase.invalid',
+    fetch: async () => new Response(JSON.stringify(NOT_CONFIGURED), { status: 503 }),
+  });
+}
+
 export function SellbaseProvider({
   url,
   anonKey,
@@ -84,10 +105,7 @@ export function SellbaseProvider({
   );
   const sellbase = useMemo(() => {
     if (client) return client;
-    if (!url)
-      throw new Error(
-        'SellbaseProvider needs `url` (your sellbase-api function URL) or a `client`.',
-      );
+    if (!url) return unconfiguredClient();
     const options: SellbaseClientOptions = { url, ...(anonKey ? { anonKey } : {}) };
     return createSellbase(options);
   }, [client, url, anonKey]);
