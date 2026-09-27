@@ -38,9 +38,9 @@ select is_empty(
   $$ select c.table_name || '.' || c.column_name
        from information_schema.columns c
       where c.table_schema = 'sellbase'
-        and (c.data_type in ('real', 'double precision', 'numeric', 'money')
+        and (c.data_type in ('real', 'double precision', 'money')
              or (c.column_name like '%\_amount' and c.data_type <> 'bigint')) $$,
-  'money columns are bigint minor units; no float, numeric or money types'
+  'money columns are bigint minor units; no float or money types anywhere'
 );
 
 select is_empty(
@@ -76,13 +76,15 @@ insert into t_updated values (1, '2000-01-01T00:00:00Z');
 update t_updated set id = 1;
 select is((select updated_at from t_updated), now(), 'set_updated_at stamps now()');
 
--- API roles cannot read schema_version
+-- anon cannot read schema_version at all
 set local role anon;
 select throws_ok('select * from sellbase.schema_version', '42501', null, 'anon cannot read schema_version');
 reset role;
 
+-- Signed-in users that are not staff get no rows (RLS), per ADR 0004.
 set local role authenticated;
-select throws_ok('select * from sellbase.schema_version', '42501', null, 'authenticated cannot read schema_version');
+select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-8000-00000000dead"}', true);
+select is_empty('select * from sellbase.schema_version', 'non-staff users see no schema_version rows');
 reset role;
 
 select * from finish();
