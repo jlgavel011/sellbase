@@ -6,6 +6,10 @@ import type { Page } from '@playwright/test';
  */
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321';
 export const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+// In CI a missing key must fail loudly: skipping would hide the admin specs (it did once,
+// when turbo filtered the variable out).
+if (process.env.CI && !SERVICE_KEY)
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set in CI (check turbo.json passThroughEnv).');
 
 export async function createOwner() {
   const email = `owner-${crypto.randomUUID()}@example.com`;
