@@ -20,7 +20,7 @@ import {
   td,
 } from '../ui.js';
 
-type ProductType = 'physical' | 'digital';
+type ProductType = 'physical' | 'digital' | 'service';
 type Status = 'draft' | 'active' | 'archived';
 
 interface VariantForm {
@@ -32,7 +32,32 @@ interface VariantForm {
   requires_shipping: boolean;
   weight_g: string;
   files: { id: string; file_name: string }[];
+  service: ServiceForm;
 }
+
+interface ServiceForm {
+  duration: string;
+  bufferBefore: string;
+  bufferAfter: string;
+  capacity: string;
+  deposit: string;
+  location: 'in_person' | 'online';
+  meetingUrl: string;
+  minNotice: string;
+  window: string;
+}
+
+const emptyService = (): ServiceForm => ({
+  duration: '60',
+  bufferBefore: '0',
+  bufferAfter: '0',
+  capacity: '1',
+  deposit: '',
+  location: 'in_person',
+  meetingUrl: '',
+  minNotice: '60',
+  window: '60',
+});
 
 const emptyVariant = (): VariantForm => ({
   title: 'Default',
@@ -42,6 +67,7 @@ const emptyVariant = (): VariantForm => ({
   requires_shipping: true,
   weight_g: '',
   files: [],
+  service: emptyService(),
 });
 
 function readFileAsBase64(file: File): Promise<string> {
@@ -171,6 +197,12 @@ export function ProductFormPage({ id }: { id?: string }) {
   const [status, setStatus] = useState<Status>('draft');
   const [description, setDescription] = useState('');
   const [variants, setVariants] = useState<VariantForm[]>([emptyVariant()]);
+  const [resourceIds, setResourceIds] = useState<string[]>([]);
+  const resources = useQuery({
+    queryKey: ['sellbase-admin', 'resources'],
+    queryFn: () => sellbase.admin.resources.list(),
+    enabled: type === 'service',
+  });
   const [imageUrl, setImageUrl] = useState('');
   const [saved, setSaved] = useState(flash === 'saved');
   const [formError, setFormError] = useState<unknown>(null);
@@ -179,7 +211,8 @@ export function ProductFormPage({ id }: { id?: string }) {
     const p = existing.data;
     if (!p) return;
     setTitle(p.title);
-    setType(p.type === 'digital' ? 'digital' : 'physical');
+    setType(p.type);
+    setResourceIds(p.resource_ids);
     setStatus(p.status);
     setDescription(p.description);
     setVariants(
@@ -194,6 +227,21 @@ export function ProductFormPage({ id }: { id?: string }) {
           requires_shipping: v.physical?.requires_shipping ?? true,
           weight_g: v.physical ? String(v.physical.weight_g) : '',
           files: v.digital_assets.map((a) => ({ id: a.id, file_name: a.file_name })),
+          service: v.service
+            ? {
+                duration: String(v.service.duration_min),
+                bufferBefore: String(v.service.buffer_before_min),
+                bufferAfter: String(v.service.buffer_after_min),
+                capacity: String(v.service.capacity),
+                deposit: v.service.deposit_amount
+                  ? toDecimalString(v.service.deposit_amount, v.currency)
+                  : '',
+                location: v.service.location_type,
+                meetingUrl: v.service.online_meeting_url ?? '',
+                minNotice: String(v.service.min_notice_min),
+                window: String(v.service.booking_window_days),
+              }
+            : emptyService(),
         })),
     );
   }, [existing.data]);
@@ -231,7 +279,29 @@ export function ProductFormPage({ id }: { id?: string }) {
                 },
               }
             : {}),
+          ...(type === 'service'
+            ? {
+                service: {
+                  duration_min: Number(v.service.duration || 60),
+                  buffer_before_min: Number(v.service.bufferBefore || 0),
+                  buffer_after_min: Number(v.service.bufferAfter || 0),
+                  capacity: Number(v.service.capacity || 1),
+                  deposit_amount: v.service.deposit
+                    ? toMinorUnits(v.service.deposit, currency)
+                    : null,
+                  location_type: v.service.location,
+                  online_meeting_url:
+                    v.service.location === 'online' && v.service.meetingUrl
+                      ? v.service.meetingUrl
+                      : null,
+                  booking_window_days: Number(v.service.window || 60),
+                  min_notice_min: Number(v.service.minNotice || 0),
+                  slot_interval_min: null,
+                },
+              }
+            : {}),
         })),
+        ...(type === 'service' ? { resource_ids: resourceIds } : {}),
       };
       return sellbase.admin.products.upsert(body);
     },
@@ -314,6 +384,7 @@ export function ProductFormPage({ id }: { id?: string }) {
               >
                 <option value="physical">{t.products.types.physical}</option>
                 <option value="digital">{t.products.types.digital}</option>
+                <option value="service">{t.products.types.service}</option>
               </Select>
             </Field>
             <Field label={t.products.status}>
@@ -363,14 +434,16 @@ export function ProductFormPage({ id }: { id?: string }) {
                     onChange={(e) => update(i, { price: e.target.value })}
                   />
                 </Field>
-                <Field label={t.products.stock}>
-                  <Input
-                    inputMode="numeric"
-                    placeholder="∞"
-                    value={v.stock}
-                    onChange={(e) => update(i, { stock: e.target.value.replace(/\D/g, '') })}
-                  />
-                </Field>
+                {type !== 'service' && (
+                  <Field label={t.products.stock}>
+                    <Input
+                      inputMode="numeric"
+                      placeholder="∞"
+                      value={v.stock}
+                      onChange={(e) => update(i, { stock: e.target.value.replace(/\D/g, '') })}
+                    />
+                  </Field>
+                )}
                 {type === 'physical' && (
                   <>
                     <Field label={t.products.weight}>
@@ -389,6 +462,72 @@ export function ProductFormPage({ id }: { id?: string }) {
                       {t.products.requiresShipping}
                     </label>
                   </>
+                )}
+                {type === 'service' && (
+                  <div className="sb:grid sb:gap-3 sb:md:col-span-4 sb:md:grid-cols-4">
+                    {(
+                      [
+                        ['duration', t.products.service.duration],
+                        ['bufferBefore', t.products.service.bufferBefore],
+                        ['bufferAfter', t.products.service.bufferAfter],
+                        ['capacity', t.products.service.capacity],
+                        ['minNotice', t.products.service.minNotice],
+                        ['window', t.products.service.window],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <Field key={key} label={label}>
+                        <Input
+                          inputMode="numeric"
+                          value={v.service[key]}
+                          onChange={(e) =>
+                            update(i, {
+                              service: { ...v.service, [key]: e.target.value.replace(/\D/g, '') },
+                            })
+                          }
+                        />
+                      </Field>
+                    ))}
+                    <Field label={`${t.products.service.deposit} (${currency})`}>
+                      <Input
+                        inputMode="decimal"
+                        placeholder="0.00"
+                        value={v.service.deposit}
+                        onChange={(e) =>
+                          update(i, { service: { ...v.service, deposit: e.target.value } })
+                        }
+                      />
+                    </Field>
+                    <Field label={t.products.service.location}>
+                      <Select
+                        value={v.service.location}
+                        onChange={(e) =>
+                          update(i, {
+                            service: {
+                              ...v.service,
+                              location: e.target.value as 'in_person' | 'online',
+                            },
+                          })
+                        }
+                      >
+                        <option value="in_person">{t.products.service.inPerson}</option>
+                        <option value="online">{t.products.service.online}</option>
+                      </Select>
+                    </Field>
+                    {v.service.location === 'online' && (
+                      <div className="sb:md:col-span-2">
+                        <Field label={t.products.service.meetingUrl}>
+                          <Input
+                            type="url"
+                            placeholder="https://meet.google.com/…"
+                            value={v.service.meetingUrl}
+                            onChange={(e) =>
+                              update(i, { service: { ...v.service, meetingUrl: e.target.value } })
+                            }
+                          />
+                        </Field>
+                      </div>
+                    )}
+                  </div>
                 )}
                 {type === 'digital' && v.id && (
                   <div className="sb:md:col-span-4">
@@ -456,6 +595,32 @@ export function ProductFormPage({ id }: { id?: string }) {
               />
             </div>
             <ErrorAlert error={addImage.error} />
+          </Card>
+        )}
+
+        {type === 'service' && (
+          <Card title={t.products.service.resources}>
+            {resources.data && resources.data.data.length === 0 && (
+              <p className="sb:text-sm sb:text-zinc-500">{t.products.service.noResources}</p>
+            )}
+            <div className="sb:flex sb:flex-col sb:gap-2">
+              {resources.data?.data.map((r) => (
+                <label key={r.id} className="sb:flex sb:items-center sb:gap-2 sb:text-sm">
+                  <input
+                    type="checkbox"
+                    checked={resourceIds.includes(r.id)}
+                    onChange={(e) =>
+                      setResourceIds(
+                        e.target.checked
+                          ? [...resourceIds, r.id]
+                          : resourceIds.filter((x) => x !== r.id),
+                      )
+                    }
+                  />
+                  {r.name}
+                </label>
+              ))}
+            </div>
           </Card>
         )}
 

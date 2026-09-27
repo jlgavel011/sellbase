@@ -3,9 +3,11 @@
 import type { CSSProperties } from 'react';
 import type { AdminConfig } from './config.js';
 import { AdminProvider, useAdmin } from './context.js';
+import { AgendaPage } from './pages/agenda.js';
 import { HomePage } from './pages/home.js';
 import { OrderDetailPage, OrdersPage } from './pages/orders.js';
 import { ProductFormPage, ProductsPage } from './pages/products.js';
+import { ResourcesPage } from './pages/resources.js';
 import { SettingsPage } from './pages/settings.js';
 import { match, Router, useRouter } from './router.js';
 import { Login, Shell, StaffGate } from './shell.js';
@@ -63,6 +65,8 @@ function Routes() {
   if (match('/', path)) return <HomePage />;
   if (match('/orders', path)) return <OrdersPage />;
   if ((params = match('/orders/:id', path))) return <OrderDetailPage id={params.id ?? ''} />;
+  if (match('/agenda', path)) return <AgendaPage />;
+  if (match('/agenda/resources', path)) return <ResourcesPage />;
   if (match('/products', path)) return <ProductsPage />;
   if (match('/products/new', path)) return <ProductFormPage />;
   if ((params = match('/products/:id', path)))

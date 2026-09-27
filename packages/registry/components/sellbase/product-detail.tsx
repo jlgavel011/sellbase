@@ -6,6 +6,7 @@
  * Variants come from the API; options (e.g. Talla, Color) are built from them.
  * AI: rearrange the layout, add sections (reviews, FAQs) around it, change button copy.
  * Keep the availability check: the server also refuses out-of-stock checkouts.
+ * Services show <BookingPicker> instead of a quantity: the buyer must pick a time.
  */
 import {
   formatMoney,
@@ -15,6 +16,7 @@ import {
   type StorefrontProduct,
 } from '@sellbase/react';
 import { useMemo, useState } from 'react';
+import { BookingPicker, type PickedSlot } from './booking-picker';
 
 type Variant = StorefrontProduct['variants'][number];
 
@@ -32,6 +34,7 @@ export function ProductDetail({ slug }: { slug: string }) {
   const drawer = useCartDrawer();
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);
+  const [slot, setSlot] = useState<PickedSlot | null>(null);
 
   const variant = useMemo(() => {
     if (!product) return null;
@@ -50,11 +53,12 @@ export function ProductDetail({ slug }: { slug: string }) {
 
   const image = product.media.find((m) => m.variant_id === variant?.id) ?? product.media[0];
   const allChosen = product.options.every((o) => selected[o.name]);
-  const canAdd = Boolean(variant?.available) && !cart.isUpdating;
+  const isService = product.type === 'service';
+  const canAdd = Boolean(variant?.available) && !cart.isUpdating && (!isService || Boolean(slot));
 
   async function add() {
     if (!variant) return;
-    await cart.addItem(variant.id, quantity);
+    await cart.addItem(variant.id, isService ? 1 : quantity, isService && slot ? slot : undefined);
     drawer.setOpen(true);
   }
 
@@ -109,6 +113,21 @@ export function ProductDetail({ slug }: { slug: string }) {
           </fieldset>
         ))}
 
+        {isService && variant && (
+          <div className="flex flex-col gap-2">
+            {variant.service && (
+              <p className="text-sm text-[var(--sb-muted)]">
+                {variant.service.duration_min} min ·{' '}
+                {variant.service.location_type === 'online' ? 'En línea' : 'Presencial'}
+                {variant.service.deposit_amount
+                  ? ` · Anticipo ${formatMoney(variant.service.deposit_amount, variant.currency)}`
+                  : ''}
+              </p>
+            )}
+            <BookingPicker key={variant.id} variantId={variant.id} onSelect={setSlot} />
+          </div>
+        )}
+
         {product.type === 'physical' && (
           <label className="flex items-center gap-3 text-sm">
             Cantidad
@@ -131,11 +150,13 @@ export function ProductDetail({ slug }: { slug: string }) {
         >
           {!allChosen && product.options.length
             ? 'Elige una opción'
-            : variant?.available === false
-              ? 'Agotado'
-              : cart.isUpdating
-                ? 'Agregando…'
-                : 'Agregar al carrito'}
+            : isService && !slot
+              ? 'Elige un horario'
+              : variant?.available === false
+                ? 'Agotado'
+                : cart.isUpdating
+                  ? 'Agregando…'
+                  : 'Agregar al carrito'}
         </button>
         {variant?.available_quantity !== null &&
           variant?.available_quantity !== undefined &&

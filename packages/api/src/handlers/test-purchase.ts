@@ -4,6 +4,7 @@ import { actorRef, randomToken } from '../auth.js';
 import type { Deps } from '../deps.js';
 import { fromDbError } from '../errors.js';
 import { register, type AppOptions } from '../http.js';
+import { refreshOrderStatus } from '../fulfillment.js';
 import { runJobs } from '../jobs.js';
 import { loadCartLines, loadStore } from '../pricing-context.js';
 import { loadService, slotsFor, withBookings } from '../services.js';
@@ -314,7 +315,14 @@ export function registerTestPurchase(app: Hono, deps: Deps, options: AppOptions)
     }
 
     // Leave the catalog as it was: stock and slots go back, the order stays flagged as a test.
-    await sql`update sellbase.bookings set status = 'cancelled', notes = 'Test purchase' where order_id = ${order.id} and status = 'confirmed'`;
+    // Test appointments are cancelled (freeing the slot) and their lines closed, so the
+    // order can still be fulfilled and completed like a real one.
+    await sql.begin(async (tx) => {
+      await tx`update sellbase.bookings set status = 'cancelled', notes = 'Test purchase' where order_id = ${order.id} and status = 'confirmed'`;
+      await tx`update sellbase.order_items set fulfilled_quantity = quantity where order_id = ${order.id} and fulfillment_type = 'booking'`;
+      await tx`update sellbase.fulfillments set status = 'cancelled' where order_id = ${order.id} and type = 'booking'`;
+      await refreshOrderStatus(tx, order.id);
+    });
     const { actor_type, actor_id } = actorRef(actor);
     for (const line of plan.lines) {
       const [tracked] =

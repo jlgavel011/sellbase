@@ -340,10 +340,10 @@ export function createSellbaseMcpServer(sellbase: Sellbase, options: { version?:
     {
       title: 'Act on an order',
       description:
-        'fulfill: mark items shipped with carrier/tracking (omit items to ship everything pending); cancel: cancel an unfulfilled or partially fulfilled order (restocks by default; needs confirm=true; refunding needs order_refund permissions); note: add an internal note; resend_notification: email the confirmation (or "order_shipped") again. Confirm cancellations with the owner first.',
+        'fulfill: mark items shipped with carrier/tracking (omit items to ship everything pending); cancel: cancel an unfulfilled or partially fulfilled order (restocks by default; needs confirm=true; refunding needs order_refund permissions); note: add an internal note; resend_notification: email the confirmation (or "order_shipped") again; payment_link: a link to pay the balance of a deposit order. Confirm cancellations with the owner first.',
       inputSchema: {
         order_id: z.uuid(),
-        action: z.enum(['fulfill', 'cancel', 'note', 'resend_notification']),
+        action: z.enum(['fulfill', 'cancel', 'note', 'resend_notification', 'payment_link']),
         items: z
           .array(z.object({ order_item_id: z.uuid(), quantity: z.number().int().positive() }))
           .optional(),
@@ -360,6 +360,10 @@ export function createSellbaseMcpServer(sellbase: Sellbase, options: { version?:
         template: z.enum(['order_confirmation', 'order_shipped']).optional(),
         notify_customer: z.boolean().optional(),
         confirm: z.boolean().optional().describe('Must be true to cancel.'),
+        success_url: z
+          .url()
+          .optional()
+          .describe('payment_link only: where the customer lands after paying the balance.'),
       },
     },
     (a) =>
@@ -392,6 +396,163 @@ export function createSellbaseMcpServer(sellbase: Sellbase, options: { version?:
             return sellbase.admin.orders.note(a.order_id, a.note);
           case 'resend_notification':
             return sellbase.admin.orders.notify(a.order_id, a.template ?? 'order_confirmation');
+          case 'payment_link':
+            if (!a.success_url)
+              throw new Error(
+                'payment_link needs success_url (where the customer lands after paying).',
+              );
+            return sellbase.admin.orders.paymentLink(a.order_id, { success_url: a.success_url });
+        }
+      }),
+  );
+
+  server.registerTool(
+    'service_setup',
+    {
+      title: 'Set up who delivers a service and when',
+      description:
+        'Create or update a resource (a person, room or equipment) with weekly hours and the service products it delivers. Hours are local times in the store time zone unless `timezone` is given (weekday 0 = Sunday … 6 = Saturday). Optionally block days off with `closed`. Create the service product first with product_upsert (type "service", variants[].service.duration_min).',
+      inputSchema: {
+        resource_id: z.uuid().optional().describe('Update this resource; omit to create one.'),
+        name: z.string().min(1),
+        kind: z.enum(['staff', 'room', 'equipment']).default('staff'),
+        timezone: z.string().optional(),
+        hours: z
+          .array(
+            z.object({
+              weekday: z.number().int().min(0).max(6),
+              start_time: z.string(),
+              end_time: z.string(),
+            }),
+          )
+          .optional(),
+        service_product_ids: z.array(z.uuid()).optional(),
+        closed: z
+          .array(
+            z.object({
+              starts_at: z.iso.datetime({ offset: true }),
+              ends_at: z.iso.datetime({ offset: true }),
+              note: z.string().optional(),
+            }),
+          )
+          .optional(),
+      },
+    },
+    (a) =>
+      run(async () => {
+        const resource = await sellbase.admin.resources.upsert({
+          ...(a.resource_id ? { id: a.resource_id } : {}),
+          name: a.name,
+          kind: a.kind,
+          ...(a.timezone ? { timezone: a.timezone } : {}),
+          ...(a.hours ? { rules: a.hours } : {}),
+          ...(a.service_product_ids ? { product_ids: a.service_product_ids } : {}),
+        });
+        let latest = resource;
+        for (const block of a.closed ?? []) {
+          latest = await sellbase.admin.resources.addException(resource.id, {
+            starts_at: block.starts_at,
+            ends_at: block.ends_at,
+            kind: 'closed',
+            ...(block.note ? { note: block.note } : {}),
+          });
+        }
+        return latest;
+      }),
+  );
+
+  server.registerTool(
+    'availability_get',
+    {
+      title: 'Free times for a service',
+      description:
+        'Free start times for a service variant (next 14 days by default). Use it to verify the setup or to find a time to reschedule. Times are UTC instants; say them to the owner in `timezone`.',
+      inputSchema: {
+        variant_id: z.uuid(),
+        from: z.iso.datetime({ offset: true }).optional(),
+        to: z.iso.datetime({ offset: true }).optional(),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    ({ variant_id, from, to }) =>
+      run(async () => {
+        const res = await sellbase.availability.get(variant_id, {
+          ...(from ? { from } : {}),
+          ...(to ? { to } : {}),
+        });
+        return {
+          timezone: res.timezone,
+          resources: res.resources,
+          slots: res.slots.slice(0, 50),
+          total_slots: res.slots.length,
+        };
+      }),
+  );
+
+  server.registerTool(
+    'bookings_search',
+    {
+      title: 'Search appointments',
+      description:
+        "Appointments in a date range (the agenda), e.g. today's for a resource. Defaults to the next 14 days.",
+      inputSchema: {
+        from: z.iso.datetime({ offset: true }).optional(),
+        to: z.iso.datetime({ offset: true }).optional(),
+        resource_id: z.uuid().optional(),
+        status: z
+          .enum(['confirmed', 'completed', 'no_show', 'cancelled', 'rescheduled'])
+          .optional(),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    (query) => run(() => sellbase.admin.bookings.search(query)),
+  );
+
+  server.registerTool(
+    'booking_action',
+    {
+      title: 'Act on an appointment',
+      description:
+        'complete, no_show, cancel (needs reason and confirm=true; refund=true also refunds the booked line and needs refunds:write) or reschedule (needs starts_at from availability_get). The customer is emailed on cancel and reschedule.',
+      inputSchema: {
+        booking_id: z.uuid(),
+        action: z.enum(['complete', 'no_show', 'cancel', 'reschedule']),
+        starts_at: z.iso.datetime({ offset: true }).optional(),
+        resource_id: z.uuid().optional(),
+        reason: z.string().optional(),
+        refund: z.boolean().optional(),
+        notify_customer: z.boolean().optional(),
+        confirm: z.boolean().optional(),
+      },
+    },
+    (a) =>
+      run(async () => {
+        const notify =
+          a.notify_customer === undefined ? {} : { notify_customer: a.notify_customer };
+        switch (a.action) {
+          case 'complete':
+            return sellbase.admin.bookings.complete(a.booking_id);
+          case 'no_show':
+            return sellbase.admin.bookings.noShow(a.booking_id);
+          case 'cancel':
+            if (!a.reason || a.confirm !== true)
+              throw new Error(
+                'cancel needs reason and confirm=true (confirm with the owner first).',
+              );
+            return sellbase.admin.bookings.cancel(a.booking_id, {
+              reason: a.reason,
+              confirm: true,
+              ...(a.refund !== undefined ? { refund: a.refund } : {}),
+              ...notify,
+            });
+          case 'reschedule':
+            if (!a.starts_at)
+              throw new Error('reschedule needs starts_at (get one with availability_get).');
+            return sellbase.admin.bookings.reschedule(a.booking_id, {
+              starts_at: a.starts_at,
+              ...(a.resource_id ? { resource_id: a.resource_id } : {}),
+              ...notify,
+            });
         }
       }),
   );

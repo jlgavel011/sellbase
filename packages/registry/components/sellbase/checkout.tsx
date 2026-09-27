@@ -7,7 +7,8 @@
  * never by this page. `successPath` must exist (e.g. /gracias) and should call
  * `useCart().clear()`.
  * AI: restyle and reorder fields freely; keep the fields the API requires (email, and the
- * address + shipping option when `cart.requires_shipping`).
+ * address + shipping option when `cart.requires_shipping`). Services with a deposit offer
+ * "pay deposit / pay total" (pay_mode).
  */
 import { useCart, useCheckout, useShippingRates, type Address } from '@sellbase/react';
 import { useEffect, useState, type FormEvent } from 'react';
@@ -36,6 +37,7 @@ export function Checkout({
   });
   const [quotedAddress, setQuotedAddress] = useState<Address | undefined>(undefined);
   const [rateId, setRateId] = useState<string | null>(null);
+  const [payMode, setPayMode] = useState<'full' | 'deposit'>('full');
 
   const needsShipping = Boolean(cart.cart?.requires_shipping);
   const addressReady = Boolean(
@@ -71,6 +73,7 @@ export function Checkout({
         email,
         ...(needsShipping && rateId ? { shipping_rate_id: rateId } : {}),
         ...(addressRequired ? { shipping_address: address } : {}),
+        ...(payMode === 'deposit' ? { pay_mode: 'deposit' as const } : {}),
         success_url: `${origin}${successPath}`,
         cancel_url: `${origin}${cancelPath}`,
       })
@@ -160,7 +163,17 @@ export function Checkout({
             <li key={i.id} className="flex justify-between gap-2">
               <span>
                 {i.title}
-                {i.variant_title ? ` — ${i.variant_title}` : ''} × {i.quantity}
+                {i.variant_title ? ` — ${i.variant_title}` : ''}
+                {i.booking ? '' : ` × ${i.quantity}`}
+                {i.booking && (
+                  <span className="block text-xs text-[var(--sb-muted)]">
+                    {new Intl.DateTimeFormat('es-MX', {
+                      timeZone: i.booking.timezone,
+                      dateStyle: 'medium',
+                      timeStyle: 'short',
+                    }).format(new Date(i.booking.starts_at))}
+                  </span>
+                )}
               </span>
               <span>{cart.format(i.total_amount)}</span>
             </li>
@@ -192,7 +205,38 @@ export function Checkout({
           {totals.tax_amount > 0 && totals.tax_mode === 'inclusive' && (
             <p className="text-xs text-[var(--sb-muted)]">Impuestos incluidos</p>
           )}
+          {payMode === 'deposit' && totals.deposit_amount !== null && (
+            <div className="flex justify-between font-semibold text-[var(--sb-primary)]">
+              <dt>Pagas hoy</dt>
+              <dd data-testid="checkout-due-now">
+                {cart.format(totals.deposit_amount + shippingAmount)}
+              </dd>
+            </div>
+          )}
         </dl>
+        {totals.deposit_amount !== null && (
+          <fieldset className="flex flex-col gap-2 text-sm">
+            <legend className="mb-1 font-medium">¿Cómo quieres pagar?</legend>
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="pay_mode"
+                checked={payMode === 'deposit'}
+                onChange={() => setPayMode('deposit')}
+              />
+              Anticipo de {cart.format(totals.deposit_amount)} (el resto después)
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="pay_mode"
+                checked={payMode === 'full'}
+                onChange={() => setPayMode('full')}
+              />
+              Total ({cart.format(totals.total_amount + shippingAmount)})
+            </label>
+          </fieldset>
+        )}
         {checkout.error && (
           <p role="alert" className="text-sm text-[var(--sb-danger)]">
             {checkout.error.message} {checkout.error.hint}

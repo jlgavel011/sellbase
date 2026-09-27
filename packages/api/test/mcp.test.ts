@@ -140,6 +140,52 @@ describe('mcp', () => {
     expect(refund.data.hint).toContain('refunds:write');
   });
 
+  it('sets up a bookable service and sells an appointment', async () => {
+    const product = await call('product_upsert', {
+      product: {
+        type: 'service',
+        title: 'Consulta nutrición',
+        status: 'active',
+        variants: [
+          {
+            price_amount: 60000,
+            service: {
+              duration_min: 45,
+              location_type: 'online',
+              online_meeting_url: 'https://meet.test/n',
+              deposit_amount: 20000,
+              min_notice_min: 0,
+            },
+          },
+        ],
+      },
+    });
+    expect(product.isError, JSON.stringify(product.data)).toBe(false);
+    const resource = await call('service_setup', {
+      name: 'Dra. Paula',
+      hours: [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({
+        weekday,
+        start_time: '08:00',
+        end_time: '20:00',
+      })),
+      service_product_ids: [product.data.id],
+    });
+    expect(resource.data.rules).toHaveLength(7);
+    const slots = await call('availability_get', { variant_id: product.data.variants[0].id });
+    expect(slots.data.total_slots).toBeGreaterThan(0);
+    const purchase = await call('test_purchase', { variant_ids: [product.data.variants[0].id] });
+    expect(purchase.data.ok, JSON.stringify(purchase.data.steps, null, 2)).toBe(true);
+    const agenda = await call('bookings_search', {
+      from: new Date(Date.now() - 86_400_000).toISOString(),
+      to: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+    });
+    expect(
+      agenda.data.data.some(
+        (b: { product: { title: string } | null }) => b.product?.title === 'Consulta nutrición',
+      ),
+    ).toBe(true);
+  });
+
   it('returns API errors with a hint the agent can act on', async () => {
     const res = await call('product_upsert', {
       product: {

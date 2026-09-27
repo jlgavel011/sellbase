@@ -142,6 +142,9 @@ export function createSellbase(options: SellbaseClientOptions) {
           }),
         note: (id: string, note: string) =>
           request('orderNote', { params: { id }, body: { note } }),
+        /** Payment link for the balance of a deposit order. */
+        paymentLink: (id: string, body: Body<'orderPaymentLink'> = {}) =>
+          request('orderPaymentLink', { params: { id }, body }),
         notify: (id: string, template: Body<'orderNotify'>['template'] = 'order_confirmation') =>
           request('orderNotify', { params: { id }, body: { template } }),
       },

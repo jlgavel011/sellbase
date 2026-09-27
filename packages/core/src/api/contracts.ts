@@ -359,6 +359,7 @@ export const bookingView = z.object({
   timezone: z.string(),
   resource: z.object({ id, name: z.string() }),
   product: z.object({ id, title: z.string() }).nullable(),
+  variant_id: id.nullable(),
   order: z.object({ id, number: z.number().int() }).nullable(),
   email: z.string().nullable(),
   meeting_url: z.string().nullable(),

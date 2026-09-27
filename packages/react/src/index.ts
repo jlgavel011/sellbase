@@ -1,5 +1,6 @@
 export { SellbaseProvider, useSellbase, type SellbaseProviderProps } from './provider.js';
 export {
+  useAvailability,
   useCart,
   useCartDrawer,
   useCheckout,

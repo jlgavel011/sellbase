@@ -23,11 +23,18 @@
       "registryDependencies": ["product-card"]
     },
     {
+      "name": "booking-picker",
+      "description": "Day and time picker for services, in the store time zone.",
+      "files": ["components/sellbase/booking-picker.tsx"],
+      "dependencies": ["@sellbase/react"],
+      "registryDependencies": ["theme"]
+    },
+    {
       "name": "product-detail",
       "description": "Product page: gallery, variant picker, availability and add to cart.",
       "files": ["components/sellbase/product-detail.tsx"],
       "dependencies": ["@sellbase/react"],
-      "registryDependencies": ["theme"]
+      "registryDependencies": ["theme", "booking-picker"]
     },
     {
       "name": "cart-drawer",

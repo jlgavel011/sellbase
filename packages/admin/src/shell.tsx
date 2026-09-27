@@ -124,6 +124,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const nav: { to: string; label: string; icon: string }[] = [
     { to: '/', label: t.nav.home, icon: '⌂' },
     { to: '/orders', label: t.nav.orders, icon: '🧾' },
+    { to: '/agenda', label: t.nav.agenda, icon: '📅' },
     { to: '/products', label: t.nav.products, icon: '🏷' },
     ...(config.pages ?? []).map((p) => ({
       to: `/${p.path.replace(/^\//, '')}`,

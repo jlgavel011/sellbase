@@ -77,6 +77,14 @@ export function OrderActions({ order }: { order: Order }) {
       done(o);
     },
   });
+  const [copied, setCopied] = useState(false);
+  const paymentLink = useMutation({
+    mutationFn: () =>
+      sellbase.admin.orders.paymentLink(order.id, {
+        success_url: window.location.origin,
+        cancel_url: window.location.origin,
+      }),
+  });
   const resend = useMutation({ mutationFn: () => sellbase.admin.orders.notify(order.id) });
 
   const canShip =
@@ -251,6 +259,36 @@ export function OrderActions({ order }: { order: Order }) {
               </>
             )}
             <ErrorAlert error={cancel.error} />
+          </div>
+        )}
+
+        {order.payment_status === 'partially_paid' && order.status === 'open' && (
+          <div className="sb:flex sb:flex-col sb:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => paymentLink.mutate()}
+              disabled={paymentLink.isPending}
+            >
+              {t.orders.balanceLink} ({money(order.total_amount - order.amount_paid)})
+            </Button>
+            {paymentLink.data && (
+              <div className="sb:flex sb:flex-col sb:gap-1 sb:text-sm">
+                <span>{t.orders.balanceReady}</span>
+                <div className="sb:flex sb:gap-2">
+                  <Input readOnly value={paymentLink.data.url} aria-label={t.orders.balanceLink} />
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      void navigator.clipboard?.writeText(paymentLink.data.url);
+                      setCopied(true);
+                    }}
+                  >
+                    {copied ? t.orders.copied : t.orders.copy}
+                  </Button>
+                </div>
+              </div>
+            )}
+            <ErrorAlert error={paymentLink.error} />
           </div>
         )}
 

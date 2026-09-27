@@ -84,34 +84,55 @@ export function CartDrawer({ checkoutHref = '/checkout' }: { checkoutHref?: stri
                     {item.variant_title && (
                       <span className="text-sm text-[var(--sb-muted)]">{item.variant_title}</span>
                     )}
+                    {item.booking && (
+                      <span className="text-sm text-[var(--sb-muted)]">
+                        {new Intl.DateTimeFormat('es-MX', {
+                          timeZone: item.booking.timezone,
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        }).format(new Date(item.booking.starts_at))}
+                        {item.booking.resource_name ? ` · ${item.booking.resource_name}` : ''}
+                      </span>
+                    )}
                     {!item.available && (
                       <span className="text-sm text-[var(--sb-danger)]">Sin stock suficiente</span>
                     )}
-                    <div className="mt-1 flex items-center gap-2">
+                    {item.booking ? (
                       <button
                         type="button"
-                        aria-label={`Quitar uno de ${item.title}`}
+                        className="mt-1 self-start text-sm underline"
                         disabled={cart.isUpdating}
-                        onClick={() =>
-                          item.quantity > 1
-                            ? cart.updateItem(item.id, item.quantity - 1)
-                            : cart.removeItem(item.id)
-                        }
-                        className="h-7 w-7 rounded border border-[var(--sb-border)]"
+                        onClick={() => cart.removeItem(item.id)}
                       >
-                        −
+                        Quitar
                       </button>
-                      <span aria-label="Cantidad">{item.quantity}</span>
-                      <button
-                        type="button"
-                        aria-label={`Agregar uno de ${item.title}`}
-                        disabled={cart.isUpdating}
-                        onClick={() => cart.updateItem(item.id, item.quantity + 1)}
-                        className="h-7 w-7 rounded border border-[var(--sb-border)]"
-                      >
-                        +
-                      </button>
-                    </div>
+                    ) : (
+                      <div className="mt-1 flex items-center gap-2">
+                        <button
+                          type="button"
+                          aria-label={`Quitar uno de ${item.title}`}
+                          disabled={cart.isUpdating}
+                          onClick={() =>
+                            item.quantity > 1
+                              ? cart.updateItem(item.id, item.quantity - 1)
+                              : cart.removeItem(item.id)
+                          }
+                          className="h-7 w-7 rounded border border-[var(--sb-border)]"
+                        >
+                          −
+                        </button>
+                        <span aria-label="Cantidad">{item.quantity}</span>
+                        <button
+                          type="button"
+                          aria-label={`Agregar uno de ${item.title}`}
+                          disabled={cart.isUpdating}
+                          onClick={() => cart.updateItem(item.id, item.quantity + 1)}
+                          className="h-7 w-7 rounded border border-[var(--sb-border)]"
+                        >
+                          +
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div className="text-right">
                     <span>{cart.format(item.total_amount)}</span>

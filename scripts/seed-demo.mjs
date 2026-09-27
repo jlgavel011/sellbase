@@ -87,6 +87,36 @@ try {
       download_limit: 3,
     });
   }
+  if (!has('Asesoría 1:1 para tu tienda')) {
+    const service = await sb.admin.products.upsert({
+      type: 'service',
+      title: 'Asesoría 1:1 para tu tienda',
+      status: 'active',
+      description: 'Revisamos juntos tu tienda y tu estrategia de ventas.',
+      variants: [
+        {
+          price_amount: 60000,
+          service: {
+            duration_min: 45,
+            location_type: 'online',
+            online_meeting_url: 'https://meet.example.com/asesoria',
+            deposit_amount: 20000,
+            min_notice_min: 60,
+            slot_interval_min: 60,
+          },
+        },
+      ],
+    });
+    await sb.admin.resources.upsert({
+      name: 'Ana (asesora)',
+      rules: [1, 2, 3, 4, 5].map((weekday) => ({
+        weekday,
+        start_time: '09:00',
+        end_time: '18:00',
+      })),
+      product_ids: [service.id],
+    });
+  }
   if (env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET) {
     await sb.admin.integrations.connect('stripe', {
       secret_key: env.STRIPE_SECRET_KEY,

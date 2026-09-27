@@ -14,7 +14,7 @@ Referencia: SPEC §15 (Fase 2), §5.2, §5.5, §9, §11, §13, §16.
 
 Cada hito termina con tests verdes, capturas revisadas y commit propio.
 
-### 2a. Operaciones de pedidos
+### 2a. Operaciones de pedidos ✅
 
 Base para el admin completo y para cancelar/reembolsar citas.
 
@@ -24,7 +24,7 @@ Base para el admin completo y para cancelar/reembolsar citas.
 - Admin: panel de acciones en el detalle de pedido, con resumen del impacto antes de confirmar.
 - MCP: `order_action` (fulfill, cancel, note, resend_notification) y `order_refund` (scope `refunds:write`, que los tokens de agente no traen por defecto).
 
-### 2b. Servicios y citas
+### 2b. Servicios y citas ✅
 
 - Migración `0003_services`: `service_specs`, `resources`, `service_resources`, `availability_rules`, `availability_exceptions`, `booking_holds` (exclusion constraint `tstzrange` + `btree_gist`: sin doble reserva) y `bookings`.
 - `@sellbase/core`: cálculo de horarios disponibles (zona horaria de la tienda, cambios de horario, buffers, capacidad, antelación mínima, ventana de reserva), con tests exhaustivos.

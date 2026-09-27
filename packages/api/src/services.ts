@@ -176,6 +176,7 @@ export async function loadResource(sql: Db, storeId: string, id: string) {
 export const BOOKING_SELECT = `
   b.id, b.status, b.starts_at, b.ends_at, r.timezone, jsonb_build_object('id', r.id, 'name', r.name) as resource,
   case when p.id is null then null else jsonb_build_object('id', p.id, 'title', p.title) end as product,
+  b.variant_id,
   case when o.id is null then null else jsonb_build_object('id', o.id, 'number', o.number) end as "order",
   b.email::text as email, b.meeting_url, b.rescheduled_from, b.notes`;
 

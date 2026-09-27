@@ -97,8 +97,12 @@ export function useCart() {
     isLoading: Boolean(token) && query.isLoading,
     isUpdating: mutation.isPending,
     error: (mutation.error ?? query.error) as (Error & { code?: string; hint?: string }) | null,
-    addItem: (variantId: string, quantity = 1) =>
-      run((t) => sellbase.cart.add(t, variantId, quantity)),
+    /** Services need `bookingSlot` with a start time from useAvailability. */
+    addItem: (
+      variantId: string,
+      quantity = 1,
+      bookingSlot?: { starts_at: string; resource_id?: string },
+    ) => run((t) => sellbase.cart.add(t, variantId, quantity, bookingSlot)),
     updateItem: (itemId: string, quantity: number) =>
       run((t) => sellbase.cart.update(t, itemId, quantity)),
     removeItem: (itemId: string) => run((t) => sellbase.cart.remove(t, itemId)),
@@ -108,6 +112,26 @@ export function useCart() {
     clear: () => setToken(null),
     format: (amount: number) => formatMoney(amount, cart?.currency ?? 'MXN'),
   };
+}
+
+/**
+ * Free start times for a service variant. Times are instants: display them in the
+ * returned `timezone` (the store's), not the visitor's.
+ */
+export function useAvailability(
+  variantId: string | undefined,
+  range: { from?: string; to?: string } = {},
+) {
+  const { sellbase, queryClient } = useSellbase();
+  return useQuery(
+    {
+      queryKey: ['sellbase', 'availability', variantId, range] as const,
+      queryFn: () => sellbase.availability.get(variantId ?? '', range),
+      enabled: Boolean(variantId),
+      staleTime: 15_000,
+    },
+    queryClient,
+  );
 }
 
 /** Shipping options for the current cart; pass the address once the buyer typed it. */

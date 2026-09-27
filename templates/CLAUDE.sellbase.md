@@ -24,7 +24,7 @@ This project sells with **Sellbase**: catalog, cart, checkout, orders, digital d
 
 ### Skills
 
-`.claude/skills/sellbase/`: `setup-store`, `add-storefront`, `manage-catalog`, `operate-orders`, `configure-payments`.
+`.claude/skills/sellbase/`: `setup-store`, `add-storefront`, `manage-catalog`, `operate-orders`, `configure-payments`, `services-and-bookings`.
 
 ### Commands
 
