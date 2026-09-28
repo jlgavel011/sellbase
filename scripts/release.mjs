@@ -8,7 +8,7 @@
  * Pushing the tag runs .github/workflows/release.yml, which builds, tests and publishes
  * the public packages to npm (needs the NPM_TOKEN secret) and creates a GitHub release.
  */
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 
@@ -24,6 +24,16 @@ for (const dir of readdirSync(join(repo, 'packages'))) {
   pkg.version = version;
   writeFileSync(path, `${JSON.stringify(pkg, null, 2)}\n`);
   console.log(`${pkg.name}@${version}${pkg.private ? ' (private, not published)' : ''}`);
+}
+// Examples install the published packages: keep their ranges on the new version.
+for (const dir of readdirSync(join(repo, 'examples'))) {
+  const path = join(repo, 'examples', dir, 'package.json');
+  if (!existsSync(path)) continue;
+  const pkg = JSON.parse(readFileSync(path, 'utf8'));
+  for (const deps of [pkg.dependencies, pkg.devDependencies])
+    for (const name of Object.keys(deps ?? {}))
+      if (name === 'sellbase' || name.startsWith('@sellbase/')) deps[name] = `^${version}`;
+  writeFileSync(path, `${JSON.stringify(pkg, null, 2)}\n`);
 }
 const versionFile = join(repo, 'packages/cli/src/version.ts');
 writeFileSync(

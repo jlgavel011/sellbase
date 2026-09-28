@@ -1,0 +1,4 @@
+# Plain static site: no build step. Run `npx sellbase init` locally first and commit the
+# sellbase/ and admin/ folders it writes (they hold public values only).
+[build]
+  publish = "."

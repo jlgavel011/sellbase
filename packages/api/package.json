@@ -1,6 +1,6 @@
 {
   "name": "@sellbase/api",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Sellbase API, webhooks and jobs as runtime-agnostic Hono apps, bundled into Supabase Edge Functions.",
   "license": "MIT",
   "private": true,

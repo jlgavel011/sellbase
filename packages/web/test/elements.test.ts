@@ -418,3 +418,33 @@ describe('store settings and recovery links', () => {
     }
   });
 });
+
+describe('<sellbase-product>', () => {
+  it('renders the product with its buy box, from an attribute or the URL', async () => {
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      '<sellbase-product product="espadin"></sellbase-product>',
+    );
+    await settle();
+    const el = document.querySelector('sellbase-product') as HTMLElement;
+    expect(el.shadowRoot?.querySelector('h1')?.textContent).toBe('Espadín');
+    expect(el.shadowRoot?.querySelector('slot[name="buy"]')).not.toBeNull();
+    const buy = el.querySelector('sellbase-add-to-cart[slot="buy"]');
+    expect(buy?.getAttribute('product')).toBe('espadin');
+    await settle();
+    expect(buy?.shadowRoot?.querySelector('.price')?.textContent).toContain('890');
+    el.remove();
+
+    window.history.replaceState(null, '', '/producto.html?p=playera');
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      '<sellbase-product slug-param="p"></sellbase-product>',
+    );
+    await settle();
+    expect(
+      document.querySelector('sellbase-product')?.shadowRoot?.querySelector('h1')?.textContent,
+    ).toBe('Playera');
+    expect(document.title).toBe('Playera');
+    window.history.replaceState(null, '', '/');
+  });
+});

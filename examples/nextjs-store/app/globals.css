@@ -1,0 +1,16 @@
+@import 'tailwindcss';
+@import '../components/sellbase/theme.css';
+
+@source '../components/sellbase';
+
+/* Your brand: change these and every Sellbase component follows. */
+:root {
+  --sb-primary: #3f2a1d;
+  --sb-primary-fg: #fff8f0;
+  --sb-radius: 14px;
+}
+
+body {
+  background: var(--sb-bg);
+  color: var(--sb-fg);
+}

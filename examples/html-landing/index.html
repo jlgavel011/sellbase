@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aurora Café · Café de especialidad</title>
+    <meta
+      name="description"
+      content="Café de especialidad tostado en casa. Tienda hecha con Sellbase."
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <!-- Sellbase: written by `npx sellbase init` (public URL + anon key, and the web components). -->
+    <script src="/sellbase/config.js"></script>
+    <script>
+      // This site's pages (sellbase/config.js holds the store URL and public key).
+      window.SellbaseConfig = {
+        ...window.SellbaseConfig,
+        productUrl: '/producto.html?p={slug}',
+        checkoutUrl: '/checkout.html',
+        successUrl: '/gracias.html',
+      };
+    </script>
+    <script type="module" src="/sellbase/sellbase.js"></script>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/">Aurora Café</a>
+      <nav>
+        <a href="/#productos">Tienda</a>
+        <a href="/pedido.html">Mi pedido</a>
+        <sellbase-cart-button></sellbase-cart-button>
+      </nav>
+    </header>
+    <div class="hero">
+      <div>
+        <span class="tag">Tostado esta semana</span>
+        <h1>Café de especialidad, directo de nuestro tostador a tu taza.</h1>
+        <p>
+          Granos de Oaxaca y Chiapas, recetas para preparar en casa y pedidos para recoger en la
+          cafetería.
+        </p>
+        <a class="cta" href="#productos">Ver la tienda</a>
+      </div>
+      <div class="art" aria-hidden="true"></div>
+    </div>
+    <section id="productos" aria-labelledby="t-productos">
+      <h2 id="t-productos">Nuestros productos</h2>
+      <sellbase-product-grid></sellbase-product-grid>
+    </section>
+    <footer>
+      Aurora Café · Tienda hecha con <a href="https://github.com/jlgavel011/sellbase">Sellbase</a> ·
+      <a href="/admin/">Admin</a>
+    </footer>
+    <sellbase-cart-drawer checkout-url="/checkout.html"></sellbase-cart-drawer>
+  </body>
+</html>

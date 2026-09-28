@@ -20,6 +20,7 @@ Plain HTML, WordPress themes, Webflow embeds, Vue, Svelte, Astro, Angular, etc. 
    | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
    | `<sellbase-add-to-cart product="<slug>"></sellbase-add-to-cart>`                  | Next to each product (price, options, quantity, button; services show times)                                    |
    | `<sellbase-price product="<slug>"></sellbase-price>`                              | Inline price anywhere                                                                                           |
+   | `<sellbase-product slug-param="p"></sellbase-product>`                            | One product page for every product (`producto.html?p=<slug>`); set `productUrl: '/producto.html?p={slug}'`      |
    | `<sellbase-product-grid collection="<slug>" limit="12"></sellbase-product-grid>`  | Catalog sections                                                                                                |
    | `<sellbase-cart-button></sellbase-cart-button>`                                   | Header or nav. The cart drawer is added automatically                                                           |
    | `<sellbase-checkout consent="…" success-url="/gracias.html"></sellbase-checkout>` | A checkout page. Use `consent` for required confirmations such as "Confirmo que soy mayor de 18 años" (alcohol) |

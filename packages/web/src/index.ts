@@ -7,6 +7,7 @@ import {
 } from './elements/after-purchase.js';
 import { SellbaseCartButton, SellbaseCartDrawer } from './elements/cart.js';
 import { SellbaseCheckout } from './elements/checkout.js';
+import { SellbaseProduct } from './elements/product.js';
 import { SellbaseProductGrid } from './elements/product-grid.js';
 import { cart, loadCart, setDrawer, state, subscribe } from './store.js';
 
@@ -16,6 +17,7 @@ export { SellbaseApiError } from './api.js';
 const ELEMENTS: [string, CustomElementConstructor][] = [
   ['sellbase-add-to-cart', SellbaseAddToCart],
   ['sellbase-price', SellbasePrice],
+  ['sellbase-product', SellbaseProduct],
   ['sellbase-product-grid', SellbaseProductGrid],
   ['sellbase-cart-button', SellbaseCartButton],
   ['sellbase-cart-drawer', SellbaseCartDrawer],

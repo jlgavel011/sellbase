@@ -25,6 +25,8 @@
     "acceptance:static": "node scripts/acceptance-static.mjs",
     "plugin:sync": "node scripts/sync-plugin.mjs",
     "plugin:check": "node scripts/sync-plugin.mjs --check",
+    "examples:sync": "node scripts/build-examples.mjs",
+    "examples:check": "node scripts/build-examples.mjs --check",
     "site:build": "pnpm docs:build && node scripts/build-site.mjs"
   },
   "devDependencies": {

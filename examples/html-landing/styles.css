@@ -1,0 +1,137 @@
+/* Aurora Café: a plain HTML landing. Sellbase elements take the theme below. */
+:root {
+  --ink: #2a1c12;
+  --cream: #fbf6ef;
+  --latte: #f1e4d3;
+  --accent: #b0643a;
+  --muted: #7a6a5c;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--cream);
+  color: var(--ink);
+  line-height: 1.6;
+}
+a {
+  color: inherit;
+}
+header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 5vw;
+  background: rgba(251, 246, 239, 0.9);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--latte);
+}
+.brand {
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 15px;
+}
+.hero {
+  display: grid;
+  gap: 40px;
+  align-items: center;
+  padding: 64px 5vw;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+@media (min-width: 860px) {
+  .hero {
+    grid-template-columns: 1.1fr 0.9fr;
+  }
+}
+.hero h1 {
+  font-size: clamp(36px, 5vw, 58px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 12px 0 18px;
+}
+.hero p {
+  font-size: 19px;
+  color: var(--muted);
+  margin: 0 0 28px;
+}
+.tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid #e3d3bf;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.cta {
+  display: inline-block;
+  padding: 14px 24px;
+  border-radius: 14px;
+  background: var(--ink);
+  color: var(--cream);
+  text-decoration: none;
+  font-weight: 700;
+}
+.art {
+  aspect-ratio: 1;
+  border-radius: 28px;
+  background: radial-gradient(circle at 30% 30%, #f5d9b8, #b07a4f 55%, #3f2a1d);
+  box-shadow: 0 40px 80px -40px rgba(42, 28, 18, 0.6);
+}
+section {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 40px 5vw 80px;
+}
+section h2 {
+  font-size: 30px;
+  letter-spacing: -0.02em;
+  margin: 0 0 24px;
+}
+.page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 48px 5vw 80px;
+}
+footer {
+  text-align: center;
+  padding: 32px;
+  color: var(--muted);
+  font-size: 14px;
+  border-top: 1px solid var(--latte);
+}
+/* Sellbase web components: brand colors, radius and font. */
+sellbase-product-grid,
+sellbase-add-to-cart,
+sellbase-cart-button,
+sellbase-cart-drawer,
+sellbase-checkout,
+sellbase-checkout-return,
+sellbase-order-lookup {
+  --sellbase-primary: #2a1c12;
+  --sellbase-primary-text: #fbf6ef;
+  --sellbase-border: #e8dccb;
+  --sellbase-surface: #fffdf9;
+  --sellbase-radius: 14px;
+  font-family: inherit;
+}

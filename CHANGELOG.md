@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.3.2 — Templates to start from
+
+- **Templates to start from:**
+  - `npx sellbase create <dir> --template nextjs|html` copies a ready store and prints the next steps;
+  - [`examples/nextjs-store`](examples/nextjs-store): Next.js 16 + Tailwind coffee shop with product pages, cart, checkout, order lookup and the admin at `/admin`, plus a Vercel deploy button;
+  - [`examples/html-landing`](examples/html-landing): plain HTML landing page with web components and a Netlify deploy button.
+- **New web component `<sellbase-product>`:** a full product page (gallery, description and buy box). With `slug-param="p"`, one `producto.html` serves every product.
+
 ## 0.3.1 — Agents find Sellbase
 
 - **Claude Code plugin:**

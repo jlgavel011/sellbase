@@ -4,6 +4,7 @@ The Sellbase CLI installs and maintains Sellbase in your project, whether it is 
 
 ```bash
 npx supabase start                 # or pass --supabase-url/--anon-key/--service-role-key/--db-url for a hosted project
+npx sellbase create my-store --template nextjs   # or --template html: a ready store to start from
 npx sellbase init --yes            # schema, Edge Functions, store, owner, admin, components, agent files
 npx sellbase doctor                # checklist with the next step for anything missing
 npx sellbase upgrade --dry-run     # see what a new version changes

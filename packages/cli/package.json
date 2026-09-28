@@ -1,6 +1,6 @@
 {
   "name": "sellbase",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Add commerce to any app your AI builds: `npx sellbase init`.",
   "mcpName": "io.github.jlgavel011/sellbase",
   "license": "MIT",

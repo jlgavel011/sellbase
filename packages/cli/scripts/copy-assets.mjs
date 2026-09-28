@@ -1,6 +1,6 @@
 // Collects everything `sellbase init` installs into a user's project: migrations, Edge
 // Function bundles, storefront components, skills and templates.
-import { cp, mkdir, rm } from 'node:fs/promises';
+import { cp, mkdir, rename, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,4 +33,16 @@ for (const [from, to] of copies) {
   await mkdir(dirname(resolve(assets, to)), { recursive: true });
   await cp(src, resolve(assets, to), { recursive: true });
 }
+// Starter templates for `sellbase create`, without local installs or generated files.
+// npm never publishes .gitignore files, so they ship as _gitignore.
+const skip = /(^|\/)(node_modules|\.next|supabase|\.env\.local|\.env\.sellbase|next-env\.d\.ts)$/;
+await cp(resolve(root, 'examples'), resolve(assets, 'examples'), {
+  recursive: true,
+  filter: (src) => !skip.test(src.slice(root.length)),
+});
+for (const example of ['nextjs-store', 'html-landing'])
+  await rename(
+    resolve(assets, 'examples', example, '.gitignore'),
+    resolve(assets, 'examples', example, '_gitignore'),
+  );
 console.log('assets copied');

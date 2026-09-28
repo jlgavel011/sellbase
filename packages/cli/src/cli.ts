@@ -2,6 +2,7 @@
 import { API_SCOPES, BRAND, isSellbaseError, type ApiScope } from '@sellbase/core';
 import { Command } from 'commander';
 import { addComponents } from './add.js';
+import { TEMPLATES, create } from './create.js';
 import { feedback } from './feedback.js';
 import { printDoctor } from './doctor.js';
 import { init } from './init.js';
@@ -36,6 +37,13 @@ program
   .option('--packages-from <dir>', 'install Sellbase packages from local .tgz files (development)')
   .option('--seed <giro>', `example catalog: ${Object.keys(PRESETS).join(', ')}`)
   .action((opts) => init(process.cwd(), opts));
+
+program
+  .command('create')
+  .description('Start a new store from an example (Next.js store or HTML landing page)')
+  .argument('<dir>', 'folder to create')
+  .option('-t, --template <name>', `${Object.keys(TEMPLATES).join(' | ')}`, 'nextjs')
+  .action((dir: string, opts: { template: string }) => create(process.cwd(), dir, opts));
 
 program
   .command('feedback')

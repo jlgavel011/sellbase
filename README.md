@@ -53,6 +53,15 @@ npx sellbase doctor         # checklist with the next step for anything missing
 npx sellbase upgrade        # new versions: dry run, backup, migrations, functions, components
 ```
 
+### Start from a template
+
+```bash
+npx sellbase create my-store --template nextjs   # Next.js store with the admin at /admin
+npx sellbase create my-landing --template html   # plain HTML landing page, no build step
+```
+
+Both are in [`examples/`](examples) with Vercel and Netlify deploy buttons.
+
 ### With Claude Code
 
 ```

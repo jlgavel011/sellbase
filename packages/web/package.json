@@ -1,6 +1,6 @@
 {
   "name": "@sellbase/web",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Sellbase storefront as Web Components: works in any site (HTML, WordPress, Vue, Svelte, Astro, Angular…).",
   "license": "MIT",
   "type": "module",

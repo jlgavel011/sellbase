@@ -1,0 +1,17 @@
+/*
+ * Sellbase storefront theme. Components only use these variables, so restyling the whole
+ * store is editing this file (or overriding the variables in your own CSS).
+ * AI: match these to the site's existing palette and fonts instead of editing components.
+ */
+:root {
+  --sb-bg: #ffffff;
+  --sb-fg: #111111;
+  --sb-muted: #6b7280;
+  --sb-border: #e5e7eb;
+  --sb-card: #ffffff;
+  --sb-primary: #111111;
+  --sb-primary-fg: #ffffff;
+  --sb-danger: #b91c1c;
+  --sb-success: #15803d;
+  --sb-radius: 0.75rem;
+}

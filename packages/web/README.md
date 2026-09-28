@@ -23,6 +23,7 @@ Sellbase web components for any site: plain HTML, WordPress, Webflow, Vue, Svelt
 Elements:
 
 - `sellbase-add-to-cart`, `sellbase-price`, `sellbase-product-grid`;
+- `sellbase-product`: a full product page (gallery, title, description and buy box). Use `product="<slug>"`, or `slug-param="p"` to read the slug from `?p=` so one `producto.html` serves every product (set `productUrl: '/producto.html?p={slug}'` in `SellbaseConfig`);
 - `sellbase-cart-button`, `sellbase-cart-drawer`;
 - `sellbase-checkout` (shows the consent checkbox the store requires), `sellbase-checkout-return`;
 - `sellbase-order-lookup`, `sellbase-download`.
