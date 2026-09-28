@@ -14,7 +14,7 @@ jobs:
     name: Lint, typecheck, unit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -31,7 +31,7 @@ jobs:
     name: Database (pgTAP) and API integration
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -50,7 +50,7 @@ jobs:
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_TEST_WEBHOOK_SECRET }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -86,7 +86,7 @@ jobs:
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_TEST_WEBHOOK_SECRET }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
