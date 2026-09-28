@@ -44,10 +44,21 @@
     "url": "https://github.com/jlgavel011/sellbase/issues"
   },
   "keywords": [
+    "sellbase",
     "ecommerce",
+    "e-commerce",
+    "commerce",
+    "nextjs",
+    "supabase",
+    "stripe",
+    "shopify-alternative",
+    "open-source",
     "react",
     "hooks",
-    "storefront"
+    "storefront",
+    "cart",
+    "checkout",
+    "headless-commerce"
   ],
   "publishConfig": {
     "access": "public"

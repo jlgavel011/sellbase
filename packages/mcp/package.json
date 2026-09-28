@@ -34,10 +34,22 @@
     "url": "https://github.com/jlgavel011/sellbase/issues"
   },
   "keywords": [
-    "mcp",
-    "ai-agents",
+    "sellbase",
     "ecommerce",
-    "model-context-protocol"
+    "e-commerce",
+    "commerce",
+    "nextjs",
+    "supabase",
+    "stripe",
+    "shopify-alternative",
+    "open-source",
+    "mcp",
+    "model-context-protocol",
+    "mcp-server",
+    "ai-agents",
+    "claude",
+    "claude-code",
+    "cursor"
   ],
   "publishConfig": {
     "access": "public"
