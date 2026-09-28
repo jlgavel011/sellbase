@@ -13,6 +13,8 @@ jobs:
   publish:
     name: Build, test and publish
     runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -28,10 +30,11 @@ jobs:
           node -e "const v=require('./packages/cli/package.json').version; if (v !== '$tag') { console.error('Tag v$tag but packages are ' + v); process.exit(1) }"
       - run: pnpm build
       - run: pnpm lint && pnpm typecheck && pnpm test
-      - name: Publish to npm
+      - name: Publish to npm (skipped when NPM_TOKEN is not set, e.g. published by hand)
+        if: env.NODE_AUTH_TOKEN != ''
         run: pnpm -r --filter "./packages/*" publish --access public --no-git-checks
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'
       - name: GitHub release
         uses: softprops/action-gh-release@v2
         with:
