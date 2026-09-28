@@ -14,6 +14,7 @@ import {
   loadOrderEmailProps,
   refreshOrderStatus,
 } from './fulfillment.js';
+import { sendCartRecoveries } from './handlers/checkouts.js';
 import { deliverWebhooks, enqueueWebhooks } from './webhooks-out.js';
 
 const MAX_ATTEMPTS = 8;
@@ -69,6 +70,7 @@ export async function runJobs(deps: Deps, options: { limit?: number; storeId?: s
     }
   }
   await sendReminders(deps, summary, options.storeId);
+  summary.processed += await sendCartRecoveries(deps, options.storeId);
   const hooks = await deliverWebhooks(deps, options.storeId ? { storeId: options.storeId } : {});
   return { ...summary, webhooks: hooks };
 }

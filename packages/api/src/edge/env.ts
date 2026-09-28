@@ -92,6 +92,10 @@ export function edgeDeps(adapters: {
         if (error) throw new Error(`Could not upload ${bucket}/${path}: ${error.message}`);
       },
       publicUrl: (bucket, path) => `${publicUrl}/storage/v1/object/public/${bucket}/${path}`,
+      remove: async (bucket, path) => {
+        const { error } = await supabase.storage.from(bucket).remove([path]);
+        if (error) throw new Error(`Could not remove ${bucket}/${path}: ${error.message}`);
+      },
     },
     background: (task) => {
       if (typeof EdgeRuntime !== 'undefined') EdgeRuntime.waitUntil(task);

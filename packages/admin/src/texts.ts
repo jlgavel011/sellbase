@@ -1,3 +1,5 @@
+import { enV2, esV2 } from './texts-v2.js';
+
 const es = {
   nav: {
     home: 'Inicio',
@@ -94,7 +96,7 @@ const es = {
     last30: 'Últimos 30 días',
     ordersCount: (n: number) => (n === 1 ? '1 pedido' : `${n} pedidos`),
     average: 'ticket promedio',
-    toFulfill: 'Pedidos por surtir',
+    toFulfill: 'Pedidos por preparar',
     bookingsToday: 'Citas de hoy',
     salesChart: 'Ventas por día (30 días)',
     topProducts: 'Más vendidos (30 días)',
@@ -387,14 +389,14 @@ const es = {
     open: 'Abierto',
     completed: 'Completado',
     cancelled: 'Cancelado',
-    unpaid: 'Sin pagar',
+    unpaid: 'Pago pendiente',
     partially_paid: 'Anticipo',
     paid: 'Pagado',
     partially_refunded: 'Reembolso parcial',
     refunded: 'Reembolsado',
-    unfulfilled: 'Por surtir',
-    partially_fulfilled: 'Surtido parcial',
-    fulfilled: 'Surtido',
+    unfulfilled: 'No preparado',
+    partially_fulfilled: 'Preparado parcialmente',
+    fulfilled: 'Preparado',
   },
   customers: {
     title: 'Clientes',
@@ -566,6 +568,7 @@ const es = {
     cancel: 'Cancelar',
     menu: 'Menú',
   },
+  ...esV2,
 };
 
 export type Texts = typeof es;
@@ -1133,6 +1136,7 @@ const en: Texts = {
     cancel: 'Cancel',
     menu: 'Menu',
   },
+  ...enV2,
 };
 
 export const texts = { es, en };

@@ -14,6 +14,7 @@ test('team invites, agent tokens with activity, and signed webhooks', async ({ p
 
   // Payments: test mode is explicit, and live keys ask before connecting.
   await page.getByRole('link', { name: /Ajustes/ }).click();
+  await page.getByRole('link', { name: 'Pagos' }).click();
   const payments = page.getByTestId('payments-card');
   if (STRIPE_CONNECTED) {
     await expect(page.getByText('Modo prueba')).toBeVisible();

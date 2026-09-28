@@ -3,7 +3,6 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { useState, type FormEvent } from 'react';
 import { useAdmin } from '../context.js';
 import { Link, useRouter } from '../router.js';
-import { PageTitle } from '../shell.js';
 import {
   Alert,
   Badge,
@@ -15,7 +14,6 @@ import {
   Select,
   Spinner,
   Table,
-  cx,
   td,
 } from '../ui.js';
 
@@ -38,39 +36,6 @@ function useDateTime() {
   const locale = config.locale === 'en' ? 'en-US' : 'es-MX';
   return (iso: string) =>
     new Date(iso).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
-}
-
-/** Tabs shared by every Settings page. */
-export function SettingsTabs() {
-  const { t } = useAdmin();
-  const { path } = useRouter();
-  const tabs = [
-    { to: '/settings', label: t.settings.tabs.store },
-    { to: '/settings/team', label: t.settings.tabs.team },
-    { to: '/settings/agents', label: t.settings.tabs.agents },
-    { to: '/settings/webhooks', label: t.settings.tabs.webhooks },
-  ];
-  return (
-    <nav
-      className="sb:-mt-2 sb:mb-6 sb:flex sb:gap-1 sb:overflow-x-auto sb:border-b sb:border-zinc-200"
-      aria-label={t.settings.title}
-    >
-      {tabs.map((tab) => (
-        <Link
-          key={tab.to}
-          to={tab.to}
-          className={cx(
-            'sb:-mb-px sb:whitespace-nowrap sb:border-b-2 sb:px-3 sb:py-2 sb:text-sm',
-            path === tab.to
-              ? 'sb:border-[var(--sba-primary)] sb:font-medium'
-              : 'sb:border-transparent sb:text-zinc-500 sb:hover:text-zinc-800',
-          )}
-        >
-          {tab.label}
-        </Link>
-      ))}
-    </nav>
-  );
 }
 
 // ── Team ────────────────────────────────────────────────────────────────────
@@ -122,10 +87,8 @@ export function TeamPage() {
 
   return (
     <>
-      <PageTitle>{t.settings.title}</PageTitle>
-      <SettingsTabs />
-      <div className="sb:flex sb:flex-col sb:gap-6">
-        <p className="sb:text-sm sb:text-zinc-600">{t.team.intro}</p>
+      <div className="sb:flex sb:flex-col sb:gap-4">
+        <p className="sb:text-[var(--sba-text-subdued)]">{t.team.intro}</p>
         <Card>
           <form
             onSubmit={submit}
@@ -295,10 +258,8 @@ export function AgentsPage() {
 
   return (
     <>
-      <PageTitle>{t.settings.title}</PageTitle>
-      <SettingsTabs />
-      <div className="sb:flex sb:flex-col sb:gap-6">
-        <p className="sb:text-sm sb:text-zinc-600">{a.intro}</p>
+      <div className="sb:flex sb:flex-col sb:gap-4">
+        <p className="sb:text-[var(--sba-text-subdued)]">{a.intro}</p>
         <Card title={a.tokens}>
           <form onSubmit={submit} className="sb:flex sb:flex-col sb:gap-4">
             <div className="sb:grid sb:gap-3 sb:md:grid-cols-[1fr_12rem]">
@@ -519,10 +480,8 @@ export function WebhooksPage() {
 
   return (
     <>
-      <PageTitle>{t.settings.title}</PageTitle>
-      <SettingsTabs />
-      <div className="sb:flex sb:flex-col sb:gap-6">
-        <p className="sb:text-sm sb:text-zinc-600">{w.intro}</p>
+      <div className="sb:flex sb:flex-col sb:gap-4">
+        <p className="sb:text-[var(--sba-text-subdued)]">{w.intro}</p>
         <Card>
           <form onSubmit={submit} className="sb:flex sb:flex-col sb:gap-4">
             <div className="sb:grid sb:gap-3 sb:md:grid-cols-2">

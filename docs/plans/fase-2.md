@@ -112,11 +112,40 @@ El usuario pausó los evals. Antes se termina, en este orden:
 5. ✅ **Antes de 2g, bloqueo de webhooks a redes privadas** (`net-guard.ts`, ADR 0010):
    - Se valida al guardar y al enviar; se resuelve DNS y no se siguen redirecciones.
    - En local, `SELLBASE_WEBHOOKS_ALLOW_PRIVATE=true`; el doctor falla si esa variable queda activa en la nube.
-6. **2g. Instalación en un Supabase en la nube**: `sellbase init` contra un proyecto real (migraciones, functions, secretos, cron) y compra de prueba.
+6. **2f-3. Admin v2, nivel Shopify con marca Sellbase** (pedido 2026-09-27, tras probar la landing de Mezcal: "el administrador debe ser como Shopify … ni me deja subir fotos"). Decidido en modo autónomo:
+   - **Diseño propio de Sellbase:**
+     - tokens de color, radio y sombra;
+     - íconos SVG en lugar de emojis;
+     - barra superior con la marca y búsqueda, y menú lateral con subsecciones;
+     - avisos flotantes (toast) y barra de "cambios sin guardar";
+     - textos para el comerciante: los checks del doctor se muestran con copy del admin, sin rutas de API.
+   - **Productos:**
+     - lista con pestañas por estado, miniaturas, existencias y filtros;
+     - editor en dos columnas: fotos con arrastrar y soltar (antes de guardar), reordenar, texto alternativo y borrar; opciones y matriz de variantes; precio comparado; inventario; envío; SEO con vista previa; colecciones y etiquetas; archivos digitales; datos de servicio.
+     - API: `DELETE /products/:id/media/:media_id` y `PATCH /products/:id/media` (orden y alt); `seo` y `collection_ids` en `product_upsert`.
+   - **Inventario:** `GET /inventory` (búsqueda y poco stock) y página con ajuste en línea.
+   - **Pedidos:**
+     - pestañas (por preparar, sin pagar, abiertos, cerrados);
+     - detalle con cliente, pago, envío, comentarios en el historial y hoja de empaque imprimible.
+   - **Carritos abandonados:**
+     - `GET /checkouts/abandoned` y `POST /checkouts/:id/recovery-email`;
+     - correo de recuperación;
+     - envío automático opcional desde los jobs;
+     - la tienda restaura el carrito con `?sellbase_cart=<token>` (web components y React).
+   - **Ajustes organizados:**
+     - secciones: General (logo con `POST /store/logo`), Pagos, Envíos, Impuestos, Checkout (consentimiento obligatorio, URL de la tienda, página de descargas, carritos abandonados), Notificaciones (Resend y correo de prueba), Equipo, Agentes IA, Webhooks e Integraciones;
+     - guía de configuración en Inicio.
+   - **Consentimiento del lado del servidor** (migración 0009):
+     - `checkout_sessions.consents`;
+     - la tienda puede exigirlo (`settings.checkout.required_consent`) y el checkout lo valida;
+     - queda copiado en `orders.metadata.consents`;
+     - `GET /storefront/store` lo expone junto con el nombre y el logo.
+   - **Instalación:** `sellbase init` crea al dueño (local: usuario + contraseña en `.env.sellbase`; nube: invitación por correo).
+7. **2g. Instalación en un Supabase en la nube**: `sellbase init` contra un proyecto real (migraciones, functions, secretos, cron) y compra de prueba.
    - **Acordado (2026-09-27):**
      - Proyecto de Supabase **nuevo** creado por el usuario solo para esta prueba.
      - La llave live de Stripe **no va en archivos**: el usuario la conecta desde el admin (Ajustes → Pagos), queda en Vault y se prueba el flujo real con la verificación live.
-7. **2h. Evals del agente**: se construyen después. **Solo corren cuando el usuario lo pide**; nada automático ni semanal en CI.
+8. **2h. Evals del agente**: se construyen después. **Solo corren cuando el usuario lo pide**; nada automático ni semanal en CI.
 
 Evals (cuando toque): `evals/` con 10+ escenarios (tienda física, curso digital, consultorio con citas, mixta, errores recuperables), agente real en un proyecto limpio, verificador vía `test_purchase` y `doctor`, métricas de éxito, tool calls y tiempo. Meta ≥ 80 %.
 

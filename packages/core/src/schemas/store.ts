@@ -76,6 +76,24 @@ export const storeSettingsPatch = z
     brand_color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
     shipping: z.record(z.string(), z.unknown()),
     site_url: z.url().describe('The storefront; default landing page after payment links.'),
+    checkout: z
+      .object({
+        required_consent: z
+          .string()
+          .min(3)
+          .max(300)
+          .nullable()
+          .describe(
+            'A checkbox the buyer must accept to pay, e.g. "Confirmo que soy mayor de 18 años". Stored with the order.',
+          ),
+      })
+      .partial(),
+    abandoned_checkout: z
+      .object({
+        auto_email: z.boolean().describe('Email buyers who left without paying, once.'),
+        delay_hours: z.number().int().min(1).max(72),
+      })
+      .partial(),
     download_page_url: z
       .url()
       .refine((u) => u.includes('%7Btoken%7D') || u.includes('{token}'), 'Must contain {token}')

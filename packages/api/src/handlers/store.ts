@@ -3,6 +3,8 @@ import type { Hono } from 'hono';
 import { actorRef } from '../auth.js';
 import type { Deps } from '../deps.js';
 import { register, type AppOptions } from '../http.js';
+import { contentTypeFor, decodeBase64, safeFileName } from './catalog.js';
+import { renderOrderConfirmation, toLocale } from '@sellbase/emails';
 import {
   loadStripeConfig,
   refreshStripeAccount,
@@ -13,7 +15,7 @@ import {
 } from '../stripe-live.js';
 
 /** Latest migration this API version expects (`sellbase.schema_version`). */
-export const EXPECTED_SCHEMA_VERSION = '0008';
+export const EXPECTED_SCHEMA_VERSION = '0009';
 
 /** Providers that can be connected, with the kind of integration and how to test them. */
 const PROVIDERS = {
@@ -85,6 +87,90 @@ export function registerStore(app: Hono, deps: Deps, options: AppOptions) {
       insert into sellbase.audit_log (store_id, actor_type, actor_id, action, entity, entity_id, diff)
       values (${storeId}, ${actor_type}, ${actor_id}, 'store.update', 'store', ${storeId}, ${sql.json(body as never)})`;
     return store as never;
+  });
+
+  register(app, deps, options, routes.storeLogoUpload, async ({ storeId, actor, body }) => {
+    const type = contentTypeFor(body.file_name);
+    if (!type.startsWith('image/')) {
+      throw sellbaseError(
+        'VALIDATION_ERROR',
+        'The logo must be an image (PNG, JPG, WebP or SVG).',
+        'Export the logo as PNG or SVG and upload it again.',
+      );
+    }
+    const bytes = decodeBase64(body.content_base64, 2_000_000);
+    const path = `${storeId}/brand/${crypto.randomUUID()}-${safeFileName(body.file_name)}`;
+    await deps.storage.upload('sellbase-media', path, bytes, type);
+    const url = deps.storage.publicUrl('sellbase-media', path);
+    const [store] = await sql`
+      update sellbase.stores set logo_url = ${url} where id = ${storeId}
+      returning ${sql.unsafe(STORE_COLUMNS)}`;
+    const { actor_type, actor_id } = actorRef(actor);
+    await sql`
+      insert into sellbase.audit_log (store_id, actor_type, actor_id, action, entity, entity_id, diff)
+      values (${storeId}, ${actor_type}, ${actor_id}, 'store.logo', 'store', ${storeId}, ${sql.json({ url } as never)})`;
+    return store as never;
+  });
+
+  register(app, deps, options, routes.notificationsTest, async ({ storeId, body }) => {
+    const [store] = await sql<
+      {
+        name: string;
+        logo_url: string | null;
+        contact_email: string | null;
+        default_currency: string;
+        default_locale: string;
+        brand_color: string | null;
+      }[]
+    >`
+      select name, logo_url, contact_email::text, default_currency::text, default_locale,
+             settings ->> 'brand_color' as brand_color
+        from sellbase.stores where id = ${storeId}`;
+    if (!store) throw new Error('store not found');
+    const notify = await deps.notify(storeId);
+    const email = await renderOrderConfirmation({
+      brand: {
+        store_name: store.name,
+        logo_url: store.logo_url,
+        brand_color: store.brand_color,
+        contact_email: store.contact_email,
+      },
+      locale: toLocale(store.default_locale),
+      order: {
+        number: 1001,
+        currency: store.default_currency,
+        subtotal_amount: 50000,
+        discount_amount: 0,
+        shipping_amount: 0,
+        tax_amount: 6897,
+        tax_mode: 'inclusive',
+        total_amount: 50000,
+        items: [
+          { title: 'Producto de ejemplo', variant_title: null, quantity: 1, total_amount: 50000 },
+        ],
+        requires_shipping: false,
+      },
+      downloads: [],
+    });
+    try {
+      await notify.send({
+        to: body.to,
+        ...email,
+        subject: `[Prueba] ${email.subject}`,
+        idempotency_key: `test-email-${crypto.randomUUID()}`,
+      });
+      const message =
+        notify.id === 'log'
+          ? 'Email is not connected yet: the message was only written to the function logs. Connect Resend to send real emails.'
+          : `Sent to ${body.to}. Check the inbox (and spam).`;
+      return { ok: notify.id !== 'log', message, provider: notify.id };
+    } catch (error) {
+      return {
+        ok: false,
+        message: error instanceof Error ? error.message : String(error),
+        provider: notify.id,
+      };
+    }
   });
 
   register(app, deps, options, routes.integrationsList, async ({ storeId }) => {

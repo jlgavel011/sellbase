@@ -216,6 +216,46 @@ export async function inviteOwner(
     on conflict (store_id, user_id) do nothing`;
 }
 
+/**
+ * Local stack: creates the owner with a password right away (no email round trip), so the
+ * admin works the moment init finishes. Returns the new password, or null when the user
+ * already existed (their password is left alone).
+ */
+export async function createLocalOwner(
+  conn: SupabaseConnection,
+  sql: postgres.Sql,
+  storeId: string,
+  email: string,
+): Promise<string | null> {
+  const [existing] = await sql<
+    { id: string }[]
+  >`select id from auth.users where email = ${email.toLowerCase()}`;
+  let userId = existing?.id;
+  let password: string | null = null;
+  if (!userId) {
+    password = `Sb-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
+    const res = await fetch(`${conn.apiUrl}/auth/v1/admin/users`, {
+      method: 'POST',
+      headers: {
+        apikey: conn.serviceRoleKey,
+        authorization: `Bearer ${conn.serviceRoleKey}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ email, password, email_confirm: true }),
+    });
+    if (!res.ok)
+      throw cliError(
+        `Could not create the owner ${email}: ${res.status} ${await res.text()}`,
+        'Check that the local Supabase stack is running (supabase status).',
+      );
+    userId = ((await res.json()) as { id: string }).id;
+  }
+  await sql`
+    insert into sellbase.staff_members (store_id, user_id, role) values (${storeId}, ${userId}, 'owner')
+    on conflict (store_id, user_id) do nothing`;
+  return password;
+}
+
 /** Reads the agent credentials written by `sellbase init`. */
 export async function readSellbaseEnv(cwd: string) {
   const env = { ...(await readEnvFile(join(cwd, '.env.sellbase'))), ...process.env };

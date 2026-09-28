@@ -13,6 +13,7 @@ import {
   createToken,
   detectProject,
   ensureStore,
+  createLocalOwner,
   inviteOwner,
   resolveSupabase,
   withDb,
@@ -296,7 +297,7 @@ export async function init(cwd: string, options: InitOptions) {
     log.step('Applied migrations and loaded the functions');
   }
 
-  const { storeId, token, created } = await withDb(conn.dbUrl, async (sql) => {
+  const { storeId, token, created, owner } = await withDb(conn.dbUrl, async (sql) => {
     const slug =
       options.storeName
         .toLowerCase()
@@ -316,11 +317,18 @@ export async function init(cwd: string, options: InitOptions) {
       ? 'http://kong:8000/functions/v1/sellbase-jobs'
       : `${conn.apiUrl.replace(/\/+$/, '')}/functions/v1/sellbase-jobs`;
     await sql`select sellbase.configure_jobs(${jobsUrl}, ${conn.serviceRoleKey})`;
-    if (options.ownerEmail)
+    // Local: an owner with a password, ready to sign in. Hosted: an email invitation.
+    let owner: { email: string; password: string | null } | null = null;
+    if (conn.local) {
+      const email = options.ownerEmail ?? `admin@${slug}.test`;
+      owner = { email, password: await createLocalOwner(conn, sql, store.id, email) };
+    } else if (options.ownerEmail) {
       await inviteOwner(conn, sql, store.id, options.ownerEmail, 'http://localhost:3000/admin');
+    }
     return {
       storeId: store.id,
       created: store.created,
+      owner,
       token: await createToken(sql, store.id, 'AI agent (sellbase init)'),
     };
   });
@@ -329,13 +337,27 @@ export async function init(cwd: string, options: InitOptions) {
       ? `Created the store "${options.storeName}" (${options.currency})`
       : 'Using the existing store',
   );
-  if (options.ownerEmail)
+  if (owner?.password)
+    log.step(`Created the admin owner ${owner.email} (password saved in .env.sellbase)`);
+  else if (owner) log.step(`Admin owner: ${owner.email} (existing account)`);
+  else if (options.ownerEmail)
     log.info(`Invited ${options.ownerEmail} as owner: check the inbox for the sign-in link.`);
+  else
+    log.info(
+      'No owner yet: run init again with --owner-email you@example.com to get an admin invitation.',
+    );
 
   const sellbaseUrl = apiUrlFor(conn);
   await upsertEnvFile(
     join(cwd, '.env.sellbase'),
-    { SELLBASE_URL: sellbaseUrl, SELLBASE_API_TOKEN: token, SUPABASE_ANON_KEY: conn.anonKey },
+    {
+      SELLBASE_URL: sellbaseUrl,
+      SELLBASE_API_TOKEN: token,
+      SUPABASE_ANON_KEY: conn.anonKey,
+      ...(owner?.password
+        ? { SELLBASE_ADMIN_EMAIL: owner.email, SELLBASE_ADMIN_PASSWORD: owner.password }
+        : {}),
+    },
     {
       secret: true,
       header:
@@ -393,6 +415,11 @@ export async function init(cwd: string, options: InitOptions) {
 
   console.log('');
   await printDoctor({ url: sellbaseUrl, token, anonKey: conn.anonKey }, { exitOnFail: false });
+  if (owner) {
+    console.log(
+      `\n${bold('Admin:')} open /admin on your site and sign in as ${owner.email}${owner.password ? ` with the password in .env.sellbase (SELLBASE_ADMIN_PASSWORD)` : ''}.`,
+    );
+  }
   console.log(
     `\n${bold('Next step:')} open your AI agent in this folder and say:\n  "Configura mi tienda con Sellbase"\n`,
   );

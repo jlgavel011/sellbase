@@ -3,6 +3,8 @@ import { configure, defineElements, Sellbase } from '../src/index.js';
 import { resetStore } from '../src/store.js';
 
 /** In-memory storefront API: two products, carts by token. */
+let requiredConsent: string | null = null;
+
 function fakeApi() {
   const products: Record<string, unknown> = {
     espadin: {
@@ -155,6 +157,15 @@ function fakeApi() {
       });
     const cart = /^\/storefront\/carts\/([^/]+)$/.exec(path);
     if (cart) return json(view(cart[1] ?? ''));
+    if (path === '/storefront/store')
+      return json({
+        name: 'Sie7e Deseos',
+        logo_url: null,
+        currency: 'MXN',
+        locale: 'es',
+        contact_email: null,
+        checkout: { required_consent: requiredConsent },
+      });
     if (path === '/storefront/checkout') {
       checkouts.push(body);
       return json({
@@ -368,5 +379,42 @@ describe('configuration', () => {
     await settle();
     expect(shadow('sellbase-product-grid').querySelector('[role="alert"]')).not.toBeNull();
     configure({ url: 'https://p.test/functions/v1/sellbase-api', anonKey: 'anon' });
+  });
+});
+
+describe('store settings and recovery links', () => {
+  it('restores the cart from ?sellbase_cart= and cleans the URL', async () => {
+    const token = 'recovered-token-xxxxxxxxxxxxxxxx';
+    window.history.replaceState(null, '', `/tienda?sellbase_cart=${token}&utm=mail`);
+    resetStore();
+    document.body.innerHTML = '<sellbase-cart-button></sellbase-cart-button>';
+    await settle();
+    expect(localStorage.getItem('sellbase_cart_token')).toBe(token);
+    expect(window.location.search).toBe('?utm=mail');
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('shows the consent the store requires and sends it with the checkout', async () => {
+    requiredConsent = 'Confirmo que soy mayor de 18 años';
+    resetStore();
+    try {
+      document.body.insertAdjacentHTML(
+        'beforeend',
+        '<sellbase-add-to-cart product="espadin"></sellbase-add-to-cart><sellbase-checkout></sellbase-checkout>',
+      );
+      await settle();
+      (
+        shadow('sellbase-add-to-cart').querySelector('[data-action="add"]') as HTMLButtonElement
+      ).click();
+      await settle();
+      document.body.querySelector('sellbase-checkout')?.remove();
+      document.body.insertAdjacentHTML('beforeend', '<sellbase-checkout></sellbase-checkout>');
+      await settle();
+      const root = shadow('sellbase-checkout');
+      expect(root.textContent).toContain('mayor de 18');
+      expect(root.querySelector('input[name="consent"]')?.hasAttribute('required')).toBe(true);
+    } finally {
+      requiredConsent = null;
+    }
   });
 });

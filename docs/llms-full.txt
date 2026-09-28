@@ -66,6 +66,16 @@ npx sellbase init --yes     # esquema, Edge Functions, tienda, token del agente,
 npx sellbase seed ropa      # opcional: catálogo de ejemplo (ropa, curso, consultorio, cafeteria)
 ```
 
+En local, `init` también crea al dueño de la tienda: el correo y la contraseña del admin quedan en `.env.sellbase` (`SELLBASE_ADMIN_EMAIL` y `SELLBASE_ADMIN_PASSWORD`). Entra a `/admin` con ellos. En un proyecto en la nube usa `--owner-email tu@correo.com` para recibir la invitación.
+
+**Qué trae el admin:**
+- guía de configuración;
+- productos con fotos (arrastrar y soltar), variantes, inventario y SEO;
+- pedidos con hoja de empaque, reembolsos e historial;
+- carritos abandonados con correo de recuperación;
+- clientes y descuentos;
+- ajustes de pagos (Stripe en Vault), envíos, impuestos, checkout (URL de la tienda y casilla obligatoria, p. ej. mayoría de edad), correos (Resend), equipo, agentes IA, webhooks e integraciones.
+
 Después abre tu agente de IA en la carpeta del proyecto y dile: **"Configura mi tienda con Sellbase"**. El agente usa las herramientas MCP (`store_status`, `product_upsert`, `integration_connect`, `test_purchase`…) hasta que una compra de prueba sale bien.
 
 ## Qué queda en tu proyecto
@@ -427,6 +437,7 @@ Auth: public routes need no token; the rest need `Authorization: Bearer <staff s
 - **GET /storefront/collections/:slug** (public): One collection; list its products with GET /storefront/products?collection=<slug>.
 - **POST /storefront/orders/lookup** (public): A buyer checks their order with its number and email. Any mismatch answers NOT_FOUND (it never tells which part was wrong). Limited to 10 attempts per minute per IP.
 - **GET /storefront/downloads/:grant_token/info** (public): What a download link gives, and whether it still works.
+- **GET /storefront/store** (public): Store name, logo, currency and the consent checkout requires.
 - **GET /storefront/downloads/:grant_token** (public): Redirect to a short-lived signed URL for a purchased file.
 
 ## catalog
@@ -438,7 +449,10 @@ Auth: public routes need no token; the rest need `Authorization: Bearer <staff s
 - **POST /products** (scope: catalog:write): Create or update a full product of any type in one call. Send `id` to update. Variants with `id` are updated, without are created, missing ones are archived.
 - **DELETE /products/:id** (scope: catalog:write): Archive a product (orders keep their snapshots).
 - **POST /products/:id/media** (scope: catalog:write): Add an image to a product from a URL or an uploaded file. Send `url` to reference an existing image, or `file_name` + `content_base64` (max 5 MB) to upload it to the public media bucket.
+- **PATCH /products/:id/media** (scope: catalog:write): Reorder product images and edit their alt text. The images listed come first, in this order; the first one is the main image. Omitted images keep their relative order after them.
+- **DELETE /products/:id/media/:media_id** (scope: catalog:write): Remove an image from a product (uploaded files are deleted too).
 - **POST /variants/:id/digital-assets** (scope: catalog:write): Upload the file buyers receive for a digital variant. The file is stored in a private bucket and only reachable through short-lived signed links issued after payment. Max 10 MB per call.
+- **GET /inventory** (scope: catalog:read): Stock per variant, with low and out of stock filters.
 - **POST /inventory/adjust** (scope: catalog:write): Adjust stock by a delta with a reason.
 - **GET /resources** (scope: catalog:read): People, rooms or equipment that deliver services, with their weekly hours.
 - **POST /resources** (scope: catalog:write): Create or update a resource, its weekly hours and the services it delivers. rules replace the weekly hours (weekday 0 = Sunday … 6 = Saturday, local times in `timezone`); product_ids replace the services it delivers.
@@ -460,6 +474,8 @@ Auth: public routes need no token; the rest need `Authorization: Bearer <staff s
 - **POST /orders/:id/payment-link** (scope: orders:write): Create a payment link for the balance still owed on an order. For orders paid with a deposit. Send the URL to the customer; when paid, the order becomes "paid".
 - **POST /orders/:id/notes** (scope: orders:write): Add an internal note to the order timeline.
 - **POST /orders/:id/notifications** (scope: orders:write): Send an order email again (confirmation or shipment).
+- **GET /checkouts/abandoned** (scope: orders:read): Checkouts started with an email but not paid (abandoned carts). One row per cart (its latest checkout). "recovered" means the cart was bought afterwards.
+- **POST /checkouts/:id/recovery-email** (scope: orders:write): Email the buyer a link that restores their cart. Needs settings.site_url (the storefront) so the link can open the cart. Sends at most once per checkout unless resend is true.
 - **GET /bookings** (scope: orders:read): Appointments in a date range (the agenda).
 - **POST /bookings/:id/complete** (scope: orders:write): Mark an appointment as done.
 - **POST /bookings/:id/no-show** (scope: orders:write): Mark that the customer did not come.
@@ -505,12 +521,14 @@ Auth: public routes need no token; the rest need `Authorization: Bearer <staff s
 
 - **GET /store** (scope: any staff or token): Get store settings.
 - **PATCH /store** (scope: settings:write): Update store settings.
+- **POST /store/logo** (scope: settings:write): Upload the store logo (PNG, JPG, WebP or SVG, max 2 MB). Used by the admin, emails and GET /storefront/store.
 
 ## integrations
 
 - **GET /integrations** (scope: integrations:write): List integrations and their status.
 - **POST /integrations/:provider/connect** (scope: integrations:write): Connect a provider with API keys (stored in Vault) or get a connect URL. Stripe: when the project has a public https URL and no webhook_secret is sent, the webhook endpoint is created in Stripe automatically and its secret stored in Vault. Locally, run `stripe listen --forward-to <webhooks URL>` and send its whsec_ as webhook_secret.
 - **POST /integrations/:provider/test** (scope: integrations:write): Test a provider connection and explain any error.
+- **POST /notifications/test** (scope: settings:write): Send a sample order email to check the email provider.
 - **POST /integrations/stripe/live-check** (scope: integrations:write): Real-money check: a minimum charge the owner pays, refunded automatically. Live keys only. Returns a Stripe Checkout URL for the smallest amount Stripe allows (10 MXN, 0.50 USD). When its webhook arrives the charge is refunded and the integration is marked verified. Stripe keeps its fee. Needs confirm=true.
 
 ## system

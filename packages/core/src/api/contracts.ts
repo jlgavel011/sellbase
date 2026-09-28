@@ -211,6 +211,13 @@ export const checkoutStartBody = z.object({
     .describe('An id from POST /storefront/carts/:token/shipping-rates.'),
   success_url: z.url().describe('Where the provider sends the buyer after paying.'),
   cancel_url: z.url().describe('Where the provider sends the buyer if they go back.'),
+  consents: z
+    .array(z.string().min(1).max(500))
+    .max(5)
+    .optional()
+    .describe(
+      'Texts of the checkboxes the buyer accepted. Required when the store sets checkout.required_consent (GET /storefront/store); kept with the order.',
+    ),
   pay_mode: z
     .enum(['full', 'deposit'])
     .default('full')
@@ -268,6 +275,7 @@ export const adminVariantView = variant.extend({
 export const adminProductView = product.extend({
   variants: z.array(adminVariantView),
   resource_ids: z.array(id),
+  collection_ids: z.array(id),
   media: z.array(z.object({ id, url: z.string(), alt: z.string(), position: z.number().int() })),
 });
 
@@ -309,7 +317,13 @@ export const refundView = z.object({
 });
 
 export const orderDetail = order.extend({
-  items: z.array(orderItem.extend({ fulfilled_quantity: z.number().int() })),
+  items: z.array(
+    orderItem.extend({
+      fulfilled_quantity: z.number().int(),
+      product_id: id.nullable(),
+      image_url: z.string().nullable().describe("The product's current main image (display only)."),
+    }),
+  ),
   payments: z.array(payment),
   fulfillments: z.array(fulfillmentView),
   refunds: z.array(refundView),
@@ -341,6 +355,61 @@ export const integrationView = z.object({
   config: z.record(z.string(), z.unknown()),
   connected_at: timestamp.nullable(),
   last_error: z.string().nullable(),
+});
+
+/** One sellable variant with its stock, for the inventory page. */
+export const inventoryItemView = z.object({
+  variant_id: id,
+  product_id: id,
+  product_title: z.string(),
+  product_status: productStatus,
+  variant_title: z.string(),
+  sku: z.string().nullable(),
+  image_url: z.string().nullable(),
+  tracked: z.boolean().describe('false: no stock control, always available.'),
+  on_hand: z.number().int(),
+  reserved: z.number().int().describe('Held by checkouts that are waiting for payment.'),
+  available: z.number().int(),
+  policy: inventoryPolicy.nullable(),
+});
+
+/** A checkout the buyer started (with their email) but did not pay. */
+export const abandonedCheckoutView = z.object({
+  id,
+  email: z.string().nullable(),
+  created_at: timestamp,
+  amount_total: amount,
+  currency,
+  items: z.array(
+    z.object({
+      title: z.string(),
+      variant_title: z.string().nullable(),
+      quantity: z.number().int(),
+      image_url: z.string().nullable(),
+      total_amount: amount,
+    }),
+  ),
+  status: z
+    .enum(['in_progress', 'abandoned', 'recovered'])
+    .describe(
+      'in_progress: still inside its payment window. recovered: the cart was bought later.',
+    ),
+  recovery_sent_at: timestamp.nullable(),
+  recovery_url: z
+    .string()
+    .nullable()
+    .describe('Opens the storefront with this cart restored; null until settings.site_url is set.'),
+  recovered_order: z.object({ id, number: z.number().int() }).nullable(),
+});
+
+/** Public store facts a storefront needs (name, logo, required checkout consent). */
+export const storefrontStoreView = z.object({
+  name: z.string(),
+  logo_url: z.string().nullable(),
+  currency,
+  locale: z.string(),
+  contact_email: z.string().nullable(),
+  checkout: z.object({ required_consent: z.string().nullable() }),
 });
 
 const cartTokenParam = z.object({ token: z.string().min(20) });
@@ -793,6 +862,15 @@ export const routes = {
       download_url: z.string().describe('Opens the file (counts one download).'),
     }),
   },
+  storefrontStore: {
+    id: 'storefrontStore',
+    method: 'GET',
+    path: '/storefront/store',
+    summary: 'Store name, logo, currency and the consent checkout requires',
+    tag: 'storefront',
+    auth: publicAuth,
+    response: storefrontStoreView,
+  },
   downloadGet: {
     id: 'downloadGet',
     method: 'GET',
@@ -929,6 +1007,34 @@ export const routes = {
       }),
     response: adminProductView,
   },
+  productMediaUpdate: {
+    id: 'productMediaUpdate',
+    method: 'PATCH',
+    path: '/products/:id/media',
+    summary: 'Reorder product images and edit their alt text',
+    description:
+      'The images listed come first, in this order; the first one is the main image. Omitted images keep their relative order after them.',
+    tag: 'catalog',
+    auth: staff('catalog:write'),
+    params: z.object({ id }),
+    body: z.object({
+      media: z
+        .array(z.object({ id, alt: z.string().max(200).optional() }))
+        .min(1)
+        .max(250),
+    }),
+    response: adminProductView,
+  },
+  productMediaDelete: {
+    id: 'productMediaDelete',
+    method: 'DELETE',
+    path: '/products/:id/media/:media_id',
+    summary: 'Remove an image from a product (uploaded files are deleted too)',
+    tag: 'catalog',
+    auth: staff('catalog:write'),
+    params: z.object({ id, media_id: id }),
+    response: adminProductView,
+  },
   digitalAssetUpload: {
     id: 'digitalAssetUpload',
     method: 'POST',
@@ -951,6 +1057,24 @@ export const routes = {
         .default(72),
     }),
     response: z.object({ id, file_name: z.string(), size_bytes: z.number().int() }),
+  },
+  inventoryList: {
+    id: 'inventoryList',
+    method: 'GET',
+    path: '/inventory',
+    summary: 'Stock per variant, with low and out of stock filters',
+    tag: 'catalog',
+    auth: staff('catalog:read'),
+    query: z.object({
+      ...pageQuery,
+      q: z.string().max(100).optional().describe('Product title or SKU'),
+      stock: z
+        .enum(['all', 'low', 'out'])
+        .default('all')
+        .describe('low: available at or below threshold (tracked only). out: nothing available.'),
+      threshold: z.coerce.number().int().min(0).max(10_000).default(5),
+    }),
+    response: paginated(inventoryItemView),
   },
   inventoryAdjust: {
     id: 'inventoryAdjust',
@@ -1158,6 +1282,34 @@ export const routes = {
     response: z.object({ queued: z.boolean(), to: z.string() }),
   },
 
+  abandonedCheckoutsList: {
+    id: 'abandonedCheckoutsList',
+    method: 'GET',
+    path: '/checkouts/abandoned',
+    summary: 'Checkouts started with an email but not paid (abandoned carts)',
+    description:
+      'One row per cart (its latest checkout). "recovered" means the cart was bought afterwards.',
+    tag: 'orders',
+    auth: staff('orders:read'),
+    query: z.object({
+      ...pageQuery,
+      status: z.enum(['abandoned', 'recovered', 'in_progress']).optional(),
+    }),
+    response: paginated(abandonedCheckoutView),
+  },
+  abandonedCheckoutRecover: {
+    id: 'abandonedCheckoutRecover',
+    method: 'POST',
+    path: '/checkouts/:id/recovery-email',
+    summary: 'Email the buyer a link that restores their cart',
+    description:
+      'Needs settings.site_url (the storefront) so the link can open the cart. Sends at most once per checkout unless resend is true.',
+    tag: 'orders',
+    auth: staff('orders:write'),
+    params: z.object({ id }),
+    body: z.object({ resend: z.boolean().default(false) }),
+    response: z.object({ sent_to: z.string(), recovery_url: z.string(), sent_at: timestamp }),
+  },
   resourcesList: {
     id: 'resourcesList',
     method: 'GET',
@@ -1580,6 +1732,20 @@ export const routes = {
     body: storeUpdateInput,
     response: store,
   },
+  storeLogoUpload: {
+    id: 'storeLogoUpload',
+    method: 'POST',
+    path: '/store/logo',
+    summary: 'Upload the store logo (PNG, JPG, WebP or SVG, max 2 MB)',
+    description: 'Used by the admin, emails and GET /storefront/store.',
+    tag: 'store',
+    auth: staff('settings:write'),
+    body: z.object({
+      file_name: z.string().min(1).max(200),
+      content_base64: z.string().min(1).max(2_800_000),
+    }),
+    response: store,
+  },
   integrationsList: {
     id: 'integrationsList',
     method: 'GET',
@@ -1625,6 +1791,16 @@ export const routes = {
     auth: staff('integrations:write'),
     params: z.object({ provider: z.string().min(1) }),
     response: z.object({ ok: z.boolean(), message: z.string() }),
+  },
+  notificationsTest: {
+    id: 'notificationsTest',
+    method: 'POST',
+    path: '/notifications/test',
+    summary: 'Send a sample order email to check the email provider',
+    tag: 'integrations',
+    auth: staff('settings:write'),
+    body: z.object({ to: email }),
+    response: z.object({ ok: z.boolean(), message: z.string(), provider: z.string() }),
   },
   integrationLiveCheck: {
     id: 'integrationLiveCheck',

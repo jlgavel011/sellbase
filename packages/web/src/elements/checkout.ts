@@ -14,7 +14,8 @@ const FIELDS = ['first_name', 'line1', 'line2', 'city', 'state', 'postal_code', 
  * The order is created by the payment webhook, never by this page.
  * Attributes: `success-url` (default config.successUrl or /gracias), `cancel-url`,
  * `country` (default MX), `consent` (text of a required checkbox, e.g. "Confirmo que soy
- * mayor de 18 años"; it is sent with the checkout).
+ * mayor de 18 años"; it is sent with the checkout). Without the attribute, the checkbox the
+ * store requires in its settings (GET /storefront/store) is shown.
  */
 export class SellbaseCheckout extends SellbaseElement {
   private email = '';
@@ -25,6 +26,7 @@ export class SellbaseCheckout extends SellbaseElement {
   private quoteTimer: ReturnType<typeof setTimeout> | null = null;
   private payMode: 'full' | 'deposit' = 'full';
   private consent = false;
+  private requiredConsent: string | null = null;
   private sending = false;
   private error: string | null = null;
 
@@ -41,8 +43,20 @@ export class SellbaseCheckout extends SellbaseElement {
 
   protected override async load() {
     this.address.country = this.getAttribute('country') ?? 'MX';
-    await loadCart();
+    await Promise.all([
+      loadCart(),
+      api
+        .store()
+        .then((info) => {
+          this.requiredConsent = info.checkout.required_consent;
+        })
+        .catch(() => undefined),
+    ]);
     if (state.cart?.requires_shipping) await this.quote();
+  }
+
+  private consentText() {
+    return this.getAttribute('consent') ?? this.requiredConsent;
   }
 
   private addressReady() {
@@ -101,7 +115,7 @@ export class SellbaseCheckout extends SellbaseElement {
     const abs = (url: string) => new URL(url, origin).toString();
     const success = this.getAttribute('success-url') ?? getConfig().successUrl ?? '/gracias';
     const cancel = this.getAttribute('cancel-url') ?? window.location.pathname;
-    const consentText = this.getAttribute('consent');
+    const consentText = this.consentText();
     this.sending = true;
     this.error = null;
     this.update();
@@ -136,7 +150,7 @@ export class SellbaseCheckout extends SellbaseElement {
     const shipping = c.requires_shipping ? (rate?.amount ?? 0) : 0;
     const input = (name: string, label: string, auto: string, required = true, id = `f-${name}`) =>
       `<label class="field" for="${id}">${esc(label)}<input class="input" part="input" id="${id}" name="${name}" autocomplete="${auto}" ${required ? 'required' : ''} value="${esc(this.address[name] ?? '')}"></label>`;
-    const consentText = this.getAttribute('consent');
+    const consentText = this.consentText();
     const deposit = c.totals.deposit_amount;
     const disabled =
       this.sending || (Boolean(consentText) && !this.consent) || (c.requires_shipping && !rate);

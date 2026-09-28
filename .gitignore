@@ -13,3 +13,7 @@ supabase/.temp/
 supabase/.branches/
 .DS_Store
 supabase/functions/sellbase-*/index.js
+
+# Written by `next dev`
+apps/playground/AGENTS.md
+apps/playground/CLAUDE.md

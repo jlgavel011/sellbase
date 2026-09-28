@@ -59,6 +59,9 @@ export interface SellbaseProviderProps {
  * Wrap the storefront once (e.g. in app/layout.tsx). Hooks read from it; components stay
  * headless so the AI that built the site can style them freely.
  */
+/** Query parameter of cart recovery links (same as @sellbase/web). */
+export const CART_PARAM = 'sellbase_cart';
+
 const NOT_CONFIGURED = {
   error: {
     code: 'VALIDATION_ERROR',
@@ -94,8 +97,18 @@ export function SellbaseProvider({
   const [cartOpen, setCartOpen] = useState(false);
   const [cartToken, setCartTokenState] = useState<string | null>(null);
 
-  // Read after mount so server and client render the same markup.
-  useEffect(() => setCartTokenState(readStorage(cartStorageKey)), [cartStorageKey]);
+  // Read after mount so server and client render the same markup. A cart recovery link
+  // (?sellbase_cart=…, from the abandoned checkout email) replaces the saved cart.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const fromLink = url.searchParams.get(CART_PARAM);
+    if (fromLink && fromLink.length >= 20) {
+      writeStorage(cartStorageKey, fromLink);
+      url.searchParams.delete(CART_PARAM);
+      window.history.replaceState(window.history.state, '', url.toString());
+    }
+    setCartTokenState(readStorage(cartStorageKey));
+  }, [cartStorageKey]);
   const setCartToken = useCallback(
     (token: string | null) => {
       writeStorage(cartStorageKey, token);

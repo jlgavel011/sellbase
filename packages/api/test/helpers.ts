@@ -82,6 +82,7 @@ export interface TestStore {
   webhooks: ReturnType<typeof createWebhooksApp>;
   emails: NotifyMessage[];
   uploads: { bucket: string; path: string; size: number }[];
+  removed: { bucket: string; path: string }[];
   payments: ReturnType<typeof fakePayments>;
   invites: { email: string; redirectTo: string | null }[];
   /** Outbound webhook requests, and status codes to answer the next ones with. */
@@ -112,6 +113,7 @@ export async function createTestStore(
   const storeId = store.id;
   const emails: NotifyMessage[] = [];
   const uploads: { bucket: string; path: string; size: number }[] = [];
+  const removed: { bucket: string; path: string }[] = [];
   const payments = fakePayments();
   const users = new Map<string, string>();
   const invites: { email: string; redirectTo: string | null }[] = [];
@@ -153,6 +155,9 @@ export async function createTestStore(
         uploads.push({ bucket, path, size: bytes.byteLength });
       },
       publicUrl: (bucket, path) => `https://storage.test/public/${bucket}/${path}`,
+      remove: async (bucket, path) => {
+        removed.push({ bucket, path });
+      },
     },
     now: () => new Date(),
     publicApiUrl: 'https://project.test/functions/v1/sellbase-api',
@@ -168,6 +173,7 @@ export async function createTestStore(
     webhooks,
     emails,
     uploads,
+    removed,
     payments,
     invites,
     hooks,

@@ -18,6 +18,8 @@ export interface Deps {
     signedUrl: (bucket: string, path: string, expiresInSeconds: number) => Promise<string>;
     upload: (bucket: string, path: string, bytes: Uint8Array, contentType: string) => Promise<void>;
     publicUrl: (bucket: string, path: string) => string;
+    /** Deletes a stored file; optional so older custom deps keep working. */
+    remove?: (bucket: string, path: string) => Promise<void>;
   };
   /**
    * Sends a Supabase Auth invitation and returns the new user's id. Only called for

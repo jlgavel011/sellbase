@@ -42,7 +42,7 @@ export function safeFileName(fileName: string): string {
   );
 }
 
-function decodeBase64(content: string, maxBytes: number): Uint8Array {
+export function decodeBase64(content: string, maxBytes: number): Uint8Array {
   let binary: string;
   try {
     binary = atob(content.replace(/^data:[^,]*,/, ''));
@@ -95,11 +95,16 @@ export async function loadAdminProduct(sql: Db, storeId: string, id: string) {
     select id, url, alt, position from sellbase.product_media where product_id = ${id} order by position`;
   const resources = await sql<{ resource_id: string }[]>`
     select resource_id from sellbase.service_resources where product_id = ${id}`;
+  const collections = await sql<{ collection_id: string }[]>`
+    select cp.collection_id from sellbase.collection_products cp
+      join sellbase.collections c on c.id = cp.collection_id
+     where cp.product_id = ${id} order by c.position, c.title`;
   return {
     ...product,
     variants,
     media,
     resource_ids: resources.map((r) => r.resource_id),
+    collection_ids: collections.map((c) => c.collection_id),
   } as never;
 }
 
@@ -112,6 +117,14 @@ async function uniqueSlug(tx: Db, storeId: string, base: string, exceptId: strin
     if (!taken) return candidate;
   }
   throw sellbaseError('VALIDATION_ERROR', `Slug "${base}" is taken.`, 'Send a different slug.');
+}
+
+/** Drops empty SEO fields so the storefront falls back to the title and description. */
+function cleanSeo(seo: ProductUpsertInput['seo']) {
+  const out: Record<string, string> = {};
+  if (seo?.title?.trim()) out.title = seo.title.trim();
+  if (seo?.description?.trim()) out.description = seo.description.trim();
+  return out;
 }
 
 /** Creates or updates a whole product in one transaction (SPEC §13.2 product_upsert). */
@@ -136,14 +149,15 @@ export async function upsertProduct(
       : (existing?.slug ?? (await uniqueSlug(tx, storeId, slugify(input.title), null)));
 
     const [row] = await tx<{ id: string }[]>`
-      insert into sellbase.products (id, store_id, type, title, slug, description, status, tags, metadata)
+      insert into sellbase.products (id, store_id, type, title, slug, description, status, tags, seo, metadata)
       values (${existing?.id ?? crypto.randomUUID()}, ${storeId}, ${input.type}, ${input.title}, ${slug},
               ${input.description ?? ''}, ${input.status}, ${tx.array(input.tags ?? [])},
-              ${tx.json((input.metadata ?? {}) as never)})
+              ${tx.json(cleanSeo(input.seo) as never)}, ${tx.json((input.metadata ?? {}) as never)})
       on conflict (id) do update set
         type = excluded.type, title = excluded.title, slug = excluded.slug, status = excluded.status,
         description = ${input.description === undefined ? tx`sellbase.products.description` : tx`excluded.description`},
         tags = ${input.tags === undefined ? tx`sellbase.products.tags` : tx`excluded.tags`},
+        seo = ${input.seo === undefined ? tx`sellbase.products.seo` : tx`excluded.seo`},
         metadata = ${input.metadata === undefined ? tx`sellbase.products.metadata` : tx`sellbase.products.metadata || excluded.metadata`}
       returning id`;
     if (!row) throw new Error('product upsert returned no row');
@@ -239,6 +253,28 @@ export async function upsertProduct(
         await tx`insert into sellbase.service_resources (store_id, product_id, resource_id) values (${storeId}, ${id}, ${r.id})`;
       }
     }
+    if (input.collection_ids) {
+      const wanted = [...new Set(input.collection_ids)];
+      const found = await tx<{ id: string }[]>`
+        select id from sellbase.collections where store_id = ${storeId} and id = any(${tx.array(wanted)}::uuid[])`;
+      if (found.length !== wanted.length) {
+        throw sellbaseError(
+          'VALIDATION_ERROR',
+          'Some collection_ids do not exist in this store.',
+          'List collections with GET /collections, or create one with POST /collections.',
+        );
+      }
+      await tx`
+        delete from sellbase.collection_products
+         where product_id = ${id} and not (collection_id = any(${tx.array(wanted)}::uuid[]))`;
+      for (const collectionId of wanted) {
+        await tx`
+          insert into sellbase.collection_products (collection_id, product_id, store_id, position)
+          values (${collectionId}, ${id}, ${storeId},
+                  (select coalesce(max(position) + 1, 0) from sellbase.collection_products where collection_id = ${collectionId}))
+          on conflict do nothing`;
+      }
+    }
     await tx`
       update sellbase.variants set status = 'archived'
        where product_id = ${id} and not (id = any(${tx.array(keep)}::uuid[]))`;
@@ -329,6 +365,117 @@ export function registerCatalog(app: Hono, deps: Deps, options: AppOptions) {
       insert into sellbase.audit_log (store_id, actor_type, actor_id, action, entity, entity_id, diff)
       values (${storeId}, ${actor_type}, ${actor_id}, 'product.media_add', 'product', ${params.id}, ${sql.json({ url } as never)})`;
     return loadAdminProduct(sql, storeId, params.id);
+  });
+
+  register(
+    app,
+    deps,
+    options,
+    routes.productMediaUpdate,
+    async ({ storeId, actor, params, body }) => {
+      const existing = await sql<{ id: string }[]>`
+      select id from sellbase.product_media where product_id = ${params.id} and store_id = ${storeId}
+       order by position, created_at`;
+      if (existing.length === 0) {
+        const [product] =
+          await sql`select id from sellbase.products where id = ${params.id} and store_id = ${storeId}`;
+        if (!product) throw notFound('Product', params.id, 'Search products with GET /products.');
+      }
+      const known = new Set(existing.map((m) => m.id));
+      const unknown = body.media.find((m) => !known.has(m.id));
+      if (unknown) {
+        throw notFound('Image', unknown.id, 'Get image ids from GET /products/:id (media).');
+      }
+      const listed = body.media.map((m) => m.id);
+      const order = [...listed, ...existing.map((m) => m.id).filter((id) => !listed.includes(id))];
+      await sql.begin(async (tx) => {
+        for (const [position, mediaId] of order.entries()) {
+          const alt = body.media.find((m) => m.id === mediaId)?.alt;
+          await tx`
+          update sellbase.product_media set position = ${position},
+                 alt = ${alt === undefined ? tx`alt` : tx`${alt}`}
+           where id = ${mediaId}`;
+        }
+        const { actor_type, actor_id } = actorRef(actor);
+        await tx`
+        insert into sellbase.audit_log (store_id, actor_type, actor_id, action, entity, entity_id, diff)
+        values (${storeId}, ${actor_type}, ${actor_id}, 'product.media_update', 'product', ${params.id},
+                ${tx.json({ media: body.media } as never)})`;
+      });
+      return loadAdminProduct(sql, storeId, params.id);
+    },
+  );
+
+  register(app, deps, options, routes.productMediaDelete, async ({ storeId, actor, params }) => {
+    const [media] = await sql<{ storage_path: string | null; url: string }[]>`
+      delete from sellbase.product_media
+       where id = ${params.media_id} and product_id = ${params.id} and store_id = ${storeId}
+      returning storage_path, url`;
+    if (!media) throw notFound('Image', params.media_id, 'Get image ids from GET /products/:id.');
+    if (media.storage_path) {
+      // The row is gone either way; a leftover file is harmless, so storage errors are logged.
+      await deps.storage
+        .remove?.('sellbase-media', media.storage_path)
+        .catch((error: unknown) => console.error('[sellbase] media remove failed', error));
+    }
+    const { actor_type, actor_id } = actorRef(actor);
+    await sql`
+      insert into sellbase.audit_log (store_id, actor_type, actor_id, action, entity, entity_id, diff)
+      values (${storeId}, ${actor_type}, ${actor_id}, 'product.media_delete', 'product', ${params.id},
+              ${sql.json({ url: media.url } as never)})`;
+    return loadAdminProduct(sql, storeId, params.id);
+  });
+
+  register(app, deps, options, routes.inventoryList, async ({ storeId, query }) => {
+    const after = decodeCursor(query.cursor);
+    const q = query.q ? `%${query.q}%` : null;
+    const rows = await sql<
+      {
+        variant_id: string;
+        product_id: string;
+        product_title: string;
+        product_status: 'draft' | 'active' | 'archived';
+        variant_title: string;
+        sku: string | null;
+        image_url: string | null;
+        tracked: boolean;
+        on_hand: number;
+        reserved: number;
+        policy: 'deny' | 'continue' | null;
+        created_at: Date;
+      }[]
+    >`
+      select * from (
+        select v.id as variant_id, p.id as product_id, p.title as product_title, p.status as product_status,
+               v.title as variant_title, v.sku, v.created_at,
+               coalesce(
+                 (select m.url from sellbase.product_media m where m.variant_id = v.id order by m.position limit 1),
+                 (select m.url from sellbase.product_media m where m.product_id = p.id order by m.position limit 1)
+               ) as image_url,
+               exists (select 1 from sellbase.inventory_levels il where il.variant_id = v.id) as tracked,
+               coalesce((select sum(il.on_hand) from sellbase.inventory_levels il where il.variant_id = v.id), 0)::int as on_hand,
+               coalesce((select sum(il.reserved) from sellbase.inventory_levels il where il.variant_id = v.id), 0)::int as reserved,
+               (select min(il.policy) from sellbase.inventory_levels il where il.variant_id = v.id) as policy
+          from sellbase.variants v join sellbase.products p on p.id = v.product_id
+         where v.store_id = ${storeId} and v.status <> 'archived' and p.status <> 'archived'
+           and p.type <> 'service'
+           ${q ? sql`and (p.title ilike ${q} or v.sku ilike ${q} or v.title ilike ${q})` : sql``}
+      ) i
+      where true
+        ${query.stock === 'low' ? sql`and tracked and on_hand - reserved <= ${query.threshold}` : sql``}
+        ${query.stock === 'out' ? sql`and tracked and on_hand - reserved <= 0` : sql``}
+        ${after ? sql`and (created_at, variant_id) < (${after.at}, ${after.id})` : sql``}
+      order by created_at desc, variant_id desc limit ${query.limit + 1}`;
+    const page = rows.slice(0, query.limit);
+    const last = page.at(-1);
+    return {
+      data: page.map(({ created_at: _created, ...r }) => ({
+        ...r,
+        available: r.tracked ? r.on_hand - r.reserved : 0,
+      })),
+      next_cursor:
+        rows.length > query.limit && last ? encodeCursor(last.created_at, last.variant_id) : null,
+    };
   });
 
   register(

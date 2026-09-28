@@ -7,6 +7,7 @@ import type {
   StorefrontCollection,
   StorefrontProduct,
   StorefrontProductSummary,
+  StorefrontStore,
 } from '@sellbase/sdk';
 import { getConfig } from './config.js';
 
@@ -62,6 +63,13 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
 
 const enc = encodeURIComponent;
 
+let storeInfo: Promise<StorefrontStore> | null = null;
+
+/** Tests only: forget cached store info. */
+export function resetApiCache() {
+  storeInfo = null;
+}
+
 export const api = {
   products: (query: { collection?: string; limit?: number } = {}) => {
     const q = new URLSearchParams();
@@ -82,6 +90,8 @@ export const api = {
       resources: { id: string; name: string }[];
       slots: { starts_at: string; ends_at: string; resource_ids: string[] }[];
     }>('GET', `/storefront/availability?variant_id=${enc(variantId)}`),
+  /** Store name, logo and the consent checkout requires; fetched once per page. */
+  store: () => (storeInfo ??= call<StorefrontStore>('GET', '/storefront/store')),
   createCart: () => call<CartView>('POST', '/storefront/carts', {}),
   cart: (token: string) => call<CartView>('GET', `/storefront/carts/${enc(token)}`),
   addItem: (token: string, variantId: string, quantity: number, slot?: { starts_at: string }) =>

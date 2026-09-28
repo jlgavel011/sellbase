@@ -36,6 +36,10 @@ export type StorefrontCollection = RouteResponse<'storefrontCollectionGet'>;
 export type OrderSummary = RouteResponse<'orderLookup'>;
 export type CheckoutStatus = RouteResponse<'checkoutStatus'>;
 export type DownloadInfo = RouteResponse<'downloadInfo'>;
+export type StorefrontStore = RouteResponse<'storefrontStore'>;
+export type AdminProduct = RouteResponse<'productGet'>;
+export type InventoryItem = RouteResponse<'inventoryList'>['data'][number];
+export type AbandonedCheckout = RouteResponse<'abandonedCheckoutsList'>['data'][number];
 export { catalogSitemap, productJsonLd, productMetadata, sitemapXml } from './seo.js';
 
 /**
@@ -51,6 +55,10 @@ export function createSellbase(options: SellbaseClientOptions) {
   return {
     baseUrl,
     request,
+    store: {
+      /** Name, logo, currency and the checkbox checkout requires (if any). */
+      get: () => request('storefrontStore', {}),
+    },
     availability: {
       /** Free start times for a service variant (instants; show them in `timezone`). */
       get: (variantId: string, range: { from?: string; to?: string } = {}) =>
@@ -129,6 +137,11 @@ export function createSellbase(options: SellbaseClientOptions) {
         archive: (id: string) => request('productArchive', { params: { id } }),
         addMedia: (id: string, body: Body<'productMediaAdd'>) =>
           request('productMediaAdd', { params: { id }, body }),
+        /** New image order (first = main image) and alt texts. */
+        updateMedia: (id: string, media: Body<'productMediaUpdate'>['media']) =>
+          request('productMediaUpdate', { params: { id }, body: { media } }),
+        removeMedia: (id: string, mediaId: string) =>
+          request('productMediaDelete', { params: { id, media_id: mediaId } }),
       },
       variants: {
         /** Attach the file buyers receive (base64, max 10 MB) to a digital variant. */
@@ -153,6 +166,7 @@ export function createSellbase(options: SellbaseClientOptions) {
           request('bookingReschedule', { params: { id }, body }),
       },
       inventory: {
+        list: (query: Query<'inventoryList'> = {}) => request('inventoryList', { query }),
         adjust: (body: Body<'inventoryAdjust'>) => request('inventoryAdjust', { body }),
       },
       orders: {
@@ -177,6 +191,13 @@ export function createSellbase(options: SellbaseClientOptions) {
           request('orderPaymentLink', { params: { id }, body }),
         notify: (id: string, template: Body<'orderNotify'>['template'] = 'order_confirmation') =>
           request('orderNotify', { params: { id }, body: { template } }),
+      },
+      checkouts: {
+        /** Abandoned carts: checkouts with an email that were not paid. */
+        abandoned: (query: Query<'abandonedCheckoutsList'> = {}) =>
+          request('abandonedCheckoutsList', { query }),
+        sendRecovery: (id: string, resend = false) =>
+          request('abandonedCheckoutRecover', { params: { id }, body: { resend } }),
       },
       collections: {
         list: () => request('collectionsList', {}),
@@ -224,12 +245,15 @@ export function createSellbase(options: SellbaseClientOptions) {
       store: {
         get: () => request('storeGet', {}),
         update: (body: Body<'storeUpdate'>) => request('storeUpdate', { body }),
+        uploadLogo: (body: Body<'storeLogoUpload'>) => request('storeLogoUpload', { body }),
       },
       integrations: {
         list: () => request('integrationsList', {}),
         connect: (provider: string, body: Body<'integrationConnect'>) =>
           request('integrationConnect', { params: { provider }, body }),
         test: (provider: string) => request('integrationTest', { params: { provider } }),
+        /** Sends a sample order email to `to` through the connected email provider. */
+        testEmail: (to: string) => request('notificationsTest', { body: { to } }),
         /** Live keys only: a minimum real charge the owner pays; refunded automatically. */
         liveCheck: (body: Body<'integrationLiveCheck'>) =>
           request('integrationLiveCheck', { body }),

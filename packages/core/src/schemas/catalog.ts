@@ -109,6 +109,18 @@ export const productUpsertInput = z
     description: z.string().max(50_000).optional(),
     status: productStatus.default('draft'),
     tags: z.array(z.string().max(50)).optional(),
+    seo: z
+      .object({
+        title: z.string().max(70).optional(),
+        description: z.string().max(160).optional(),
+      })
+      .optional()
+      .describe('Search engine title and description; defaults to the title and description.'),
+    collection_ids: z
+      .array(id)
+      .max(100)
+      .optional()
+      .describe('Collections this product belongs to (replaces the current ones). Omit to keep.'),
     currency: currency.optional(),
     options: z
       .array(

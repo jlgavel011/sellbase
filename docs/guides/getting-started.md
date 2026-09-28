@@ -15,6 +15,16 @@ npx sellbase init --yes     # esquema, Edge Functions, tienda, token del agente,
 npx sellbase seed ropa      # opcional: catálogo de ejemplo (ropa, curso, consultorio, cafeteria)
 ```
 
+En local, `init` también crea al dueño de la tienda: el correo y la contraseña del admin quedan en `.env.sellbase` (`SELLBASE_ADMIN_EMAIL` y `SELLBASE_ADMIN_PASSWORD`). Entra a `/admin` con ellos. En un proyecto en la nube usa `--owner-email tu@correo.com` para recibir la invitación.
+
+**Qué trae el admin:**
+- guía de configuración;
+- productos con fotos (arrastrar y soltar), variantes, inventario y SEO;
+- pedidos con hoja de empaque, reembolsos e historial;
+- carritos abandonados con correo de recuperación;
+- clientes y descuentos;
+- ajustes de pagos (Stripe en Vault), envíos, impuestos, checkout (URL de la tienda y casilla obligatoria, p. ej. mayoría de edad), correos (Resend), equipo, agentes IA, webhooks e integraciones.
+
 Después abre tu agente de IA en la carpeta del proyecto y dile: **"Configura mi tienda con Sellbase"**. El agente usa las herramientas MCP (`store_status`, `product_upsert`, `integration_connect`, `test_purchase`…) hasta que una compra de prueba sale bien.
 
 ## Qué queda en tu proyecto

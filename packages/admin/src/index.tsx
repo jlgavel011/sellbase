@@ -1,22 +1,23 @@
 'use client';
 
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { AdminConfig } from './config.js';
 import { AdminProvider, useAdmin } from './context.js';
+import { AbandonedPage } from './pages/abandoned.js';
 import { AgendaPage } from './pages/agenda.js';
 import { CollectionsPage } from './pages/collections.js';
 import { CustomerDetailPage, CustomersPage } from './pages/customers.js';
 import { DiscountsPage } from './pages/discounts.js';
 import { ManualOrderPage } from './pages/manual-order.js';
 import { HomePage } from './pages/home.js';
+import { InventoryPage } from './pages/inventory.js';
 import { OrderDetailPage, OrdersPage } from './pages/orders.js';
 import { ProductFormPage, ProductsPage } from './pages/products.js';
 import { ResourcesPage } from './pages/resources.js';
 import { SettingsPage } from './pages/settings.js';
-import { AgentsPage, TeamPage, WebhooksPage } from './pages/settings-sections.js';
 import { match, Router, useRouter } from './router.js';
-import { Login, SetPassword, Shell, StaffGate } from './shell.js';
-import { Card } from './ui.js';
+import { Login, PageBody, SetPassword, Shell, StaffGate } from './shell.js';
+import { EmptyState, ToastProvider } from './ui.js';
 
 export type { AdminConfig, AdminPage, AdminTheme, SlotContext, SlotName } from './config.js';
 export { SLOT_NAMES } from './config.js';
@@ -31,19 +32,22 @@ export type { Texts } from './texts.js';
 export function SellbaseAdmin({ config }: { config: AdminConfig }) {
   const theme = config.theme ?? {};
   const style = {
-    '--sba-primary': theme.primary ?? '#18181b',
+    '--sba-primary': theme.primary ?? '#1a1a1a',
     '--sba-primary-fg': theme.primaryForeground ?? '#ffffff',
     '--sba-radius': theme.radius ?? '0.5rem',
     fontFamily:
-      theme.fontFamily ?? 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
+      theme.fontFamily ??
+      '"Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
   } as CSSProperties;
 
   return (
     <div className="sb-admin" style={style}>
       <AdminProvider config={config}>
-        <Router basePath={config.basePath ?? '/admin'} mode={config.routing ?? 'path'}>
-          <Gate />
-        </Router>
+        <ToastProvider>
+          <Router basePath={config.basePath ?? '/admin'} mode={config.routing ?? 'path'}>
+            <Gate />
+          </Router>
+        </ToastProvider>
       </AdminProvider>
     </div>
   );
@@ -65,31 +69,52 @@ function Gate() {
 
 function Routes() {
   const { path, navigate } = useRouter();
-  const { config, sellbase } = useAdmin();
+  const { config, sellbase, t } = useAdmin();
   let params: Record<string, string> | null;
+  // Pages from before the v2 layout share the page width through PageBody.
+  const legacy = (node: ReactNode) => <PageBody>{node}</PageBody>;
 
   if (match('/', path)) return <HomePage />;
   if (match('/orders', path)) return <OrdersPage />;
-  if (match('/orders/new', path)) return <ManualOrderPage />;
-  if ((params = match('/orders/:id', path))) return <OrderDetailPage id={params.id ?? ''} />;
-  if (match('/agenda', path)) return <AgendaPage />;
-  if (match('/agenda/resources', path)) return <ResourcesPage />;
+  if (match('/orders/new', path)) return legacy(<ManualOrderPage />);
+  if (match('/orders/abandoned', path)) return <AbandonedPage />;
+  if ((params = match('/orders/:id', path)))
+    return <OrderDetailPage key={params.id} id={params.id ?? ''} />;
+  if (match('/agenda', path)) return legacy(<AgendaPage />);
+  if (match('/agenda/resources', path)) return legacy(<ResourcesPage />);
   if (match('/products', path)) return <ProductsPage />;
-  if (match('/products/collections', path)) return <CollectionsPage />;
-  if (match('/products/new', path)) return <ProductFormPage />;
+  if (match('/products/collections', path)) return legacy(<CollectionsPage />);
+  if (match('/products/inventory', path)) return <InventoryPage />;
+  if (match('/products/new', path)) return <ProductFormPage key="new" />;
   if ((params = match('/products/:id', path)))
     return <ProductFormPage key={params.id} id={params.id ?? ''} />;
-  if (match('/customers', path)) return <CustomersPage />;
+  if (match('/customers', path)) return legacy(<CustomersPage />);
   if ((params = match('/customers/:id', path)))
-    return <CustomerDetailPage key={params.id} id={params.id ?? ''} />;
-  if (match('/discounts', path)) return <DiscountsPage />;
+    return legacy(<CustomerDetailPage key={params.id} id={params.id ?? ''} />);
+  if (match('/discounts', path)) return legacy(<DiscountsPage />);
   if (match('/settings', path)) return <SettingsPage />;
-  if (match('/settings/team', path)) return <TeamPage />;
-  if (match('/settings/agents', path)) return <AgentsPage />;
-  if (match('/settings/webhooks', path)) return <WebhooksPage />;
+  if ((params = match('/settings/:section', path)))
+    return <SettingsPage key={params.section} section={params.section ?? 'general'} />;
 
   const page = config.pages?.find((p) => match(`/${p.path.replace(/^\//, '')}`, path));
-  if (page) return <>{page.render({ sellbase, navigate })}</>;
+  if (page) return legacy(<>{page.render({ sellbase, navigate })}</>);
 
-  return <Card>404</Card>;
+  return legacy(
+    <EmptyState
+      icon="search"
+      title="404"
+      body={path}
+      action={
+        <a
+          href="#/"
+          onClick={(e) => {
+            e.preventDefault();
+            navigate('/');
+          }}
+        >
+          {t.nav.home}
+        </a>
+      }
+    />,
+  );
 }

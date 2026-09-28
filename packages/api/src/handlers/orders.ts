@@ -19,9 +19,14 @@ export async function loadOrderDetail(sql: Db, storeId: string, id: string) {
     select ${sql.unsafe(ORDER_COLUMNS)} from sellbase.orders where id = ${id} and store_id = ${storeId}`;
   if (!order) throw notFound('Order', id, 'Search orders with GET /orders.');
   const items = await sql`
-    select id, order_id, variant_id, product_type, title, variant_title, sku, unit_price_amount, quantity,
-           discount_amount, total_amount, fulfillment_type, fulfilled_quantity, metadata
-      from sellbase.order_items where order_id = ${id} order by created_at, id`;
+    select i.id, i.order_id, i.variant_id, i.product_id, i.product_type, i.title, i.variant_title, i.sku,
+           i.unit_price_amount, i.quantity, i.discount_amount, i.total_amount, i.fulfillment_type,
+           i.fulfilled_quantity, i.metadata,
+           coalesce(
+             (select m.url from sellbase.product_media m where m.variant_id = i.variant_id order by m.position limit 1),
+             (select m.url from sellbase.product_media m where m.product_id = i.product_id order by m.position limit 1)
+           ) as image_url
+      from sellbase.order_items i where i.order_id = ${id} order by i.created_at, i.id`;
   const payments = await sql`
     select id, order_id, provider, provider_payment_id, method, kind, amount, currency::text as currency, status, created_at
       from sellbase.payments where order_id = ${id} order by created_at`;

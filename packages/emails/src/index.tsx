@@ -3,6 +3,7 @@ import { messages } from './i18n.js';
 import { OrderConfirmation, type OrderConfirmationProps } from './order-confirmation.js';
 import { OrderUpdate, type OrderUpdateProps } from './order-update.js';
 import { BookingNotice, type BookingNoticeProps } from './booking.js';
+import { CartRecovery, type CartRecoveryProps } from './cart-recovery.js';
 
 export {
   OrderConfirmation,
@@ -11,6 +12,7 @@ export {
 } from './order-confirmation.js';
 export { messages, toLocale, type Locale } from './i18n.js';
 export { OrderUpdate, type OrderUpdateProps } from './order-update.js';
+export { CartRecovery, type CartRecoveryProps } from './cart-recovery.js';
 export {
   BookingNotice,
   formatWhen,
@@ -49,4 +51,14 @@ export async function renderBookingNotice(props: BookingNoticeProps): Promise<Re
         ? t.rescheduled.subject(props.booking.title)
         : t.bookingCancelled.subject(props.booking.title);
   return { subject, html, text };
+}
+
+export async function renderCartRecovery(props: CartRecoveryProps): Promise<RenderedEmail> {
+  const element = <CartRecovery {...props} />;
+  const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
+  return {
+    subject: messages[props.locale].cartRecovery.subject(props.brand.store_name),
+    html,
+    text,
+  };
 }

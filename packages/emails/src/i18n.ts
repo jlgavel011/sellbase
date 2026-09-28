@@ -54,6 +54,14 @@ export const messages = {
       body: (amount: string) =>
         `Te reembolsamos ${amount}. Puede tardar de 5 a 10 días hábiles en verse en tu estado de cuenta.`,
     },
+    cartRecovery: {
+      subject: (store: string) => `¿Olvidaste algo? Tu carrito en ${store} te espera`,
+      title: 'Tu carrito te espera',
+      body: 'Guardamos los productos que elegiste. Puedes terminar tu compra cuando quieras:',
+      cta: 'Terminar mi compra',
+      total: 'Total',
+      more: (n: number) => `y ${n} más`,
+    },
     cancelled: {
       subject: (n: number) => `Pedido #${n} cancelado`,
       title: 'Tu pedido fue cancelado',
@@ -110,6 +118,14 @@ export const messages = {
       title: 'We processed your refund',
       body: (amount: string) =>
         `We refunded ${amount}. It can take 5–10 business days to show on your statement.`,
+    },
+    cartRecovery: {
+      subject: (store: string) => `Forgot something? Your cart at ${store} is waiting`,
+      title: 'Your cart is waiting',
+      body: 'We saved the items you picked. You can finish your order whenever you like:',
+      cta: 'Finish my order',
+      total: 'Total',
+      more: (n: number) => `and ${n} more`,
     },
     cancelled: {
       subject: (n: number) => `Order #${n} cancelled`,

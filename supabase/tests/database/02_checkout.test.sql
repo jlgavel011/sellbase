@@ -2,7 +2,7 @@
 -- idempotent order creation, expiry, late payments, state machine and stock constraints.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(29);
+select plan(31);
 
 -- ── Fixtures ─────────────────────────────────────────────────────────────────
 insert into sellbase.stores (id, name, slug, default_currency, country) values
@@ -113,11 +113,18 @@ select results_eq('select * from pg_temp.stock()', $$ values (3, 0) $$, 'release
 
 -- ── A late payment still becomes an order, flagging oversold stock ───────────
 select sellbase.adjust_inventory('30000000-0000-4000-8000-000000000001', -2, 'damaged', 'staff', 'u1');
+update sellbase.checkout_sessions set consents = '[{"text": "Soy mayor de 18", "accepted_at": "2026-01-01T00:00:00Z"}]'
+ where id = (select id from t_ctx where key = 's2');
 insert into t_ctx select 'o2', sellbase.place_order_from_checkout((select id from t_ctx where key = 's2'),
   '{"provider": "stripe", "provider_payment_id": "pi_2", "amount": 112140}');
 select results_eq('select * from pg_temp.stock()', $$ values (0, 0) $$, 'stock stops at zero instead of failing a paid order');
 select results_eq($$ select (payload ->> 'short_by')::int from sellbase.events where type = 'inventory.oversold' and store_id = '10000000-0000-4000-8000-00000000000a' $$,
   array[2], 'an inventory.oversold event tells the owner how many units are missing');
+
+select results_eq($$ select metadata #>> '{consents,0,text}' from sellbase.orders where id = (select id from t_ctx where key = 'o2') $$,
+  array['Soy mayor de 18'], 'checkout consents are copied into the order');
+select ok((select not (metadata ? 'consents') from sellbase.orders where id = (select id from t_ctx where key = 'o1')),
+  'orders without consents get no consents key');
 
 -- ── State machine mirror ─────────────────────────────────────────────────────
 select throws_like($$ update sellbase.orders set status = 'pending_payment' where id = (select id from t_ctx where key = 'o1') $$,

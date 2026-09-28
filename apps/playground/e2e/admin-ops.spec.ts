@@ -27,7 +27,7 @@ test('CSV import, bulk price change, manual order and order filters', async ({ p
   await page.screenshot({ path: 'test-results/admin-import.png', fullPage: true });
   await page.getByRole('button', { name: 'Importar', exact: true }).click();
   await expect(report).toContainText('Listo: 1 creado(s)');
-  await page.getByRole('button', { name: 'Cerrar' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Cerrar' }).click();
 
   // Bulk price: +10% on the imported product, previewed before applying.
   await page.getByLabel('Buscar por nombre o SKU').fill(`Llavero ${tag}`);
@@ -72,6 +72,7 @@ test('CSV import, bulk price change, manual order and order filters', async ({ p
   await page.getByLabel('Buscar #pedido o correo').fill(buyer);
   await expect(page.getByTestId('order-row')).toHaveCount(1);
   await expect(page.getByTestId('order-row')).toContainText('WhatsApp');
+  await page.getByRole('button', { name: 'Más filtros' }).click();
   await page.getByLabel('Estado').selectOption('cancelled');
   await expect(page.getByTestId('order-row')).toHaveCount(0);
   await page.getByRole('button', { name: 'Limpiar filtros' }).click();

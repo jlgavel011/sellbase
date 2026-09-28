@@ -229,6 +229,16 @@ export function registerStorefront(app: Hono, deps: Deps, options: AppOptions) {
     const store = await loadStore(sql, storeId);
     const cart = await loadCart(sql, storeId, body.cart_token);
     assertCartOpen(cart);
+    const consents = (body.consents ?? []).map((text) => text.trim()).filter(Boolean);
+    const requiredConsent = requiredConsentOf(store.settings);
+    if (requiredConsent && consents.length === 0) {
+      throw sellbaseError(
+        'VALIDATION_ERROR',
+        `The buyer must accept "${requiredConsent}" to pay.`,
+        'Show a required checkbox with checkout.required_consent from GET /storefront/store and send its text in consents.',
+        { required_consent: requiredConsent },
+      );
+    }
     const lines = await loadCartLines(sql, cart.id);
     const discounts = await loadDiscounts(sql, storeId, cart.discount_codes, deps.now());
 
@@ -345,6 +355,13 @@ export function registerStorefront(app: Hono, deps: Deps, options: AppOptions) {
       await sql`update sellbase.checkout_sessions set amount_total = ${charge}, pay_mode = 'deposit' where id = ${session.id}`;
     }
     await sql`update sellbase.carts set email = ${body.email} where id = ${cart.id}`;
+    if (consents.length > 0) {
+      const acceptedAt = deps.now().toISOString();
+      await sql`
+        update sellbase.checkout_sessions
+           set consents = ${sql.json(consents.map((text) => ({ text, accepted_at: acceptedAt })) as never)}
+         where id = ${session.id}`;
+    }
 
     try {
       const result = await payments.createCheckout({
@@ -388,6 +405,18 @@ export function registerStorefront(app: Hono, deps: Deps, options: AppOptions) {
     }
   });
 
+  register(app, deps, options, routes.storefrontStore, async ({ storeId }) => {
+    const store = await loadStore(sql, storeId);
+    return {
+      name: store.name,
+      logo_url: store.logo_url,
+      currency: store.default_currency,
+      locale: store.default_locale,
+      contact_email: store.contact_email,
+      checkout: { required_consent: requiredConsentOf(store.settings) },
+    };
+  });
+
   // ── Downloads ──────────────────────────────────────────────────────────────
   register(app, deps, options, routes.checkoutStatus, async ({ storeId, params }) => {
     const [row] = await sql<{ status: string; order_id: string | null }[]>`
@@ -423,4 +452,11 @@ export function registerStorefront(app: Hono, deps: Deps, options: AppOptions) {
     await sql`update sellbase.digital_grants set downloads_used = downloads_used + 1 where id = ${grant.id}`;
     return { redirect: await deps.storage.signedUrl('sellbase-digital', grant.storage_path, 300) };
   });
+}
+
+/** The checkbox text the store requires at checkout (settings.checkout.required_consent). */
+export function requiredConsentOf(settings: unknown): string | null {
+  const value = (settings as { checkout?: { required_consent?: unknown } }).checkout
+    ?.required_consent;
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }

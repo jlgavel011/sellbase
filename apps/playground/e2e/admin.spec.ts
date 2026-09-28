@@ -10,13 +10,8 @@ test('staff signs in, manages a product, and sees orders and settings', async ({
 
   // Home: checklist from /doctor plus the store's custom slot.
   await expect(page.getByRole('heading', { name: 'Inicio' })).toBeVisible();
-  await expect(page.getByText('Lista de configuración')).toBeVisible();
+  await expect(page.getByText('Guía de configuración')).toBeVisible();
   await expect(page.getByTestId('custom-slot')).toBeVisible();
-  // Theme from config reaches the compiled admin CSS.
-  await expect(page.getByRole('link', { name: /Inicio/ })).toHaveCSS(
-    'background-color',
-    'rgb(124, 58, 237)',
-  );
 
   // Custom text override and custom page.
   await expect(page.getByRole('link', { name: /Ventas/ })).toBeVisible();
@@ -27,16 +22,21 @@ test('staff signs in, manages a product, and sees orders and settings', async ({
   // Create a product that immediately shows up in the storefront.
   const title = `Sudadera Admin ${Date.now()}`;
   await page.getByRole('link', { name: /Productos/ }).click();
+  // Theme from config reaches the compiled admin CSS.
+  await expect(page.getByRole('link', { name: 'Nuevo producto' })).toHaveCSS(
+    'background-color',
+    'rgb(124, 58, 237)',
+  );
   await page.getByRole('link', { name: 'Nuevo producto' }).click();
-  await page.getByLabel('Nombre').fill(title);
+  await page.getByLabel('Título').fill(title);
   await page.getByLabel('Estado').selectOption('active');
-  await page.getByLabel(/Precio/).fill('599.00');
-  await page.getByLabel('Stock').fill('7');
+  await page.getByLabel('Precio', { exact: true }).fill('599.00');
+  await page.getByLabel('Cantidad').fill('7');
   await page.getByRole('button', { name: 'Guardar' }).click();
-  await expect(page.getByText('Guardado')).toBeVisible();
+  await expect(page.getByText('Producto creado')).toBeVisible();
   await expect(page).toHaveURL(/\/admin\/products\/[0-9a-f-]{36}$/);
 
-  await page.getByRole('link', { name: '← Productos' }).click();
+  await page.getByRole('link', { name: 'Productos', exact: true }).first().click();
   await page.getByLabel('Buscar por nombre o SKU').fill(title);
   await expect(page.getByRole('link', { name: title })).toBeVisible();
   await expect(page.getByRole('row', { name: new RegExp(title) })).toContainText('$599.00');
@@ -58,6 +58,7 @@ test('staff signs in, manages a product, and sees orders and settings', async ({
 
   // Settings: Stripe status comes from the integration.
   await page.getByRole('link', { name: /Ajustes/ }).click();
+  await page.getByRole('link', { name: 'Pagos' }).click();
   if (STRIPE_CONNECTED) {
     await expect(page.getByText('Modo prueba')).toBeVisible();
     await expect(page.getByTestId('payments-card')).toContainText('Cuenta de Stripe');
@@ -66,7 +67,8 @@ test('staff signs in, manages a product, and sees orders and settings', async ({
   }
 
   // Sign out returns to the login screen.
-  await page.getByRole('button', { name: 'Salir' }).click();
+  await page.getByRole('button', { name: 'Cuenta' }).click();
+  await page.getByRole('menuitem', { name: /Salir/ }).click();
   await expect(page.getByRole('heading', { name: 'Entra a tu tienda' })).toBeVisible();
 });
 
@@ -126,7 +128,7 @@ test('order actions: ship with tracking and refund part of it through Stripe', a
   await page.getByLabel('URL de rastreo').fill('https://rastreo.test/EST-E2E-1');
   await page.getByRole('button', { name: 'Marcar como enviado' }).last().click();
   await expect(page.getByText('Estafeta · EST-E2E-1')).toBeVisible();
-  await expect(page.getByText('Surtido', { exact: true })).toBeVisible();
+  await expect(page.getByText('Preparado', { exact: true }).first()).toBeVisible();
 
   await page.getByRole('button', { name: 'Reembolsar' }).first().click();
   await page.getByLabel(/Monto a reembolsar/).fill('99.00');
@@ -136,6 +138,6 @@ test('order actions: ship with tracking and refund part of it through Stripe', a
     page.getByText(/Se reembolsarán \$99\.00 a refund-e2e@example\.com vía Stripe/),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Confirmar' }).click();
-  await expect(page.getByText('Reembolso parcial')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText('Reembolso parcial').first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText('−$99.00')).toBeVisible();
 });

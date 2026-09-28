@@ -1,5 +1,5 @@
 import type { CartView } from '@sellbase/sdk';
-import { api } from './api.js';
+import { api, resetApiCache } from './api.js';
 
 /**
  * Cart state shared by every element on the page (and by @sellbase/react: same
@@ -48,9 +48,24 @@ function emit() {
 
 let loaded: Promise<void> | null = null;
 
+/** Query parameter of cart recovery links (abandoned checkout emails). */
+export const CART_PARAM = 'sellbase_cart';
+
+/** A recovery link (?sellbase_cart=…) replaces the saved cart, then leaves the URL clean. */
+function takeCartFromUrl() {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  const token = url.searchParams.get(CART_PARAM);
+  if (!token || token.length < 20) return;
+  write(token);
+  url.searchParams.delete(CART_PARAM);
+  window.history.replaceState(window.history.state, '', url.toString());
+}
+
 /** Loads the saved cart once; converted or missing carts are forgotten. */
 export function loadCart() {
   loaded ??= (async () => {
+    takeCartFromUrl();
     state.token = read();
     if (!state.token) return;
     state.loading = true;
@@ -125,6 +140,7 @@ export function setDrawer(open: boolean) {
 /** Tests only. */
 export function resetStore() {
   loaded = null;
+  resetApiCache();
   forget();
   state.drawerOpen = false;
   state.error = null;

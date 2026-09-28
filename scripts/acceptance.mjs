@@ -275,16 +275,17 @@ try {
   say('next build of the user project…');
   sh('pnpm', ['build'], app, { quiet: true });
 
-  // 7. Upgrade from an older install: the 0008 migration and two components are "old".
+  // 7. Upgrade from an older install: the 0009 migration and two components are "old".
   say('Simulating an older install for `sellbase upgrade`…');
   const dbUrl = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
   const db = (query) => sh('psql', [dbUrl, '-Atc', query], app, { quiet: true }).toString().trim();
-  // Documented rollback of 0008 (see the migration header).
-  db(`update sellbase.api_tokens set scopes = array_remove(scopes, 'webhooks:write') where 'webhooks:write' = any(scopes);
-      alter table sellbase.api_tokens drop constraint api_tokens_scopes_check;
-      alter table sellbase.api_tokens add constraint api_tokens_scopes_check check (scopes <@ array['catalog:read','catalog:write','orders:read','orders:write','refunds:write','customers:read','discounts:write','settings:write','integrations:write']);
-      delete from sellbase.schema_version where version = '0008';
-      delete from supabase_migrations.schema_migrations where version = '0008';`);
+  // Documented rollback of 0009 (see the migration header).
+  db(`drop trigger orders_copy_checkout_consents on sellbase.orders;
+      drop function sellbase.copy_checkout_consents();
+      drop index sellbase.checkout_sessions_abandoned;
+      alter table sellbase.checkout_sessions drop column consents, drop column recovery_sent_at;
+      delete from sellbase.schema_version where version = '0009';
+      delete from supabase_migrations.schema_migrations where version = '0009';`);
   const manifestPath = join(app, '.sellbase/manifest.json');
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
   const sha = (t) => createHash('sha256').update(t).digest('hex');
@@ -314,22 +315,22 @@ try {
     ).toString();
   const dry = cli(['upgrade', '--dry-run', '--skip-install']);
   for (const expected of [
-    '0008_webhooks_scope.sql',
+    '0009_admin_v2.sql',
     'applies cleanly',
     `Update ${card}`,
     `Edited ${checkout}`,
   ])
     if (!dry.includes(expected))
       throw new Error(`upgrade --dry-run did not report: ${expected}\n${dry}`);
-  if (db('select max(version) from sellbase.schema_version') !== '0007')
+  if (db('select max(version) from sellbase.schema_version') !== '0008')
     throw new Error('the dry run changed the database');
   say(
     'upgrade --dry-run: 1 pending migration (applies cleanly), 1 update, 1 diff; database untouched',
   );
 
   cli(['upgrade', '--skip-install']);
-  if (db('select max(version) from sellbase.schema_version') !== '0008')
-    throw new Error('upgrade did not apply 0008');
+  if (db('select max(version) from sellbase.schema_version') !== '0009')
+    throw new Error('upgrade did not apply 0009');
   if (readFileSync(join(app, card), 'utf8') === oldCard) throw new Error(`${card} was not updated`);
   if (readFileSync(join(app, checkout), 'utf8') !== edited)
     throw new Error(`${checkout} was overwritten`);
