@@ -1,7 +1,8 @@
 import { BRAND } from '@sellbase/core';
 import { existsSync } from 'node:fs';
 import { cp, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { addComponents } from './add.js';
 import { readManifest, trackFiles, writeManifest } from './manifest.js';
 import { seed } from './seed.js';
@@ -161,11 +162,22 @@ async function upsertManagedSection(path: string, section: string) {
 }
 
 /** Adds the sellbase server to an MCP client config, keeping the other servers. */
+/**
+ * How agents start the MCP server. From npm: `npx sellbase mcp`. From a local checkout of
+ * Sellbase (not published yet, or developing it): this very CLI file with node, because
+ * `npx sellbase` would look the name up on the npm registry.
+ */
+export function mcpCommand(cliFile = fileURLToPath(new URL('./cli.js', import.meta.url))) {
+  return cliFile.includes(`${sep}node_modules${sep}`)
+    ? { command: 'npx', args: [BRAND.cli, 'mcp'] }
+    : { command: process.execPath, args: [cliFile, 'mcp'] };
+}
+
 async function registerMcp(path: string) {
   const config = await readJson<{ mcpServers?: Record<string, unknown> }>(path, {});
   config.mcpServers = {
     ...config.mcpServers,
-    [BRAND.slug]: { command: 'npx', args: [BRAND.cli, 'mcp'] },
+    [BRAND.slug]: mcpCommand(),
   };
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, `${JSON.stringify(config, null, 2)}\n`);

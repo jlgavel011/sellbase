@@ -56,3 +56,16 @@ describe('planFile', () => {
     );
   });
 });
+
+describe('mcpCommand', () => {
+  it('uses npx when installed from npm and node + this file from a local checkout', async () => {
+    const { mcpCommand } = await import('../src/init.js');
+    expect(mcpCommand('/app/node_modules/sellbase/dist/cli.js')).toEqual({
+      command: 'npx',
+      args: ['sellbase', 'mcp'],
+    });
+    const local = mcpCommand('/Users/me/sellbase/packages/cli/dist/cli.js');
+    expect(local.command).toBe(process.execPath);
+    expect(local.args).toEqual(['/Users/me/sellbase/packages/cli/dist/cli.js', 'mcp']);
+  });
+});
