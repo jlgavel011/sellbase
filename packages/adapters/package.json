@@ -1,6 +1,6 @@
 {
   "name": "@sellbase/adapters",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Sellbase provider adapters: payments, shipping and notifications.",
   "license": "MIT",
   "private": true,

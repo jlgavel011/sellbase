@@ -1,6 +1,6 @@
 {
   "name": "@sellbase/sdk",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Typed client for the Sellbase API (browser and server).",
   "license": "MIT",
   "type": "module",

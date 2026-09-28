@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.3.3 — Easier to find
+
+- **New guide:** [Add an ecommerce store to a Next.js app with Supabase](docs/guides/nextjs-supabase-ecommerce.md), also [in Spanish](docs/guides/tienda-nextjs-supabase.md).
+- **Discovery:** npm keywords on every package (`nextjs`, `supabase`, `stripe`, `headless-commerce`, `mcp-server`…).
+- The MCP registry is updated automatically on every release.
+
 ## 0.3.2 — Templates to start from
 
 - **Templates to start from:**

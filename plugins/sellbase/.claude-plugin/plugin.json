@@ -1,7 +1,7 @@
 {
   "name": "sellbase",
   "displayName": "Sellbase",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Open source commerce your AI agent can install and run: turn any project into a store with catalog, Stripe checkout, orders, inventory, an admin, an API and an MCP server on your own Supabase.",
   "author": {
     "name": "Sellbase",

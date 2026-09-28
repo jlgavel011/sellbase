@@ -1,6 +1,6 @@
 {
   "name": "@sellbase/emails",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Sellbase transactional email templates (React Email).",
   "license": "MIT",
   "private": true,

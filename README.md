@@ -171,6 +171,7 @@ your AI agent ──(sellbase MCP server)─────────────
 ## Documentation
 
 - [Getting started (español)](docs/guides/getting-started.md)
+- [Add an ecommerce store to a Next.js app with Supabase](docs/guides/nextjs-supabase-ecommerce.md) ([en español](docs/guides/tienda-nextjs-supabase.md))
 - [Deploy to production](docs/guides/deploy.md)
 - [Customize the admin](docs/guides/customize-admin.md)
 - [Live payments with Stripe (español)](docs/guides/stripe-live.md)

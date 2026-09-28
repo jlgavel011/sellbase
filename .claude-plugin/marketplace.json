@@ -12,7 +12,7 @@
       "name": "sellbase",
       "source": "./plugins/sellbase",
       "description": "Turn any project (Next.js, Vite, plain HTML, WordPress…) into a store: skills to install and operate Sellbase, plus its MCP server.",
-      "version": "0.3.2",
+      "version": "0.3.3",
       "homepage": "https://github.com/jlgavel011/sellbase",
       "license": "MIT",
       "keywords": [

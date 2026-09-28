@@ -10,8 +10,8 @@
     "setup": "(test -f supabase/config.toml || supabase init) && supabase start && sellbase init --yes --seed cafeteria"
   },
   "dependencies": {
-    "@sellbase/admin": "^0.3.2",
-    "@sellbase/react": "^0.3.2",
+    "@sellbase/admin": "^0.3.3",
+    "@sellbase/react": "^0.3.3",
     "next": "^16.3.6",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
@@ -21,7 +21,7 @@
     "@types/node": "^24.0.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "sellbase": "^0.3.2",
+    "sellbase": "^0.3.3",
     "supabase": "^2.118.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.0"

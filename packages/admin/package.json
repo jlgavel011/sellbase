@@ -1,6 +1,6 @@
 {
   "name": "@sellbase/admin",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Sellbase admin SPA. Mount it at /admin in any React app; customize with config, slots and pages.",
   "license": "MIT",
   "type": "module",

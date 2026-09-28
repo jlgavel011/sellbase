@@ -34,7 +34,7 @@ export const DOCS: DocSection[] = [
   {
     source: 'README.md',
     title: 'README › Documentation',
-    text: '## Documentation\n\n- [Getting started (español)](docs/guides/getting-started.md)\n- [Deploy to production](docs/guides/deploy.md)\n- [Customize the admin](docs/guides/customize-admin.md)\n- [Live payments with Stripe (español)](docs/guides/stripe-live.md)\n- [API reference](docs/reference/api.md), plus [`llms.txt`](docs/llms.txt) and [`llms-full.txt`](docs/llms-full.txt) for agents\n- [Specification](SPEC.md) and [architecture decisions](docs/decisions/)\n- [Changelog](CHANGELOG.md)',
+    text: '## Documentation\n\n- [Getting started (español)](docs/guides/getting-started.md)\n- [Add an ecommerce store to a Next.js app with Supabase](docs/guides/nextjs-supabase-ecommerce.md) ([en español](docs/guides/tienda-nextjs-supabase.md))\n- [Deploy to production](docs/guides/deploy.md)\n- [Customize the admin](docs/guides/customize-admin.md)\n- [Live payments with Stripe (español)](docs/guides/stripe-live.md)\n- [API reference](docs/reference/api.md), plus [`llms.txt`](docs/llms.txt) and [`llms-full.txt`](docs/llms-full.txt) for agents\n- [Specification](SPEC.md) and [architecture decisions](docs/decisions/)\n- [Changelog](CHANGELOG.md)',
   },
   {
     source: 'README.md',
@@ -147,6 +147,53 @@ export const DOCS: DocSection[] = [
     text: '## Actualizar\n\n`npx sellbase upgrade --dry-run` muestra qué cambiaría; `npx sellbase upgrade` lo aplica con respaldo. Los componentes que editaste no se sobrescriben.',
   },
   {
+    source: 'docs/guides/nextjs-supabase-ecommerce.md',
+    title: 'Add an ecommerce store to a Next.js app with Supabase',
+    text: '# Add an ecommerce store to a Next.js app with Supabase\n\nThis guide turns an existing Next.js (App Router) project into a store with Stripe checkout and an admin dashboard. It takes about ten minutes. At the end you have:\n\n- a product catalog, product pages with SEO, a cart and Stripe checkout;\n- orders created only by the verified Stripe webhook;\n- an admin at `/admin` for products, inventory, orders, refunds, discounts and customers;\n- an MCP server so your AI agent (Claude Code, Cursor…) can set up and run the store.\n\nEverything lives in **your repo and your Supabase project**: the schema, the API (Supabase Edge Functions) and the storefront components. There is no platform fee and no third-party backend. [Sellbase](https://github.com/jlgavel011/sellbase) is open source (MIT).\n\n> In Spanish: [Agrega una tienda en línea a tu app de Next.js con Supabase](tienda-nextjs-supabase.md).',
+  },
+  {
+    source: 'docs/guides/nextjs-supabase-ecommerce.md',
+    title: 'Add an ecommerce store to a Next.js app with Supabase › Why not build it by hand?',
+    text: "## Why not build it by hand?\n\nThe usual recipe is a `products` table in Supabase, a Server Action that creates a Stripe Checkout Session and a webhook route that writes the order. It works for a first sale. Then the store also needs:\n\n- **inventory**, including stock that is released when a checkout expires;\n- **variants**, such as size and color;\n- **shipping rates and taxes**;\n- **discounts**;\n- **refunds**;\n- **emails**;\n- **an admin for the owner**, so they don't have to edit rows in the Supabase dashboard.\n\nSellbase is that whole layer, already built and tested:\n\n- RLS on every table, with pgTAP tests;\n- money stored as integers;\n- idempotent writes;\n- Stripe keys kept in Supabase Vault.",
+  },
+  {
+    source: 'docs/guides/nextjs-supabase-ecommerce.md',
+    title: 'Add an ecommerce store to a Next.js app with Supabase › Requirements',
+    text: '## Requirements\n\n- Node 20+.\n- A Next.js 15 or 16 project with the App Router.\n- Supabase. Locally, that means Docker, so you can run `supabase start`. You can also use a hosted project.\n- A Stripe account. Test mode is enough for now.',
+  },
+  {
+    source: 'docs/guides/nextjs-supabase-ecommerce.md',
+    title: 'Add an ecommerce store to a Next.js app with Supabase › 1. Install',
+    text: '## 1. Install\n\nFrom the root of your project:\n\n```bash\nnpx supabase init            # skip it if you already have supabase/config.toml\nnpx supabase start\nnpx sellbase init --yes\n```\n\n`sellbase init` does the following:\n\n- **Supabase:** copies the migrations (schema `sellbase`, never `public`) and three Edge Functions, `sellbase-api`, `sellbase-webhooks` and `sellbase-jobs`, then applies them.\n- **Store:** creates the store and its owner. Locally, the admin email and password go to `.env.sellbase`, which is gitignored.\n- **Storefront:** copies the components into `components/sellbase/`. They are your files to edit.\n- **Admin:** adds `components/sellbase/provider.tsx` and `app/admin/[[...path]]/page.tsx`.\n- **Environment:** writes the public values to `.env.local`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `NEXT_PUBLIC_SELLBASE_URL`.\n- **AI agent:** writes `CLAUDE.md`/`AGENTS.md`, skills and `.mcp.json`.\n\nWant sample products to see it working? Run `npx sellbase seed cafeteria`. The other presets are `ropa`, `curso` and `consultorio`.\n\nFor a hosted Supabase project, pass its keys instead of starting the local stack:\n\n```bash\nnpx sellbase init --yes --supabase-url https://<project>.supabase.co --anon-key … --service-role-key … --db-url … --owner-email you@example.com\n```\n\nThe service role key is used only during `init`. It is never written to your frontend.',
+  },
+  {
+    source: 'docs/guides/nextjs-supabase-ecommerce.md',
+    title:
+      'Add an ecommerce store to a Next.js app with Supabase › 2. Wire the provider and the theme',
+    text: "## 2. Wire the provider and the theme\n\nWrap the app once in `app/layout.tsx`:\n\n```tsx\nimport { CartButton, CartDrawer } from '@/components/sellbase/cart-drawer';\nimport { SellbaseStoreProvider } from '@/components/sellbase/provider';\n\nexport default function RootLayout({ children }: { children: React.ReactNode }) {\n  return (\n    <html lang=\"en\">\n      <body>\n        <SellbaseStoreProvider>\n          <header>\n            <a href=\"/\">My store</a>\n            <CartButton />\n          </header>\n          <main>{children}</main>\n          <CartDrawer cartHref=\"/cart\" />\n        </SellbaseStoreProvider>\n      </body>\n    </html>\n  );\n}\n```\n\nThe admin brings its own full-page layout. If your header shouldn't show on `/admin`, put the store pages in a route group such as `app/(store)/layout.tsx`, as the [example store](https://github.com/jlgavel011/sellbase/tree/main/examples/nextjs-store) does.\n\nImport the theme in your global CSS and set your brand. With Tailwind v4:\n\n```css\n@import 'tailwindcss';\n@import '../components/sellbase/theme.css';\n@source '../components/sellbase';\n\n:root {\n  --sb-primary: #3f2a1d; /* buttons and accents */\n  --sb-radius: 14px;\n}\n```",
+  },
+  {
+    source: 'docs/guides/nextjs-supabase-ecommerce.md',
+    title: 'Add an ecommerce store to a Next.js app with Supabase › 3. Add the store pages',
+    text: "## 3. Add the store pages\n\n```tsx\n// app/page.tsx: catalog\nimport { ProductGrid } from '@/components/sellbase/product-grid';\n\nexport default function Home() {\n  return <ProductGrid />;\n}\n```\n\n```tsx\n// app/products/[slug]/page.tsx: product page with SEO\nimport { createSellbase, productMetadata } from '@sellbase/react';\nimport { ProductDetail } from '@/components/sellbase/product-detail';\nimport { ProductJsonLd } from '@/components/sellbase/product-seo';\n\nconst sellbase = createSellbase({\n  url: process.env.NEXT_PUBLIC_SELLBASE_URL!,\n  anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,\n});\ntype Props = { params: Promise<{ slug: string }> };\n\nexport async function generateMetadata({ params }: Props) {\n  const product = await sellbase.products.get((await params).slug).catch(() => null);\n  return product\n    ? productMetadata(product, { url: `https://example.com/products/${product.slug}` })\n    : {};\n}\n\nexport default async function ProductPage({ params }: Props) {\n  const { slug } = await params;\n  const product = await sellbase.products.get(slug).catch(() => null);\n  return (\n    <>\n      {product && <ProductJsonLd product={product} url={`https://example.com/products/${slug}`} />}\n      <ProductDetail slug={slug} />\n    </>\n  );\n}\n```\n\n```tsx\n// app/checkout/page.tsx\nimport { Checkout } from '@/components/sellbase/checkout';\nexport default function CheckoutPage() {\n  return <Checkout successPath=\"/thanks\" cancelPath=\"/cart\" />;\n}\n\n// app/thanks/page.tsx: waits for the webhook, shows the order and clears the cart\nimport { CheckoutReturn } from '@/components/sellbase/order-status';\nexport default function ThanksPage() {\n  return <CheckoutReturn />;\n}\n```\n\nThere is also `<CartPage />` (`cart-page`), `<OrderLookup />` for a \"my order\" page and `<ProductCarousel />`. The components read everything from the API, so products and prices are never hardcoded.",
+  },
+  {
+    source: 'docs/guides/nextjs-supabase-ecommerce.md',
+    title:
+      'Add an ecommerce store to a Next.js app with Supabase › 4. Add products and connect Stripe',
+    text: '## 4. Add products and connect Stripe\n\nRun `npm run dev`, open http://localhost:3000/admin and sign in with the credentials in `.env.sellbase`:\n\n1. **Products → Add product:** add photos, a price, variants and stock.\n2. **Settings → Payments:** paste your Stripe **test** secret key (`sk_test_…`). It is stored in Supabase Vault.\n   - On a deployed project, the Stripe webhook is created for you.\n   - Locally, forward it with the Stripe CLI and paste the `whsec_…` it prints:\n\n     ```bash\n     stripe listen --forward-to http://127.0.0.1:54321/functions/v1/sellbase-webhooks/stripe\n     ```\n\n3. **Test purchase:** buy something with card `4242 4242 4242 4242`. The order appears in **Orders** once the webhook confirms the payment.\n\n`npx sellbase doctor` lists anything still pending, with the next step for each.\n\n### Or let your agent do it\n\n`init` registered the Sellbase MCP server in `.mcp.json`. Open Claude Code or Cursor in the project and say:\n\n> Set up my store with Sellbase: I sell handmade candles, $250 MXN each, shipping $120.\n\nThe agent creates the products, connects Stripe in test mode and runs a test purchase until it succeeds. Money and destructive actions always ask you first and are written to the audit log.',
+  },
+  {
+    source: 'docs/guides/nextjs-supabase-ecommerce.md',
+    title: 'Add an ecommerce store to a Next.js app with Supabase › 5. Deploy',
+    text: '## 5. Deploy\n\n- **Frontend:** deploy to Vercel, or any host that runs Next.js, with the three `NEXT_PUBLIC_*` values from your hosted Supabase project. Never set the service role key in the frontend.\n- **Backend:** `npx sellbase init` against the hosted project pushes the migrations and deploys the functions.\n- **Live payments:** connect the live key from the admin (**Settings → Payments**), so it goes straight to Vault.\n\nFull guides: [deploy](deploy.md) and [live payments with Stripe](stripe-live.md).',
+  },
+  {
+    source: 'docs/guides/nextjs-supabase-ecommerce.md',
+    title: 'Add an ecommerce store to a Next.js app with Supabase › Start from a template instead',
+    text: '## Start from a template instead\n\n```bash\nnpx sellbase create my-store --template nextjs\ncd my-store && npm install && npm run setup && npm run dev\n```\n\nIt is a complete Next.js 16 + Tailwind store with a Vercel deploy button: [examples/nextjs-store](https://github.com/jlgavel011/sellbase/tree/main/examples/nextjs-store). Using plain HTML, WordPress or Webflow instead of React? Use `--template html`, which uses the `<sellbase-*>` web components.',
+  },
+  {
     source: 'docs/guides/stripe-live.md',
     title: 'Cobrar de verdad con Stripe',
     text: '# Cobrar de verdad con Stripe\n\nEsta guía lleva una tienda Sellbase de modo prueba a pagos reales. Tu agente de IA puede hacer casi todo (`skills/configure-payments`), pero dos pasos son tuyos: activar la cuenta de Stripe y pagar la verificación.',
@@ -185,6 +232,55 @@ export const DOCS: DocSection[] = [
     source: 'docs/guides/stripe-live.md',
     title: 'Cobrar de verdad con Stripe › Problemas comunes',
     text: '## Problemas comunes\n\n| Síntoma en el doctor              | Qué hacer                                                                                          |\n| --------------------------------- | -------------------------------------------------------------------------------------------------- |\n| Pagos: "cannot take charges yet"  | Termina la activación en Stripe y luego usa "Probar conexión".                                     |\n| Webhooks: "no event received yet" | Revisa en Stripe → Developers → Webhooks que el endpoint esté activo. Luego corre la verificación. |\n| Verificación: "refund failed"     | Reembolsa desde Stripe → Payments y vuelve a correr la verificación.                               |\n| El pago no llega en local         | `stripe listen --live` debe seguir corriendo y el `whsec_` conectado debe ser el que imprimió.     |',
+  },
+  {
+    source: 'docs/guides/tienda-nextjs-supabase.md',
+    title: 'Agrega una tienda en línea a tu app de Next.js con Supabase',
+    text: '# Agrega una tienda en línea a tu app de Next.js con Supabase\n\nEsta guía convierte un proyecto de Next.js (App Router) en una tienda con checkout de Stripe y panel de administración, en unos diez minutos. Al terminar tienes:\n\n- catálogo, páginas de producto con SEO, carrito y checkout con Stripe;\n- pedidos que solo se crean con el webhook verificado de Stripe;\n- un admin en `/admin` para productos, inventario, pedidos, reembolsos, descuentos y clientes;\n- un servidor MCP para que tu agente de IA (Claude Code, Cursor…) configure y opere la tienda.\n\nTodo vive en **tu repo y tu proyecto de Supabase**: el esquema, la API (Supabase Edge Functions) y los componentes de la tienda. No hay comisión por venta ni un backend de terceros. [Sellbase](https://github.com/jlgavel011/sellbase) es open source (MIT).\n\n> En inglés: [Add an ecommerce store to a Next.js app with Supabase](nextjs-supabase-ecommerce.md).',
+  },
+  {
+    source: 'docs/guides/tienda-nextjs-supabase.md',
+    title:
+      'Agrega una tienda en línea a tu app de Next.js con Supabase › ¿Por qué no hacerlo a mano?',
+    text: '## ¿Por qué no hacerlo a mano?\n\nLa receta de siempre es una tabla `products` en Supabase, una Server Action que crea la sesión de Stripe Checkout y una ruta de webhook que guarda el pedido. Sirve para la primera venta. Después la tienda también necesita:\n\n- **inventario**, incluido liberar el stock cuando un checkout vence;\n- **variantes**, como talla y color;\n- **envíos e impuestos**;\n- **descuentos**;\n- **reembolsos**;\n- **correos**;\n- **un admin para el dueño**, para no editar filas en el dashboard de Supabase.\n\nSellbase es esa capa completa, ya hecha y probada:\n\n- RLS en todas las tablas, con pruebas pgTAP;\n- dinero guardado en enteros;\n- escrituras idempotentes;\n- llaves de Stripe guardadas en Supabase Vault.',
+  },
+  {
+    source: 'docs/guides/tienda-nextjs-supabase.md',
+    title: 'Agrega una tienda en línea a tu app de Next.js con Supabase › Requisitos',
+    text: '## Requisitos\n\n- Node 20 o superior.\n- Un proyecto de Next.js 15 o 16 con App Router.\n- Supabase. En local eso significa Docker, para correr `supabase start`. También sirve un proyecto en la nube.\n- Una cuenta de Stripe. Por ahora basta con el modo de prueba.',
+  },
+  {
+    source: 'docs/guides/tienda-nextjs-supabase.md',
+    title: 'Agrega una tienda en línea a tu app de Next.js con Supabase › 1. Instalar',
+    text: '## 1. Instalar\n\nDesde la raíz de tu proyecto:\n\n```bash\nnpx supabase init            # sáltalo si ya tienes supabase/config.toml\nnpx supabase start\nnpx sellbase init --yes\n```\n\n`sellbase init` hace lo siguiente:\n\n- **Supabase:** copia las migraciones (esquema `sellbase`, nunca `public`) y tres Edge Functions, `sellbase-api`, `sellbase-webhooks` y `sellbase-jobs`, y las aplica.\n- **Tienda:** crea la tienda y a su dueño. En local, el correo y la contraseña del admin quedan en `.env.sellbase`, que ya está en `.gitignore`.\n- **Tienda en tu sitio:** copia los componentes a `components/sellbase/`. Son tuyos y puedes editarlos.\n- **Admin:** agrega `components/sellbase/provider.tsx` y `app/admin/[[...path]]/page.tsx`.\n- **Variables de entorno:** escribe los valores públicos en `.env.local`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `NEXT_PUBLIC_SELLBASE_URL`.\n- **Agente de IA:** escribe `CLAUDE.md`/`AGENTS.md`, los skills y `.mcp.json`.\n\n¿Quieres productos de ejemplo para verla funcionando? Corre `npx sellbase seed cafeteria`. También hay `ropa`, `curso` y `consultorio`.\n\nCon un proyecto de Supabase en la nube, pasa sus llaves en lugar de levantar el stack local:\n\n```bash\nnpx sellbase init --yes --supabase-url https://<proyecto>.supabase.co --anon-key … --service-role-key … --db-url … --owner-email tu@correo.com\n```\n\nLa service role key solo se usa durante `init` y nunca se escribe en tu frontend.',
+  },
+  {
+    source: 'docs/guides/tienda-nextjs-supabase.md',
+    title:
+      'Agrega una tienda en línea a tu app de Next.js con Supabase › 2. Conectar el provider y el tema',
+    text: "## 2. Conectar el provider y el tema\n\nEnvuelve la app una sola vez en `app/layout.tsx`:\n\n```tsx\nimport { CartButton, CartDrawer } from '@/components/sellbase/cart-drawer';\nimport { SellbaseStoreProvider } from '@/components/sellbase/provider';\n\nexport default function RootLayout({ children }: { children: React.ReactNode }) {\n  return (\n    <html lang=\"es\">\n      <body>\n        <SellbaseStoreProvider>\n          <header>\n            <a href=\"/\">Mi tienda</a>\n            <CartButton />\n          </header>\n          <main>{children}</main>\n          <CartDrawer cartHref=\"/carrito\" />\n        </SellbaseStoreProvider>\n      </body>\n    </html>\n  );\n}\n```\n\nEl admin trae su propio diseño a pantalla completa. Si no quieres que tu header salga en `/admin`, pon las páginas de la tienda en un grupo de rutas como `app/(store)/layout.tsx`, igual que la [tienda de ejemplo](https://github.com/jlgavel011/sellbase/tree/main/examples/nextjs-store).\n\nImporta el tema en tu CSS global y pon tu marca. Con Tailwind v4:\n\n```css\n@import 'tailwindcss';\n@import '../components/sellbase/theme.css';\n@source '../components/sellbase';\n\n:root {\n  --sb-primary: #3f2a1d; /* botones y acentos */\n  --sb-radius: 14px;\n}\n```",
+  },
+  {
+    source: 'docs/guides/tienda-nextjs-supabase.md',
+    title:
+      'Agrega una tienda en línea a tu app de Next.js con Supabase › 3. Agregar las páginas de la tienda',
+    text: "## 3. Agregar las páginas de la tienda\n\n```tsx\n// app/page.tsx: catálogo\nimport { ProductGrid } from '@/components/sellbase/product-grid';\n\nexport default function Home() {\n  return <ProductGrid />;\n}\n```\n\n```tsx\n// app/products/[slug]/page.tsx: ficha de producto con SEO\nimport { createSellbase, productMetadata } from '@sellbase/react';\nimport { ProductDetail } from '@/components/sellbase/product-detail';\nimport { ProductJsonLd } from '@/components/sellbase/product-seo';\n\nconst sellbase = createSellbase({\n  url: process.env.NEXT_PUBLIC_SELLBASE_URL!,\n  anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,\n});\ntype Props = { params: Promise<{ slug: string }> };\n\nexport async function generateMetadata({ params }: Props) {\n  const product = await sellbase.products.get((await params).slug).catch(() => null);\n  return product\n    ? productMetadata(product, { url: `https://tusitio.com/products/${product.slug}` })\n    : {};\n}\n\nexport default async function ProductPage({ params }: Props) {\n  const { slug } = await params;\n  const product = await sellbase.products.get(slug).catch(() => null);\n  return (\n    <>\n      {product && <ProductJsonLd product={product} url={`https://tusitio.com/products/${slug}`} />}\n      <ProductDetail slug={slug} />\n    </>\n  );\n}\n```\n\n```tsx\n// app/checkout/page.tsx\nimport { Checkout } from '@/components/sellbase/checkout';\nexport default function CheckoutPage() {\n  return <Checkout successPath=\"/gracias\" cancelPath=\"/carrito\" />;\n}\n\n// app/gracias/page.tsx: espera el webhook, muestra el pedido y vacía el carrito\nimport { CheckoutReturn } from '@/components/sellbase/order-status';\nexport default function GraciasPage() {\n  return <CheckoutReturn />;\n}\n```\n\nTambién están `<CartPage />` (`cart-page`), `<OrderLookup />` para la página \"Mi pedido\" y `<ProductCarousel />`. Los componentes leen todo de la API, así que productos y precios nunca quedan fijos en el código.",
+  },
+  {
+    source: 'docs/guides/tienda-nextjs-supabase.md',
+    title: 'Agrega una tienda en línea a tu app de Next.js con Supabase › 4. Productos y Stripe',
+    text: '## 4. Productos y Stripe\n\nCorre `npm run dev`, abre http://localhost:3000/admin y entra con los datos de `.env.sellbase`:\n\n1. **Productos → Agregar producto:** fotos, precio, variantes e inventario.\n2. **Ajustes → Pagos:** pega tu llave secreta de **prueba** de Stripe (`sk_test_…`). Se guarda en Supabase Vault.\n   - En un proyecto desplegado, el webhook de Stripe se crea solo.\n   - En local, redirígelo con la CLI de Stripe y pega el `whsec_…` que imprime:\n\n     ```bash\n     stripe listen --forward-to http://127.0.0.1:54321/functions/v1/sellbase-webhooks/stripe\n     ```\n\n3. **Compra de prueba:** compra con la tarjeta `4242 4242 4242 4242`. El pedido aparece en **Pedidos** en cuanto el webhook confirma el pago.\n\n`npx sellbase doctor` lista lo que falta, con el siguiente paso de cada punto.\n\n### O deja que tu agente lo haga\n\n`init` registró el servidor MCP de Sellbase en `.mcp.json`. Abre Claude Code o Cursor en el proyecto y dile:\n\n> Configura mi tienda con Sellbase: vendo velas artesanales a $250 MXN, envío $120.\n\nEl agente crea los productos, conecta Stripe en modo prueba y repite la compra de prueba hasta que sale bien. Todo lo que mueve dinero o borra datos te pide confirmación y queda en la bitácora.',
+  },
+  {
+    source: 'docs/guides/tienda-nextjs-supabase.md',
+    title: 'Agrega una tienda en línea a tu app de Next.js con Supabase › 5. Publicar',
+    text: '## 5. Publicar\n\n- **Frontend:** en Vercel o cualquier hosting de Next.js, con los tres valores `NEXT_PUBLIC_*` de tu proyecto de Supabase en la nube. Nunca pongas la service role key en el frontend.\n- **Backend:** `npx sellbase init` contra el proyecto en la nube sube las migraciones y despliega las funciones.\n- **Cobros reales:** conecta la llave live desde el admin (**Ajustes → Pagos**), así va directo a Vault.\n\nGuías completas: [despliegue](deploy.md) y [cobrar de verdad con Stripe](stripe-live.md).',
+  },
+  {
+    source: 'docs/guides/tienda-nextjs-supabase.md',
+    title:
+      'Agrega una tienda en línea a tu app de Next.js con Supabase › O empieza desde una plantilla',
+    text: '## O empieza desde una plantilla\n\n```bash\nnpx sellbase create mi-tienda --template nextjs\ncd mi-tienda && npm install && npm run setup && npm run dev\n```\n\nEs una tienda completa con Next.js 16 y Tailwind, con botón de deploy a Vercel: [examples/nextjs-store](https://github.com/jlgavel011/sellbase/tree/main/examples/nextjs-store). ¿Tu sitio es HTML puro, WordPress o Webflow en lugar de React? Usa `--template html`, que funciona con los componentes web `<sellbase-*>`.',
   },
   {
     source: 'skills/add-storefront/SKILL.md',

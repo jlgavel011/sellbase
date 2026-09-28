@@ -10,7 +10,9 @@ Agents: connect the `sellbase` MCP server (`npx sellbase mcp`), start with `stor
 - [docs/guides/customize-admin.md](guides/customize-admin.md): guide
 - [docs/guides/deploy.md](guides/deploy.md): guide
 - [docs/guides/getting-started.md](guides/getting-started.md): guide
+- [docs/guides/nextjs-supabase-ecommerce.md](guides/nextjs-supabase-ecommerce.md): guide
 - [docs/guides/stripe-live.md](guides/stripe-live.md): guide
+- [docs/guides/tienda-nextjs-supabase.md](guides/tienda-nextjs-supabase.md): guide
 - [skills/add-storefront/SKILL.md](skills/add-storefront/SKILL.md): agent skill
 - [skills/configure-payments/SKILL.md](skills/configure-payments/SKILL.md): agent skill
 - [skills/configure-shipping/SKILL.md](skills/configure-shipping/SKILL.md): agent skill
