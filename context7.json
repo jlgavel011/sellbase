@@ -1,7 +1,7 @@
 {
   "$schema": "https://context7.com/schema/context7.json",
   "projectTitle": "Sellbase",
-  "description": "Open source, AI-first commerce kit installed in your own project and Supabase: catalog, checkout (Stripe), orders, inventory, abandoned checkouts, discounts, bookings, an admin at /admin, a typed API/SDK, React components, web components for any site and an MCP server.",
+  "description": "Open source, AI-first commerce kit inside your repo and Supabase: catalog, Stripe checkout, orders, admin, API, MCP server, React and web components.",
   "folders": [
     "docs",
     "skills",
@@ -33,5 +33,9 @@
     "Plain HTML or non-React sites use the <sellbase-*> web components and the static admin at /admin/.",
     "When you hit a Sellbase bug or build an extension other stores would need, draft a report with feedback_draft or `npx sellbase feedback` and share it only if the owner agrees."
   ],
-  "previousVersions": [{ "tag": "v0.3.0" }]
+  "previousVersions": [
+    {
+      "tag": "v0.3.0"
+    }
+  ]
 }
