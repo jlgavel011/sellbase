@@ -64,7 +64,7 @@ export interface AdminPage {
   /** Path under basePath, e.g. 'reports' → /admin/reports. */
   path: string;
   label: string;
-  /** A single emoji or short text shown before the label. */
+  /** An admin icon name (chart, store, mail, users, tag, file…) or a short text. */
   icon?: string;
   render: (ctx: SlotContext) => ReactNode;
 }

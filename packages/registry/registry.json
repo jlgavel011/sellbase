@@ -9,11 +9,18 @@
       "registryDependencies": []
     },
     {
+      "name": "icons",
+      "description": "Inline SVG icons (cart, close, calendar, truck, download, image) used by the other components.",
+      "files": ["components/sellbase/icons.tsx"],
+      "dependencies": [],
+      "registryDependencies": []
+    },
+    {
       "name": "product-card",
       "description": "One product tile with image, title and price.",
       "files": ["components/sellbase/product-card.tsx"],
       "dependencies": ["@sellbase/react"],
-      "registryDependencies": ["theme"]
+      "registryDependencies": ["theme", "icons"]
     },
     {
       "name": "product-grid",
@@ -71,7 +78,7 @@
       "description": "Cart button with count and a side panel with lines, discount code and totals (focus-trapped, Escape closes).",
       "files": ["components/sellbase/cart-drawer.tsx"],
       "dependencies": ["@sellbase/react"],
-      "registryDependencies": ["cart-lines", "discount-input"]
+      "registryDependencies": ["cart-lines", "discount-input", "icons"]
     },
     {
       "name": "cart-page",
@@ -90,7 +97,7 @@
       "name": "order-status",
       "description": "Return page after paying (confirming → paid, with the order summary) and \"where is my order?\" lookup.",
       "files": ["components/sellbase/order-status.tsx"],
-      "registryDependencies": ["theme"]
+      "registryDependencies": ["theme", "icons"]
     },
     {
       "name": "download-page",

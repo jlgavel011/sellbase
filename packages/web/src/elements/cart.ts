@@ -1,3 +1,4 @@
+import { icons } from '../icons.js';
 import type { CartView } from '@sellbase/sdk';
 import { esc, SellbaseElement } from '../base.js';
 import { getConfig, productHref } from '../config.js';
@@ -111,7 +112,7 @@ export class SellbaseCartButton extends SellbaseElement {
   }
   protected render() {
     const n = cart.count();
-    const icon = this.innerHTML.trim() ? '<slot></slot>' : '<span aria-hidden="true">🛒</span>';
+    const icon = this.innerHTML.trim() ? '<slot></slot>' : icons.cart;
     return `<button type="button" part="button" data-action="toggle" data-sellbase-cart-button aria-haspopup="dialog" aria-expanded="${state.drawerOpen}" aria-label="${esc(t().cartButton(n))}">${icon}${n > 0 ? `<span class="badge" aria-hidden="true">${n}</span>` : ''}</button>`;
   }
 }
@@ -119,7 +120,7 @@ export class SellbaseCartButton extends SellbaseElement {
 /**
  * <sellbase-cart-drawer></sellbase-cart-drawer>: the side panel. Added to the page
  * automatically by sellbase.js when missing. Focus moves in, Tab stays inside, Escape
- * and ✕ close it. Attribute `checkout-url` (default config.checkoutUrl or /checkout).
+ * and the close button close it. Attribute `checkout-url` (default config.checkoutUrl or /checkout).
  */
 export class SellbaseCartDrawer extends SellbaseElement {
   private wasOpen = false;
@@ -182,7 +183,7 @@ export class SellbaseCartDrawer extends SellbaseElement {
     const checkout = this.getAttribute('checkout-url') ?? getConfig().checkoutUrl ?? '/checkout';
     return `<div class="backdrop" data-action="close" aria-hidden="true"></div>
     <aside class="panel" role="dialog" aria-modal="true" aria-labelledby="t" part="panel">
-      <header><h2 id="t">${esc(s.cart)}</h2><button type="button" class="close" data-action="close" aria-label="${esc(s.close)}">✕</button></header>
+      <header><h2 id="t">${esc(s.cart)}</h2><button type="button" class="close" data-action="close" aria-label="${esc(s.close)}">${icons.close}</button></header>
       <div class="body">${has && c ? cartBody(c) : `<p class="muted">${esc(state.loading ? s.loading : s.emptyCart)}</p>`}</div>
       ${has ? `<footer><a class="btn" part="button" href="${esc(checkout)}">${esc(s.goToCheckout)}</a></footer>` : ''}
     </aside>`;

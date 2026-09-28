@@ -19,6 +19,7 @@ import {
   type OrderSummary,
 } from '@sellbase/react';
 import { useEffect, useId, useState } from 'react';
+import { Icon } from './icons';
 
 const STATUS: Record<string, string> = {
   unfulfilled: 'En preparación',
@@ -76,7 +77,7 @@ export function OrderSummaryCard({ order }: { order: OrderSummary }) {
       )}
       {order.bookings.map((b, i) => (
         <p key={i} className="rounded-[var(--sb-radius)] bg-[var(--sb-card)] p-3 text-sm">
-          📅 <strong>{b.title}</strong>: {when(b.starts_at, b.timezone)}
+          <Icon name="calendar" /> <strong>{b.title}</strong>: {when(b.starts_at, b.timezone)}
           {b.meeting_url ? (
             <>
               {' · '}
@@ -89,7 +90,7 @@ export function OrderSummaryCard({ order }: { order: OrderSummary }) {
       ))}
       {order.shipments.map((s, i) => (
         <p key={i} className="text-sm">
-          📦 Enviado{s.carrier ? ` con ${s.carrier}` : ''}
+          <Icon name="truck" /> Enviado{s.carrier ? ` con ${s.carrier}` : ''}
           {s.tracking_number ? ` · guía ${s.tracking_number}` : ''}
           {s.tracking_url ? (
             <>
@@ -102,7 +103,9 @@ export function OrderSummaryCard({ order }: { order: OrderSummary }) {
         </p>
       ))}
       {order.has_downloads && (
-        <p className="text-sm">⬇ Te enviamos los enlaces de descarga a {order.email}.</p>
+        <p className="text-sm">
+          <Icon name="download" /> Te enviamos los enlaces de descarga a {order.email}.
+        </p>
       )}
     </div>
   );

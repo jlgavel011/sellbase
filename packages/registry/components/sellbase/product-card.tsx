@@ -8,6 +8,7 @@
  * amounts are integers in cents.
  */
 import { formatMoney, type StorefrontProductSummary } from '@sellbase/react';
+import { Icon } from './icons';
 
 export function ProductCard({
   product,
@@ -42,7 +43,7 @@ export function ProductCard({
             className="flex h-full items-center justify-center text-4xl text-[var(--sb-muted)]"
             aria-hidden
           >
-            {product.type === 'digital' ? '⬇' : '◻'}
+            <Icon name={product.type === 'digital' ? 'download' : 'image'} />
           </div>
         )}
       </div>

@@ -13,6 +13,7 @@ import { useCart, useCartDrawer } from '@sellbase/react';
 import { useEffect, useRef } from 'react';
 import { CartLines, CartTotals } from './cart-lines';
 import { DiscountInput } from './discount-input';
+import { Icon } from './icons';
 
 export function CartButton({ className = '' }: { className?: string }) {
   const { itemCount } = useCart();
@@ -27,7 +28,7 @@ export function CartButton({ className = '' }: { className?: string }) {
       aria-expanded={open}
       aria-haspopup="dialog"
     >
-      <span aria-hidden>🛒</span>
+      <Icon name="cart" />
       {itemCount > 0 && (
         <span
           aria-hidden
@@ -93,7 +94,7 @@ export function CartDrawer({
       aria-modal="true"
       aria-labelledby="sb-cart-title"
     >
-      {/* Backdrop: a mouse shortcut only; keyboard and screen readers use ✕ or Escape. */}
+      {/* Backdrop: a mouse shortcut only; keyboard and screen readers use the close button or Escape. */}
       <div aria-hidden className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
       <aside
         ref={panelRef}
@@ -109,7 +110,7 @@ export function CartDrawer({
             onClick={() => setOpen(false)}
             aria-label="Cerrar carrito"
           >
-            ✕
+            <Icon name="close" />
           </button>
         </header>
 

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useAdmin } from '../context.js';
 import { Link } from '../router.js';
+import { Icon } from '../icons.js';
 import { Page } from '../shell.js';
 import {
   Alert,
@@ -83,7 +84,11 @@ export function AgendaPage() {
       }
     >
       <div className="sb:flex sb:flex-wrap sb:items-center sb:gap-2">
-        <Button variant="outline" onClick={() => setStart(new Date(start.getTime() - 7 * DAY))}>
+        <Button
+          variant="outline"
+          icon="chevronLeft"
+          onClick={() => setStart(new Date(start.getTime() - 7 * DAY))}
+        >
           {t.agenda.previous}
         </Button>
         <Button variant="ghost" onClick={() => setStart(weekStart(new Date()))}>
@@ -91,6 +96,7 @@ export function AgendaPage() {
         </Button>
         <Button variant="outline" onClick={() => setStart(new Date(start.getTime() + 7 * DAY))}>
           {t.agenda.next}
+          <Icon name="chevronRight" className="sb:h-4 sb:w-4" />
         </Button>
         <span className="sb:text-[var(--sba-text-subdued)]">
           {new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(start)} –{' '}

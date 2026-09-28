@@ -1474,7 +1474,7 @@ function DigitalCard({
         content_base64: await readFileAsBase64(file),
       }),
     onSuccess: (asset) => {
-      toast(`${asset.file_name} ✓`);
+      toast(t.editor.fileUploaded(asset.file_name));
       onUploaded();
     },
     onError: (e) => toast((e as Error).message, { error: true }),

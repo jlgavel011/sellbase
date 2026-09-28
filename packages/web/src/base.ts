@@ -9,6 +9,7 @@ import { subscribe } from './store.js';
  * Parts (::part) can be styled from the page too: button, input, panel, line, total.
  */
 export const baseCss = `
+  .icon { width: 1.15em; height: 1.15em; vertical-align: -0.2em; flex-shrink: 0; }
 :host { display: block; color: var(--sellbase-text, inherit); font: inherit; }
 :host([hidden]) { display: none; }
 * { box-sizing: border-box; }

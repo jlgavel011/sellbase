@@ -27,7 +27,7 @@ const config: AdminConfig = {
     {
       path: 'reportes',
       label: 'Reportes',
-      icon: '📊',
+      icon: 'chart',
       render: () => <h1 style={{ fontSize: 24, fontWeight: 600 }}>Reportes personalizados</h1>,
     },
   ],

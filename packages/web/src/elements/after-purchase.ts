@@ -1,3 +1,4 @@
+import { icons } from '../icons.js';
 import type { DownloadInfo, OrderSummary } from '@sellbase/sdk';
 import { api } from '../api.js';
 import { esc, SellbaseElement } from '../base.js';
@@ -30,9 +31,9 @@ function summary(o: OrderSummary) {
       <li class="row strong"><span>${esc(s.total)}</span><span>${esc(f(o.total_amount))}</span></li>
     </ul>
     ${due > 0 && o.status !== 'cancelled' ? `<p class="small">${esc(s.depositDue(f(o.amount_paid), f(due)))}</p>` : ''}
-    ${o.bookings.map((b) => `<p class="small">📅 <strong>${esc(b.title)}</strong>: ${esc(when(b.starts_at, b.timezone))}${b.meeting_url ? ` · <a href="${esc(b.meeting_url)}">${esc(s.sessionLink)}</a>` : ''}</p>`).join('')}
-    ${o.shipments.map((sh) => `<p class="small">📦 ${esc(s.trackWith(sh.carrier, sh.tracking_number))}${sh.tracking_url ? ` · <a href="${esc(sh.tracking_url)}">${esc(s.track)}</a>` : ''}</p>`).join('')}
-    ${o.has_downloads ? `<p class="small">⬇ ${esc(s.downloadsEmailed(o.email))}</p>` : ''}
+    ${o.bookings.map((b) => `<p class="small">${icons.calendar} <strong>${esc(b.title)}</strong>: ${esc(when(b.starts_at, b.timezone))}${b.meeting_url ? ` · <a href="${esc(b.meeting_url)}">${esc(s.sessionLink)}</a>` : ''}</p>`).join('')}
+    ${o.shipments.map((sh) => `<p class="small">${icons.truck} ${esc(s.trackWith(sh.carrier, sh.tracking_number))}${sh.tracking_url ? ` · <a href="${esc(sh.tracking_url)}">${esc(s.track)}</a>` : ''}</p>`).join('')}
+    ${o.has_downloads ? `<p class="small">${icons.download} ${esc(s.downloadsEmailed(o.email))}</p>` : ''}
   </div>`;
 }
 
