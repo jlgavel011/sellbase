@@ -1,6 +1,6 @@
 # CLAUDE.md — Sellbase
 
-> Nombre provisional: **Sellbase**. Si cambia, reemplazar `sellbase` / `Sellbase` en todo el repo.
+> Nombre final: **Sellbase** (decidido el 2026-09-28). Paquetes npm: `sellbase` y `@sellbase/*`.
 
 Estás construyendo **Sellbase**: un kit de comercio **open source, AI-first**, que se instala dentro del proyecto del usuario (su repo + su Supabase) y le da catálogo, checkout, pedidos, entregas, descuentos, notificaciones, un admin en `/admin`, una API y un servidor MCP para que su agente de IA configure y opere todo.
 

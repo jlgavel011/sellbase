@@ -1,6 +1,6 @@
 # Sellbase — Especificación de producto y técnica (v0.1)
 
-> Nombre provisional. Documento pensado para que Claude Code diseñe e implemente el producto por fases.
+> Nombre final: **Sellbase** (2026-09-28). Documento pensado para que Claude Code diseñe e implemente el producto por fases.
 
 ---
 
@@ -530,7 +530,7 @@ Cada fase termina con: tests verdes, `doctor` limpio, docs actualizadas, demo gr
 
 ## 19. Preguntas abiertas (decidir antes o durante Fase 1)
 
-1. Nombre definitivo y disponibilidad (dominio, npm, GitHub, marca). Se decide antes de publicar en npm. Mientras tanto, el nombre vive en **un solo lugar** (`packages/core/src/brand.ts` + scope del monorepo) para que renombrar sea un buscar-y-reemplazar.
+1. ✅ **Nombre definitivo: Sellbase** (decidido 2026-09-28; npm `sellbase` y `@sellbase/*`, repo `jlgavel011/sellbase`). Pendiente: dominio y registro de marca. Mientras tanto, el nombre vive en **un solo lugar** (`packages/core/src/brand.ts` + scope del monorepo) para que renombrar sea un buscar-y-reemplazar.
 2. Agregador de envíos MX para v1 y términos comerciales.
 3. ✅ **Decidido**: admin como **paquete npm** (`@sellbase/admin`) montado en `/admin`, no copiado al repo. Se personaliza por configuración (tema, textos, logo), por `metadata`/campos personalizados y por puntos de extensión (slots de UI + páginas extra registradas por el usuario). Nunca editando el paquete.
 4. ✅ **Decidido**: checkout **redirigido a Stripe Checkout en Fase 1**, **embebido en Fase 2**. El `PaymentsAdapter.createCheckout` devuelve desde el inicio `{ mode: 'redirect', url } | { mode: 'embedded', client_secret }` para que el cambio de Fase 2 no requiera refactor.

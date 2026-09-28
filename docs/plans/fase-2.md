@@ -108,11 +108,11 @@ El usuario pausó los evals. Antes se termina, en este orden:
      - Un sitio sin `package.json` recibe `sellbase/sellbase.js`, `sellbase/config.js` y el admin en `admin/`.
      - En todos los casos se escriben los archivos del agente e instrucciones para pegar las etiquetas en el diseño existente.
    - **Pruebas:** unitarias de los componentes; e2e de un sitio HTML puro (carrito, pago, regreso con webhook firmado, admin con hash); aceptación "sitio estático limpio → init → agente → compra de prueba".
-   - **Primer caso real:** la landing estática de Mezcal 7 Deseos, en una rama `sellbase`.
+   - **Primer caso real:** una landing estática de un cliente (marca de mezcal), en una rama `sellbase`.
 5. ✅ **Antes de 2g, bloqueo de webhooks a redes privadas** (`net-guard.ts`, ADR 0010):
    - Se valida al guardar y al enviar; se resuelve DNS y no se siguen redirecciones.
    - En local, `SELLBASE_WEBHOOKS_ALLOW_PRIVATE=true`; el doctor falla si esa variable queda activa en la nube.
-6. **2f-3. Admin v2, nivel Shopify con marca Sellbase** (pedido 2026-09-27, tras probar la landing de Mezcal: "el administrador debe ser como Shopify … ni me deja subir fotos"). Decidido en modo autónomo:
+6. **2f-3. Admin v2, nivel Shopify con marca Sellbase** (pedido 2026-09-27, tras probarlo en una landing real: "el administrador debe ser como Shopify … ni me deja subir fotos"). Decidido en modo autónomo:
    - **Diseño propio de Sellbase:**
      - tokens de color, radio y sombra;
      - íconos SVG en lugar de emojis;

@@ -159,7 +159,7 @@ function fakeApi() {
     if (cart) return json(view(cart[1] ?? ''));
     if (path === '/storefront/store')
       return json({
-        name: 'Sie7e Deseos',
+        name: 'Tienda de prueba',
         logo_url: null,
         currency: 'MXN',
         locale: 'es',
