@@ -25,6 +25,9 @@ function write(path, content) {
   }
 }
 
+// Plugin directories want the license inside the plugin folder.
+write('plugins/sellbase/LICENSE', readFileSync(join(repo, 'LICENSE'), 'utf8'));
+
 for (const skill of readdirSync(join(repo, 'skills'))) {
   const source = join(repo, 'skills', skill, 'SKILL.md');
   if (existsSync(source))

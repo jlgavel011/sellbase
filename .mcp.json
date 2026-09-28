@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "sellbase": {
+      "command": "npx",
+      "args": ["-y", "sellbase@latest", "mcp"]
+    }
+  }
+}
