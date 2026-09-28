@@ -4,7 +4,7 @@
 
 ## Context
 
-The first real install (a static landing page) showed that the admin worked but felt like a developer tool: generic look, emoji icons, API wording, photos only after saving, and no abandoned carts or inventory view. For a merchant, the admin *is* the product.
+The first real install (a static landing page) showed that the admin worked but felt like a developer tool: generic look, emoji icons, API wording, photos only after saving, and no abandoned carts or inventory view. For a merchant, the admin _is_ the product.
 
 ## Decision
 

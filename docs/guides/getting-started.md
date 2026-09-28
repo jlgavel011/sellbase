@@ -18,6 +18,7 @@ npx sellbase seed ropa      # opcional: catálogo de ejemplo (ropa, curso, consu
 En local, `init` también crea al dueño de la tienda: el correo y la contraseña del admin quedan en `.env.sellbase` (`SELLBASE_ADMIN_EMAIL` y `SELLBASE_ADMIN_PASSWORD`). Entra a `/admin` con ellos. En un proyecto en la nube usa `--owner-email tu@correo.com` para recibir la invitación.
 
 **Qué trae el admin:**
+
 - guía de configuración;
 - productos con fotos (arrastrar y soltar), variantes, inventario y SEO;
 - pedidos con hoja de empaque, reembolsos e historial;
