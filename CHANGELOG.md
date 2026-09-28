@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Any agent:** `npx skills add jlgavel011/sellbase` installs the Sellbase skills (including `add-ecommerce`) in Cursor, Codex, Copilot, Gemini CLI and more.
+- **shadcn registry:** `npx shadcn add https://jlgavel011.github.io/sellbase/r/store.json`, or one component at a time.
+
 ## 0.3.3 — Easier to find
 
 - **New guide:** [Add an ecommerce store to a Next.js app with Supabase](docs/guides/nextjs-supabase-ecommerce.md), also [in Spanish](docs/guides/tienda-nextjs-supabase.md).

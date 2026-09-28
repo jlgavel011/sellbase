@@ -247,4 +247,99 @@ write(
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${SITE}/${u}</loc></url>`).join('')}</urlset>\n`,
 );
 write('robots.txt', `User-agent: *\nAllow: /\nSitemap: ${SITE}/sitemap.xml\n`);
+// ── shadcn-compatible registry: npx shadcn add https://…/r/<name>.json ─────────────
+// Same files `sellbase add` copies. They need the Sellbase backend (`npx sellbase init`).
+{
+  const R = `${SITE}/r`;
+  const registry = JSON.parse(
+    readFileSync(join(repo, 'packages/registry/registry.json'), 'utf8'),
+  ).components;
+  const file = (from, target) => ({
+    path: target,
+    type: 'registry:file',
+    target,
+    content: readFileSync(join(repo, from), 'utf8'),
+  });
+  const docs =
+    'Sellbase storefront components need the Sellbase backend in your Supabase: run `npx sellbase init --yes`. ' +
+    'Wrap the app in SellbaseStoreProvider (components/sellbase/provider.tsx) and import components/sellbase/theme.css in your global CSS. ' +
+    `Guide: ${SITE}/guides/nextjs-supabase-ecommerce.html`;
+  const items = [
+    ...registry.map((c) => ({
+      name: c.name,
+      type: 'registry:component',
+      title: c.name,
+      description: c.description,
+      dependencies:
+        c.dependencies ?? (c.name === 'theme' || c.name === 'icons' ? [] : ['@sellbase/react']),
+      // Every component pulls in the provider, which carries the setup notes (printed once).
+      registryDependencies: [
+        ...(c.name === 'theme' || c.name === 'icons' ? [] : ['provider']),
+        ...(c.registryDependencies ?? []),
+      ].map((d) => `${R}/${d}.json`),
+      files: c.files.map((f) => file(`packages/registry/${f}`, f)),
+    })),
+    {
+      name: 'provider',
+      type: 'registry:component',
+      title: 'provider',
+      description:
+        'SellbaseStoreProvider: connects the storefront components to your Sellbase API.',
+      dependencies: ['@sellbase/react'],
+      registryDependencies: [`${R}/theme.json`],
+      files: [file('templates/provider.tsx', 'components/sellbase/provider.tsx')],
+      envVars: {
+        NEXT_PUBLIC_SELLBASE_URL: 'http://127.0.0.1:54321/functions/v1/sellbase-api',
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: '',
+      },
+    },
+    {
+      name: 'store',
+      type: 'registry:block',
+      title: 'Sellbase store',
+      description:
+        'Everything for a storefront: provider, theme, product grid, carousel and detail, SEO, cart drawer and page, checkout and order status.',
+      dependencies: ['@sellbase/react'],
+      registryDependencies: [
+        'provider',
+        'theme',
+        'product-grid',
+        'product-carousel',
+        'product-detail',
+        'product-seo',
+        'cart-drawer',
+        'cart-page',
+        'checkout',
+        'order-status',
+      ].map((d) => `${R}/${d}.json`),
+      files: [],
+    },
+  ].map((item) => (item.name === 'provider' ? { ...item, docs } : item));
+  for (const item of items)
+    write(
+      `r/${item.name}.json`,
+      JSON.stringify(
+        { $schema: 'https://ui.shadcn.com/schema/registry-item.json', ...item },
+        null,
+        2,
+      ),
+    );
+  write(
+    'r/registry.json',
+    JSON.stringify(
+      {
+        $schema: 'https://ui.shadcn.com/schema/registry.json',
+        name: 'sellbase',
+        homepage: SITE,
+        items: items.map(({ files, ...item }) => ({
+          ...item,
+          files: files.map(({ content: _content, ...f }) => f),
+        })),
+      },
+      null,
+      2,
+    ),
+  );
+}
+
 console.log(`Site built in site-dist/ (${docs.length} docs pages)`);

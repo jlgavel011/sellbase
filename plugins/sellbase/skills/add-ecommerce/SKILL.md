@@ -14,8 +14,9 @@ Sellbase installs **inside the user's project and Supabase**:
 ## 1. Check the project
 
 - Find the framework: `package.json` with `next` → Next.js; `vite` + `react` → Vite; otherwise any site (web components + static admin).
-- Supabase: local needs Docker (`npx supabase init` if there is no `supabase/` folder, then `npx supabase start`). For a hosted project, ask for the project URL and keys and see `docs/guides/deploy.md`.
+- Supabase: local needs Docker (`npx supabase init` if there is no `supabase/` folder, then `npx supabase start`). For a hosted project, ask for the project URL and keys and see https://jlgavel011.github.io/sellbase/guides/deploy.html.
 - Work on a new git branch so the owner can review.
+- Empty folder or no site yet? Start from a template instead: `npx sellbase create <dir> --template nextjs` (or `html`), then follow its README.
 
 ## 2. Install
 
@@ -48,6 +49,6 @@ Tell the owner:
 
 - where the admin is and where the credentials are (`.env.sellbase`, never paste them);
 - what is ready;
-- what they must do to charge real money (`docs/guides/stripe-live.md`).
+- what they must do to charge real money (https://jlgavel011.github.io/sellbase/guides/stripe-live.html).
 
 If you hit a Sellbase bug, draft a report with `feedback_draft` and share it only if the owner agrees.

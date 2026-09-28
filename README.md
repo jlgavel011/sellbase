@@ -72,6 +72,25 @@ Both are in [`examples/`](examples) with Vercel and Netlify deploy buttons.
 
 The plugin brings the Sellbase skills and MCP server to every project. `/sellbase:setup` installs Sellbase, creates your products, connects Stripe in test mode and runs a test purchase. Any other MCP client can use `npx sellbase mcp` (listed in the MCP registry as `io.github.jlgavel011/sellbase`).
 
+### With any agent (Cursor, Codex, Copilot, Gemini CLI, Windsurf…)
+
+```bash
+npx skills add jlgavel011/sellbase    # the Sellbase skills, including add-ecommerce
+```
+
+Then ask your agent to "add a store to this project". The `add-ecommerce` skill installs Sellbase and sets it up.
+
+### With shadcn
+
+The storefront components are also a shadcn-compatible registry:
+
+```bash
+npx shadcn add https://jlgavel011.github.io/sellbase/r/store.json          # everything
+npx shadcn add https://jlgavel011.github.io/sellbase/r/product-grid.json   # or one component
+```
+
+They still need the backend: `npx sellbase init --yes`. The index is at [`/r/registry.json`](https://jlgavel011.github.io/sellbase/r/registry.json).
+
 Going live: [deploy guide](docs/guides/deploy.md) and [live payments with Stripe](docs/guides/stripe-live.md).
 
 ## Features
