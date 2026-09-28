@@ -1,4 +1,4 @@
-import type { SVGProps } from 'react';
+import { useId, type SVGProps } from 'react';
 
 /*
  * Sellbase icon set: 20×20, 1.6 stroke, round caps (drawn for the admin, no icon font or
@@ -85,6 +85,10 @@ const PATHS = {
     'M5 15 15 5M6 7.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM14 15.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z',
   filter: 'M3 4.5h14l-5.5 6.5v5l-3-1.5v-3.5Z',
   note: 'M4.5 3.5h11a1 1 0 0 1 1 1v8L12.5 16.5h-8a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1ZM12.5 16.5v-4h4',
+  command:
+    'M7 7V5.5A2 2 0 1 0 5 7.5h1.5M13 7V5.5a2 2 0 1 1 2 2h-1.5M7 13v1.5A2 2 0 1 1 5 12.5h1.5M13 13v1.5a2 2 0 1 0 2-2h-1.5M7 7h6v6H7Z',
+  arrowRight: 'M4 10h12M11 5l5 5-5 5',
+  enter: 'M16 4.5v5a2 2 0 0 1-2 2H4.5M8 8l-3.5 3.5L8 15',
 } as const;
 
 export type IconName = keyof typeof PATHS;
@@ -114,24 +118,56 @@ export function Icon({
   );
 }
 
-/** The Sellbase mark: a green tile with the "S" stroke; used in the top bar and login. */
+/** The Sellbase mark: an "S" of two stacked layers (the base) with an AI spark. */
 export function SellbaseMark({ className }: { className?: string }) {
+  const id = useId().replace(/:/g, '');
   return (
     <svg viewBox="0 0 32 32" aria-hidden className={className ?? 'sb:h-7 sb:w-7'}>
       <defs>
-        <linearGradient id="sba-mark" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#34d399" />
-          <stop offset="1" stopColor="#059669" />
+        <linearGradient id={`${id}g`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#8b7bff" />
+          <stop offset="0.5" stopColor="#5b4bff" />
+          <stop offset="1" stopColor="#1fb8e6" />
+        </linearGradient>
+        <linearGradient id={`${id}h`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#fff" stopOpacity=".28" />
+          <stop offset=".5" stopColor="#fff" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <rect width="32" height="32" rx="8" fill="url(#sba-mark)" />
+      <rect width="32" height="32" rx="9" fill={`url(#${id}g)`} />
+      <rect width="32" height="32" rx="9" fill={`url(#${id}h)`} />
       <path
-        d="M21.5 11.2c-.9-1.7-2.9-2.7-5.3-2.7-3.1 0-5.2 1.6-5.2 3.9 0 5.3 10.6 2.9 10.6 7.9 0 2.4-2.3 4.1-5.5 4.1-2.6 0-4.7-1.1-5.6-3"
+        d="M21 10H13.25a3 3 0 0 0 0 6h5.5a3 3 0 0 1 0 6H10"
         fill="none"
         stroke="#fff"
-        strokeWidth="2.6"
+        strokeWidth="3.2"
         strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M24.6 5.2l.75 1.75 1.75.75-1.75.75-.75 1.75-.75-1.75-1.75-.75 1.75-.75Z"
+        fill="#fff"
       />
     </svg>
+  );
+}
+
+/** Mark + "sellbase" wordmark. `tone` is the text color: light on dark frames. */
+export function SellbaseLogo({
+  tone = 'dark',
+  size = 'md',
+}: {
+  tone?: 'light' | 'dark';
+  size?: 'md' | 'lg';
+}) {
+  return (
+    <span className="sb:inline-flex sb:items-center sb:gap-2">
+      <SellbaseMark className={size === 'lg' ? 'sb:h-9 sb:w-9' : 'sb:h-7 sb:w-7'} />
+      <span
+        className={`sb:font-bold sb:tracking-[-0.04em] ${size === 'lg' ? 'sb:text-2xl' : 'sb:text-[1.0625rem]'} ${tone === 'light' ? 'sb:text-white' : 'sb:text-[var(--sba-text-strong)]'}`}
+      >
+        sellbase
+      </span>
+    </span>
   );
 }

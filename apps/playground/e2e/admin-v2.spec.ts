@@ -82,8 +82,9 @@ test('product editor: photos before saving, variants, inventory and search', asy
   await expect(input).toHaveValue('9');
 
   // Global search finds the product.
-  await page.getByRole('searchbox', { name: 'Buscar productos, pedidos y clientes' }).fill(title);
-  await page.getByRole('button', { name: new RegExp(title) }).click();
+  await page.keyboard.press('ControlOrMeta+k');
+  await page.getByRole('textbox', { name: 'Buscar productos, pedidos y clientes' }).fill(title);
+  await page.getByRole('option', { name: new RegExp(title) }).click();
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
 });
 

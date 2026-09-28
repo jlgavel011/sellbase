@@ -32,12 +32,16 @@ export type { Texts } from './texts.js';
 export function SellbaseAdmin({ config }: { config: AdminConfig }) {
   const theme = config.theme ?? {};
   const style = {
-    '--sba-primary': theme.primary ?? '#1a1a1a',
+    '--sba-primary': theme.primary ?? '#5b4bff',
+    // The brand gradient unless the store picked its own primary color.
+    '--sba-primary-gradient': theme.primary
+      ? 'none'
+      : 'linear-gradient(135deg, #7c6bff 0%, #5b4bff 55%, #3f8cf0 100%)',
     '--sba-primary-fg': theme.primaryForeground ?? '#ffffff',
     '--sba-radius': theme.radius ?? '0.5rem',
     fontFamily:
       theme.fontFamily ??
-      '"Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+      '"Inter var", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
   } as CSSProperties;
 
   return (

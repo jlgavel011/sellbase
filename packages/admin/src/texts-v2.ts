@@ -4,6 +4,46 @@
  */
 
 export const esV2 = {
+  brand: {
+    tagline: 'El comercio que tu IA opera.',
+    points: [
+      'Tu agente configura y opera la tienda por ti',
+      'Tu código, tu Supabase, tu Stripe: sin comisiones de plataforma',
+      'Seguro por diseño: RLS, pagos verificados, secretos en Vault',
+    ],
+    footer: 'Sellbase · open source',
+  },
+  copilot: {
+    title: 'Tu copiloto IA',
+    intro: 'Pídele a tu agente (Claude, Cursor…) que trabaje por ti. Copia una idea y pégasela:',
+    connected: (n: number) => (n === 1 ? '1 agente conectado' : `${n} agentes conectados`),
+    notConnected: 'Ningún agente conectado',
+    lastAction: (when: string) => `última acción ${when}`,
+    connect: 'Conectar mi IA',
+    copy: 'Copiar',
+    copied: 'Copiado',
+    prompts: [
+      'Revisa mis pedidos por preparar y dime qué enviar hoy.',
+      'Crea un código BIENVENIDA de 10% para la primera compra.',
+      'Analiza mis ventas de 30 días y sugiere qué producto impulsar.',
+    ],
+  },
+  palette: {
+    title: 'Paleta de comandos',
+    trigger: 'Buscar o ejecutar un comando…',
+    placeholder: 'Busca productos, pedidos, clientes o escribe una acción…',
+    actions: 'Acciones',
+    goTo: 'Ir a',
+    newProduct: 'Crear producto',
+    newOrder: 'Registrar pedido',
+    newDiscount: 'Crear descuento',
+    toFulfill: 'Pedidos por preparar',
+    payments: 'Ajustes de pagos',
+    shipping: 'Ajustes de envíos',
+    agents: 'Conectar tu IA (tokens)',
+    move: 'moverte',
+    open: 'abrir',
+  },
   discounts2: { scheduled: 'Programado', expired: 'Vencido' },
   shell: {
     search: 'Buscar',
@@ -467,6 +507,46 @@ export const esV2 = {
 export type TextsV2 = typeof esV2;
 
 export const enV2: TextsV2 = {
+  brand: {
+    tagline: 'Commerce your AI can run.',
+    points: [
+      'Your agent sets up and runs the store for you',
+      'Your code, your Supabase, your Stripe: no platform fees',
+      'Secure by design: RLS, verified payments, secrets in Vault',
+    ],
+    footer: 'Sellbase · open source',
+  },
+  copilot: {
+    title: 'Your AI copilot',
+    intro: 'Ask your agent (Claude, Cursor…) to do the work. Copy an idea and paste it:',
+    connected: (n: number) => (n === 1 ? '1 agent connected' : `${n} agents connected`),
+    notConnected: 'No agent connected',
+    lastAction: (when: string) => `last action ${when}`,
+    connect: 'Connect my AI',
+    copy: 'Copy',
+    copied: 'Copied',
+    prompts: [
+      'Check my orders to fulfill and tell me what to ship today.',
+      'Create a WELCOME code for 10% off the first order.',
+      'Analyze my last 30 days of sales and suggest which product to push.',
+    ],
+  },
+  palette: {
+    title: 'Command palette',
+    trigger: 'Search or run a command…',
+    placeholder: 'Search products, orders, customers or type an action…',
+    actions: 'Actions',
+    goTo: 'Go to',
+    newProduct: 'Create product',
+    newOrder: 'Record an order',
+    newDiscount: 'Create discount',
+    toFulfill: 'Orders to fulfill',
+    payments: 'Payment settings',
+    shipping: 'Shipping settings',
+    agents: 'Connect your AI (tokens)',
+    move: 'move',
+    open: 'open',
+  },
   discounts2: { scheduled: 'Scheduled', expired: 'Expired' },
   shell: {
     search: 'Search',

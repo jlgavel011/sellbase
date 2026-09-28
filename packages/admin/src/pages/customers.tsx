@@ -44,7 +44,7 @@ const initials = (name: string) =>
 
 function Avatar({ name }: { name: string }) {
   return (
-    <span className="sb:grid sb:h-8 sb:w-8 sb:shrink-0 sb:place-items-center sb:rounded-full sb:bg-emerald-100 sb:text-xs sb:font-bold sb:text-emerald-800">
+    <span className="sb:grid sb:h-8 sb:w-8 sb:shrink-0 sb:place-items-center sb:rounded-full sb:bg-[var(--sba-brand-soft)] sb:text-xs sb:font-bold sb:text-[var(--sba-brand-strong)]">
       {initials(name) || '?'}
     </span>
   );

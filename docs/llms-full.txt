@@ -5,6 +5,8 @@
 
 <div align="center">
 
+<img src="docs/images/sellbase-mark.svg" width="72" alt="Sellbase" />
+
 # Sellbase
 
 **Open source commerce that lives inside your project, run by your AI agent.**
@@ -24,7 +26,10 @@ Catalog, checkout, orders, inventory, abandoned carts, discounts, appointments, 
 - **Works on any site.**
   - **Next.js and Vite + React:** React components.
   - **Plain HTML, WordPress, Webflow, Vue, Svelte, Astro, Angular:** `<sellbase-*>` web components (13 KB gzipped) and a static admin.
-- **A real admin.** Products with drag and drop photos and variants, inventory, orders with packing slips and refunds, abandoned cart recovery, customers, discounts and settings for every connection. It is built for store owners, not developers.
+- **An admin that is a pleasure to use.** Products with drag and drop photos and variants, inventory, orders with packing slips and refunds, abandoned cart recovery, customers, discounts and settings for every connection. Also:
+  - a command palette (⌘K) to search and act;
+  - an AI copilot on Home;
+  - built for store owners, not developers.
 - **Safe by default.**
   - Money stored as integers.
   - RLS on every table, with tests.
@@ -57,10 +62,11 @@ Going live: [deploy guide](docs/guides/deploy.md) and [live payments with Stripe
 
 ## Features
 
-|                                             |                                                         |
-| ------------------------------------------- | ------------------------------------------------------- |
-| ![Products](docs/images/admin-products.png) | ![Product editor](docs/images/admin-product-editor.png) |
-| ![Orders](docs/images/admin-orders.png)     | ![Order](docs/images/admin-order.png)                   |
+|                                                           |                                                         |
+| --------------------------------------------------------- | ------------------------------------------------------- |
+| ![Products](docs/images/admin-products.png)               | ![Product editor](docs/images/admin-product-editor.png) |
+| ![Orders](docs/images/admin-orders.png)                   | ![Order](docs/images/admin-order.png)                   |
+| ![Command palette](docs/images/admin-command-palette.png) | ![Sign in](docs/images/admin-login.png)                 |
 
 **Catalog:**
 

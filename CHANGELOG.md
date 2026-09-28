@@ -8,6 +8,15 @@
   - MCP tool `feedback_draft`;
   - `npx sellbase feedback`.
     An agent that hits a Sellbase bug, or builds an extension other stores would need, drafts a redacted GitHub issue (keys, tokens, emails and phones removed), shows it to the owner and shares it only if they agree.
+- **New Sellbase identity:**
+  - new logo (an "S" of two layers with an AI spark) and a violet-to-cyan palette;
+  - the admin now has a dark frame (top bar and side menu) around a light workspace;
+  - command palette (⌘K, Ctrl+K or `/`) to search products, orders and customers and to run actions;
+  - AI copilot card on Home (connected agents and prompts to copy);
+  - sparklines on the sales metrics;
+  - a split sign-in screen with the brand;
+  - pill badges, tabular numbers and brand-colored focus rings.
+    Stores that set `theme.primary` keep their solid button color. The screenshots come from `apps/playground/scripts/screenshots.mjs`.
 - **Icons:** SVG icons instead of emoji in the storefront (web components and React) and in the admin.
 
 ## 0.3.0 — Admin v2 and open source release

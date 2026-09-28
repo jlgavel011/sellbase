@@ -1,6 +1,6 @@
 import { formatMoney } from '@sellbase/sdk';
 import { useQuery } from '@tanstack/react-query';
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { useAdmin } from '../context.js';
 import { Icon, type IconName } from '../icons.js';
 import { Link, useRouter } from '../router.js';
@@ -102,7 +102,10 @@ export function HomePage() {
           <Skeleton className="sb:h-12" />
         </div>
       ) : (
-        <SetupGuide steps={steps} />
+        <div className="sb:grid sb:items-start sb:gap-4 sb:lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
+          <SetupGuide steps={steps} />
+          <Copilot />
+        </div>
       )}
       <Metrics />
       <Todo />
@@ -167,7 +170,7 @@ function SetupGuide({ steps }: { steps: Step[] }) {
               aria-label={t.setup.title}
             >
               <span
-                className="sb:block sb:h-full sb:rounded-full sb:bg-[#1a1a1a] sb:transition-all"
+                className="sb:block sb:h-full sb:rounded-full sb:bg-[image:var(--sba-gradient)] sb:transition-all"
                 style={{ width: `${(done / steps.length) * 100}%` }}
               />
             </span>
@@ -206,7 +209,7 @@ function SetupGuide({ steps }: { steps: Step[] }) {
                 ) : (
                   <Icon
                     name="dashedCircle"
-                    className="sb:h-5 sb:w-5 sb:shrink-0 sb:text-[#8a8a8a]"
+                    className="sb:h-5 sb:w-5 sb:shrink-0 sb:text-[#b4b7c7]"
                     title={t.setup.pending}
                   />
                 )}
@@ -232,7 +235,7 @@ function SetupGuide({ steps }: { steps: Step[] }) {
                       {copy.action}
                     </Button>
                   </div>
-                  <span className="sb:hidden sb:h-20 sb:w-20 sb:shrink-0 sb:place-items-center sb:rounded-2xl sb:bg-gradient-to-br sb:from-emerald-100 sb:to-emerald-50 sb:text-emerald-700 sb:sm:grid">
+                  <span className="sb:hidden sb:h-20 sb:w-20 sb:shrink-0 sb:place-items-center sb:rounded-2xl sb:bg-[var(--sba-brand-soft)] sb:text-[var(--sba-brand)] sb:sm:grid">
                     <Icon name={step.icon} className="sb:h-9 sb:w-9" />
                   </span>
                 </div>
@@ -283,17 +286,20 @@ function Metrics() {
           label={t.home.today}
           value={money(r.sales.today.amount)}
           detail={period(r.sales.today)}
+          series={r.daily.slice(-2).map((d) => d.amount)}
           testId="metric-today"
         />
         <Stat
           label={t.home.last7}
           value={money(r.sales.last_7_days.amount)}
           detail={period(r.sales.last_7_days)}
+          series={r.daily.slice(-7).map((d) => d.amount)}
         />
         <Stat
           label={t.home.last30}
           value={money(r.sales.last_30_days.amount)}
           detail={period(r.sales.last_30_days)}
+          series={r.daily.map((d) => d.amount)}
           testId="metric-30"
         />
       </div>
@@ -361,21 +367,138 @@ function Stat({
   label,
   value,
   detail,
+  series,
   testId,
 }: {
   label: string;
   value: string;
   detail?: string;
+  series?: number[];
   testId?: string;
 }) {
   return (
-    <div className="sb:flex sb:flex-col sb:gap-1 sb:p-4" data-testid={testId}>
-      <span className="sb:text-xs sb:font-semibold sb:text-[var(--sba-text-subdued)]">{label}</span>
-      <span className="sb:text-2xl sb:font-bold sb:tracking-tight sb:text-[var(--sba-text-strong)]">
-        {value}
-      </span>
-      {detail && <span className="sb:text-xs sb:text-[var(--sba-text-subdued)]">{detail}</span>}
+    <div className="sb:flex sb:items-end sb:justify-between sb:gap-3 sb:p-4" data-testid={testId}>
+      <div className="sb:flex sb:min-w-0 sb:flex-col sb:gap-1">
+        <span className="sb:text-xs sb:font-semibold sb:text-[var(--sba-text-subdued)]">
+          {label}
+        </span>
+        <span className="sba-num sb:text-2xl sb:font-bold sb:tracking-tight sb:text-[var(--sba-text-strong)]">
+          {value}
+        </span>
+        {detail && <span className="sb:text-xs sb:text-[var(--sba-text-subdued)]">{detail}</span>}
+      </div>
+      {series && series.length > 1 && <Sparkline values={series} />}
     </div>
+  );
+}
+
+/** Tiny trend line for a stat (brand gradient, no axes). */
+function Sparkline({ values }: { values: number[] }) {
+  const id = useId().replace(/:/g, '');
+  const w = 96;
+  const h = 32;
+  const max = Math.max(1, ...values);
+  const step = w / (values.length - 1);
+  const points = values.map((v, i) => [i * step, h - 3 - (v / max) * (h - 6)] as const);
+  const line = points
+    .map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`)
+    .join(' ');
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} aria-hidden className="sb:shrink-0">
+      <defs>
+        <linearGradient id={`${id}l`} x1="0" x2="1">
+          <stop offset="0" stopColor="#8b7bff" />
+          <stop offset="1" stopColor="#1fb8e6" />
+        </linearGradient>
+        <linearGradient id={`${id}a`} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#6d5bff" stopOpacity=".22" />
+          <stop offset="1" stopColor="#6d5bff" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={`${line} L${w} ${h} L0 ${h} Z`} fill={`url(#${id}a)`} />
+      <path
+        d={line}
+        fill="none"
+        stroke={`url(#${id}l)`}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** The store's AI copilot: is an agent connected, and what to ask it next. */
+function Copilot() {
+  const { sellbase, t } = useAdmin();
+  const { navigate } = useRouter();
+  const c = t.copilot;
+  const tokens = useQuery({
+    queryKey: ['sellbase-admin', 'tokens'],
+    queryFn: () => sellbase.admin.tokens.list(),
+    retry: false,
+  });
+  const active = (tokens.data?.data ?? []).filter((x) => !x.revoked_at);
+  const lastUsed = active
+    .map((x) => x.last_used_at)
+    .filter((x): x is string => Boolean(x))
+    .sort()
+    .at(-1);
+  const [copied, setCopied] = useState<number | null>(null);
+  return (
+    <section
+      className="sba-card sba-glow sb:relative sb:flex sb:flex-col sb:gap-4 sb:overflow-hidden sb:p-4"
+      data-testid="copilot"
+    >
+      <div className="sb:flex sb:items-center sb:gap-3">
+        <span className="sb:grid sb:h-10 sb:w-10 sb:place-items-center sb:rounded-xl sb:bg-[image:var(--sba-gradient)] sb:text-white sb:shadow-[0_8px_20px_-8px_rgba(91,75,255,0.7)]">
+          <Icon name="sparkles" className="sb:h-5 sb:w-5" />
+        </span>
+        <div className="sb:flex sb:min-w-0 sb:flex-col">
+          <h2 className="sb:text-sm sb:font-semibold sb:text-[var(--sba-text-strong)]">
+            {c.title}
+          </h2>
+          <span className="sb:flex sb:items-center sb:gap-1.5 sb:text-xs sb:text-[var(--sba-text-subdued)]">
+            <span
+              className={cx(
+                'sb:h-2 sb:w-2 sb:rounded-full',
+                active.length
+                  ? 'sb:bg-[#22c55e] sb:shadow-[0_0_0_3px_rgba(34,197,94,0.18)]'
+                  : 'sb:bg-[#b4b7c7]',
+              )}
+            />
+            {active.length ? c.connected(active.length) : c.notConnected}
+            {lastUsed && ` · ${c.lastAction(new Date(lastUsed).toLocaleDateString())}`}
+          </span>
+        </div>
+      </div>
+      <p className="sb:text-[var(--sba-text-subdued)]">{c.intro}</p>
+      <ul className="sb:flex sb:flex-col sb:gap-2">
+        {c.prompts.map((prompt, i) => (
+          <li key={prompt}>
+            <button
+              type="button"
+              onClick={() => {
+                void navigator.clipboard?.writeText(prompt);
+                setCopied(i);
+                setTimeout(() => setCopied(null), 1800);
+              }}
+              className="sb:group sb:flex sb:w-full sb:cursor-pointer sb:items-start sb:gap-2 sb:rounded-xl sb:border sb:border-[var(--sba-border)] sb:bg-white/80 sb:px-3 sb:py-2 sb:text-left sb:transition sb:hover:border-[var(--sba-brand)] sb:hover:shadow-[0_0_0_3px_rgba(109,91,255,0.12)]"
+            >
+              <span className="sb:flex-1">“{prompt}”</span>
+              <span className="sb:shrink-0 sb:text-xs sb:font-semibold sb:text-[var(--sba-brand)]">
+                {copied === i ? c.copied : c.copy}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {!active.length && (
+        <Button variant="secondary" icon="bot" onClick={() => navigate('/settings/agents')}>
+          {c.connect}
+        </Button>
+      )}
+    </section>
   );
 }
 

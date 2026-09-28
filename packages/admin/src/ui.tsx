@@ -332,7 +332,7 @@ const bannerIcon: Record<string, IconName> = {
 };
 const bannerIconColor: Record<string, string> = {
   info: 'sb:text-[#00527c]',
-  success: 'sb:text-[#29845a]',
+  success: 'sb:text-[#16a34a]',
   warning: 'sb:text-[#b28400]',
   critical: 'sb:text-[#e51c00]',
 };
@@ -400,7 +400,7 @@ export function Spinner({ label }: { label: string }) {
       className="sb:flex sb:items-center sb:justify-center sb:gap-2 sb:py-10 sb:text-[var(--sba-text-subdued)]"
       aria-busy="true"
     >
-      <span className="sb:h-4 sb:w-4 sb:animate-spin sb:rounded-full sb:border-2 sb:border-[#cccccc] sb:border-t-[#303030]" />
+      <span className="sb:h-4 sb:w-4 sb:animate-spin sb:rounded-full sb:border-2 sb:border-[#d3d6e3] sb:border-t-[var(--sba-brand)]" />
       {label}
     </div>
   );
@@ -475,7 +475,7 @@ export function EmptyState({
   const [done, setDone] = useState(false);
   return (
     <div className="sb:flex sb:flex-col sb:items-center sb:gap-3 sb:px-4 sb:py-10 sb:text-center">
-      <span className="sb:grid sb:h-14 sb:w-14 sb:place-items-center sb:rounded-full sb:bg-[#ecfdf5] sb:text-[var(--sba-brand-strong)]">
+      <span className="sb:grid sb:h-14 sb:w-14 sb:place-items-center sb:rounded-2xl sb:bg-[image:var(--sba-gradient)] sb:text-white sb:shadow-[0_8px_24px_-8px_rgba(91,75,255,0.6)]">
         <Icon name={icon} className="sb:h-7 sb:w-7" />
       </span>
       <p className="sb:text-base sb:font-semibold sb:text-[var(--sba-text-strong)]">{title}</p>
@@ -759,7 +759,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             role="status"
             className={cx(
               'sba-toast sb:pointer-events-auto sb:flex sb:items-center sb:gap-2 sb:rounded-[var(--sba-card-radius)] sb:px-4 sb:py-2.5 sb:text-sm sb:font-medium sb:text-white sb:shadow-lg',
-              t.error ? 'sb:bg-[#c70a24]' : 'sb:bg-[#1a1a1a]',
+              t.error ? 'sb:bg-[#dc2626]' : 'sb:bg-[#0d0c1d] sb:ring-1 sb:ring-white/10',
             )}
           >
             {t.error && <Icon name="alert" className="sb:h-4 sb:w-4" />}
