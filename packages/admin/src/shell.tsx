@@ -559,6 +559,7 @@ function TopBar({ onMenu, saveBar }: { onMenu: () => void; saveBar: SaveBarState
           <Menu
             variant="tertiary"
             ariaLabel={t.shell.account}
+            buttonClassName="sb:text-white sb:hover:bg-white/10"
             label={
               <span className="sb:flex sb:items-center sb:gap-2 sb:text-white">
                 <span className="sb:grid sb:h-7 sb:w-7 sb:place-items-center sb:overflow-hidden sb:rounded-lg sb:bg-[image:var(--sba-gradient)] sb:text-xs sb:font-bold sb:text-white">

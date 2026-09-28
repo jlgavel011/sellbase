@@ -653,9 +653,12 @@ export function Menu({
   variant = 'secondary',
   align = 'right',
   ariaLabel,
+  buttonClassName,
 }: {
   label: ReactNode;
   ariaLabel?: string;
+  /** Extra classes for the trigger, e.g. light text on the dark top bar. */
+  buttonClassName?: string;
   items: (
     { label: ReactNode; icon?: IconName; onClick: () => void; destructive?: boolean } | false | null
   )[];
@@ -687,7 +690,7 @@ export function Menu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={ariaLabel}
-        className={buttonClass(variant)}
+        className={cx(buttonClass(variant), buttonClassName)}
         onClick={() => setOpen(!open)}
       >
         {label}
@@ -697,7 +700,8 @@ export function Menu({
         <div
           role="menu"
           className={cx(
-            'sb:absolute sb:z-30 sb:mt-1 sb:min-w-48 sb:rounded-[var(--sba-card-radius)] sb:bg-white sb:p-1.5 sb:shadow-[var(--sba-shadow-popover)]',
+            // Explicit text color: the menu may open inside a dark surface (the top bar).
+            'sb:absolute sb:z-30 sb:mt-1 sb:min-w-56 sb:rounded-[var(--sba-card-radius)] sb:bg-white sb:p-1.5 sb:text-[var(--sba-text-strong)] sb:shadow-[var(--sba-shadow-popover)]',
             align === 'right' ? 'sb:right-0' : 'sb:left-0',
           )}
         >
