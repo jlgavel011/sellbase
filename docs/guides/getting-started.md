@@ -2,6 +2,11 @@
 
 Sellbase se instala dentro de tu proyecto: tu repo y tu Supabase. No hay servidores de Sellbase de por medio.
 
+Funciona en **cualquier sitio**:
+
+- Next.js o Vite + React: usa componentes de React.
+- HTML puro, WordPress, Webflow, Vue, Svelte, Astro, Angular…: usa etiquetas `<sellbase-*>` que se agregan con un solo `<script>`, y el admin se entrega como página estática en `/admin/`.
+
 ## Instalar
 
 ```bash

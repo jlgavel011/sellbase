@@ -21,15 +21,15 @@ const copies = [
   ['docs/llms.txt', 'docs/llms.txt'],
   ['docs/llms-full.txt', 'docs/llms-full.txt'],
   ['CHANGELOG.md', 'CHANGELOG.md'],
+  // Sites without React: the web components bundle and the static admin.
+  ['packages/web/dist/sellbase.js', 'web/sellbase.js'],
+  ['packages/admin/dist/standalone', 'admin-standalone'],
 ];
 
 await rm(assets, { recursive: true, force: true });
 for (const [from, to] of copies) {
   const src = resolve(root, from);
-  if (!existsSync(src))
-    throw new Error(
-      `Missing ${from}. Build @sellbase/api first (pnpm --filter @sellbase/api build).`,
-    );
+  if (!existsSync(src)) throw new Error(`Missing ${from}. Build the packages first (pnpm build).`);
   await mkdir(dirname(resolve(assets, to)), { recursive: true });
   await cp(src, resolve(assets, to), { recursive: true });
 }

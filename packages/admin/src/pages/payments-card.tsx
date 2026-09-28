@@ -2,6 +2,7 @@ import { formatMoney } from '@sellbase/sdk';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useAdmin } from '../context.js';
+import { useRouter } from '../router.js';
 import { Alert, Badge, Button, Card, ErrorAlert, Field, Input } from '../ui.js';
 
 interface StripeConfig {
@@ -28,6 +29,7 @@ const isLiveKey = (key: string) => /^(sk|rk)_live_/.test(key.trim());
 /** Settings → Payments: test or live Stripe, account status, webhook and the live check. */
 export function PaymentsCard() {
   const { sellbase, t, config: adminConfig } = useAdmin();
+  const { absolute } = useRouter();
   const p = t.settings.pay;
   const qc = useQueryClient();
   const locale = adminConfig.locale === 'en' ? 'en-US' : 'es-MX';
@@ -73,7 +75,7 @@ export function PaymentsCard() {
     mutationFn: () =>
       sellbase.admin.integrations.liveCheck({
         confirm: true,
-        success_url: `${window.location.origin}${adminConfig.basePath ?? '/admin'}/settings`,
+        success_url: absolute('/settings'),
       }),
     onSuccess: () => {
       setConfirmingCheck(false);

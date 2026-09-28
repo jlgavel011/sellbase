@@ -6,7 +6,9 @@
 
 **ES:** Kit de comercio open source y AI-first que vive dentro de tu proyecto (tu repo + tu Supabase). Tu agente de IA configura y opera la tienda vía MCP.
 
-## Quick start (Next.js + Supabase)
+## Quick start (any site + Supabase)
+
+Works with Next.js and Vite + React (React components) and with **any other site**: plain HTML, WordPress, Vue, Svelte, Astro, Angular (`<sellbase-*>` web components, one `<script>`, static admin).
 
 ```bash
 npx supabase start              # or use a hosted project with --supabase-url/--anon-key/--service-role-key/--db-url

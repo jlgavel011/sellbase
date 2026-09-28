@@ -76,7 +76,8 @@ export function SettingsTabs() {
 // ── Team ────────────────────────────────────────────────────────────────────
 
 export function TeamPage() {
-  const { sellbase, t, session, config } = useAdmin();
+  const { sellbase, t, session } = useAdmin();
+  const { absolute } = useRouter();
   const qc = useQueryClient();
   const date = useDateTime();
   const team = useQuery({
@@ -93,7 +94,7 @@ export function TeamPage() {
       sellbase.admin.team.invite({
         email,
         role,
-        redirect_to: `${window.location.origin}${config.basePath ?? '/admin'}`,
+        redirect_to: absolute('/'),
       }),
     onSuccess: (m) => {
       setNotice(t.team.invited(m.email));

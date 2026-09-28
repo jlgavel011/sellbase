@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sitio estático · Sellbase</title>
+    <link rel="stylesheet" href="/site.css" />
+    <script src="/sellbase/config.js"></script>
+    <script type="module" src="/sellbase/sellbase.js"></script>
+  </head>
+  <body>
+    <header class="nav">
+      <a href="/" class="brand">Mi landing en HTML</a>
+      <nav aria-label="Principal">
+        <a href="/pedido.html">Mi pedido</a> <sellbase-cart-button></sellbase-cart-button>
+      </nav>
+    </header>
+    <main>
+      <section class="hero">
+        <h1>Playera Sellbase</h1>
+        <p>Una landing hecha a mano, sin React ni build. Sellbase solo agrega etiquetas.</p>
+        <sellbase-add-to-cart product="playera-sellbase"></sellbase-add-to-cart>
+      </section>
+      <section aria-labelledby="mas">
+        <h2 id="mas">Más productos</h2>
+        <sellbase-product-grid limit="8"></sellbase-product-grid>
+      </section>
+    </main>
+  </body>
+</html>

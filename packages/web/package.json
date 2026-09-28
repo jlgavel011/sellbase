@@ -1,0 +1,27 @@
+{
+  "name": "@sellbase/web",
+  "version": "0.0.0",
+  "description": "Sellbase storefront as Web Components: works in any site (HTML, WordPress, Vue, Svelte, Astro, Angular…).",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./sellbase.js": "./dist/sellbase.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@sellbase/sdk": "workspace:*",
+    "esbuild": "^0.28.2",
+    "jsdom": "^30.1.1"
+  }
+}

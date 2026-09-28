@@ -19,6 +19,7 @@ Hoy cualquiera genera una landing con IA en minutos, pero casi nadie vende desde
 3. **Siempre el mismo núcleo**: el mismo esquema, las mismas APIs y el mismo admin en cada instalación; el frente es 100% libre.
 4. **Defaults perfectos, todo sobrescribible**: funciona sin configurar; al ser open source, todo se puede cambiar.
 5. **Seguro por defecto**: RLS en todo, secretos en Vault, pedidos nacen del webhook.
+6. **Universal**: funciona en cualquier sitio: HTML puro, WordPress, Webflow, Vue, Svelte, Astro, Angular, Next.js o Vite. El backend son servicios HTTP en Supabase. En el navegador se integra con Web Components (`@sellbase/web`, un `<script>`), y el admin se entrega como página estática. React es una opción, no un requisito.
 
 ### Qué NO es (non-goals v1)
 - No es un constructor de sitios ni un theme engine: el frente lo genera la IA del usuario.

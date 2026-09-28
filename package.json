@@ -21,7 +21,8 @@
     "docs:build": "node scripts/build-docs.mjs",
     "docs:check": "node scripts/build-docs.mjs --check",
     "acceptance": "node scripts/acceptance.mjs",
-    "acceptance:vite": "node scripts/acceptance-vite.mjs"
+    "acceptance:vite": "node scripts/acceptance-vite.mjs",
+    "acceptance:static": "node scripts/acceptance-static.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

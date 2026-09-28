@@ -88,7 +88,45 @@ const INTENTS: { match: RegExp; components: string[]; pages: string[]; why: stri
 ];
 
 /** Which registry components to add for what the owner wants to sell, and the command. */
-export function scaffoldStorefront(intent: string) {
+interface ReactPlan {
+  components: { name: string; description: string }[];
+  command: string;
+  pages: string[];
+  why: string[];
+  next_steps: string[];
+}
+interface WebPlan {
+  elements: string[];
+  head: string;
+  pages: string[];
+  why: string[];
+  next_steps: string[];
+}
+
+const WEB_ELEMENTS: Record<string, string> = {
+  'product-grid': '<sellbase-product-grid limit="12"></sellbase-product-grid>',
+  'product-carousel':
+    '<sellbase-product-grid collection="<slug>" limit="8"></sellbase-product-grid>',
+  'product-detail': '<sellbase-add-to-cart product="<slug>"></sellbase-add-to-cart>',
+  'product-card': '<sellbase-add-to-cart product="<slug>"></sellbase-add-to-cart>',
+  'cart-drawer': '<sellbase-cart-button></sellbase-cart-button>',
+  'cart-page': '<sellbase-cart-button></sellbase-cart-button>',
+  checkout: '<sellbase-checkout success-url="/gracias.html"></sellbase-checkout>',
+  'order-status':
+    '<sellbase-checkout-return></sellbase-checkout-return> and <sellbase-order-lookup></sellbase-order-lookup>',
+  'download-page': '<sellbase-download></sellbase-download>',
+};
+
+export function scaffoldStorefront(intent: string, framework?: 'react'): ReactPlan;
+export function scaffoldStorefront(intent: string, framework: 'web'): WebPlan;
+export function scaffoldStorefront(
+  intent: string,
+  framework?: 'react' | 'web',
+): ReactPlan | WebPlan;
+export function scaffoldStorefront(
+  intent: string,
+  framework: 'react' | 'web' = 'react',
+): ReactPlan | WebPlan {
   const text = normalize(intent);
   const matched = INTENTS.filter((i) => i.match.test(text));
   const chosen = matched.length ? matched : [INTENTS[2] as (typeof INTENTS)[number]];
@@ -108,6 +146,20 @@ export function scaffoldStorefront(intent: string) {
     name,
     description: byName.get(name)?.description ?? '',
   }));
+  if (framework === 'web') {
+    return {
+      elements: [...new Set([...names].flatMap((n) => (WEB_ELEMENTS[n] ? [WEB_ELEMENTS[n]] : [])))],
+      head: '<script src="/sellbase/config.js"></script><script type="module" src="/sellbase/sellbase.js"></script>',
+      pages: [...new Set(chosen.flatMap((i) => i.pages))],
+      why: chosen.map((i) => i.why),
+      next_steps: [
+        'Add the two <script> tags to every page (or the layout/template).',
+        'Place the elements inside the existing design; theme them with --sellbase-* CSS variables.',
+        'Set productUrl/checkoutUrl/successUrl in sellbase/config.js to match the site pages.',
+        'Follow the add-storefront skill (section "Sites without React").',
+      ],
+    };
+  }
   return {
     components,
     command: `npx sellbase add ${[...names].filter((n) => n !== 'theme').join(' ')}`,

@@ -1,9 +1,39 @@
 ---
 name: sellbase-add-storefront
-description: Integrate Sellbase storefront components (catalog, product page, cart, checkout, return page, order lookup, downloads, SEO) into the site's existing design, in Next.js or Vite + React. Use when the site needs to show or sell products or services.
+description: Integrate the Sellbase storefront (catalog, product page, cart, checkout, return page, order lookup, downloads, SEO) into the site's existing design, in ANY site - plain HTML, WordPress, Vue, Svelte, Astro, Angular (web components) or Next.js / Vite + React (React components). Use when the site needs to show or sell products or services.
 ---
 
 # Add the storefront
+
+## Sites without React: web components (any HTML)
+
+Plain HTML, WordPress themes, Webflow embeds, Vue, Svelte, Astro, Angular, etc. `sellbase init` copied `sellbase/sellbase.js`, `sellbase/config.js` and the static admin in `admin/`, into the folder the site serves.
+
+1. In every page's `<head>` (or the layout/template):
+   ```html
+   <script src="/sellbase/config.js"></script>
+   <script type="module" src="/sellbase/sellbase.js"></script>
+   ```
+2. Place the elements where they belong in the existing design:
+
+   | Element                                                                           | Where                                                                                                           |
+   | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+   | `<sellbase-add-to-cart product="<slug>"></sellbase-add-to-cart>`                  | Next to each product (price, options, quantity, button; services show times)                                    |
+   | `<sellbase-price product="<slug>"></sellbase-price>`                              | Inline price anywhere                                                                                           |
+   | `<sellbase-product-grid collection="<slug>" limit="12"></sellbase-product-grid>`  | Catalog sections                                                                                                |
+   | `<sellbase-cart-button></sellbase-cart-button>`                                   | Header or nav. The cart drawer is added automatically                                                           |
+   | `<sellbase-checkout consent="…" success-url="/gracias.html"></sellbase-checkout>` | A checkout page. Use `consent` for required confirmations such as "Confirmo que soy mayor de 18 años" (alcohol) |
+   | `<sellbase-checkout-return></sellbase-checkout-return>`                           | The thank-you page (`success-url`)                                                                              |
+   | `<sellbase-order-lookup></sellbase-order-lookup>`                                 | "Mi pedido" page                                                                                                |
+   | `<sellbase-download></sellbase-download>`                                         | Downloads page (`?token=`). Then set `download_page_url` to `https://<site>/descargas.html?token={token}`       |
+
+3. **Theme with CSS variables** on `:root` or on the element: `--sellbase-primary`, `--sellbase-primary-text`, `--sellbase-text`, `--sellbase-muted`, `--sellbase-bg`, `--sellbase-surface`, `--sellbase-border`, `--sellbase-radius`, `--sellbase-danger`, `--sellbase-success`. Fonts and text color are inherited. Fine-tune with `::part(button)`, `::part(input)`, `::part(panel)`. The page's own CSS cannot break them (Shadow DOM).
+4. **Links:** in `sellbase/config.js` set `productUrl` (e.g. `/productos/{slug}.html`), `checkoutUrl` and `successUrl`; `locale: 'en'` for English.
+5. **Your own buttons:** `window.Sellbase.cart.add(variantId, qty)`, `Sellbase.cart.open()` and `Sellbase.onChange(fn)`.
+6. **Admin:** the site serves it at `/admin/`, with `#/` routes, so it needs no rewrites. Edit `admin/config.js` for theme and logo.
+7. Verify: add to cart → checkout reaches Stripe; then `test_purchase`.
+
+## React sites (Next.js, Vite)
 
 Start with `storefront_scaffold` and the owner's intent (e.g. "tienda de playeras", "citas para mi consultorio"). It returns the components to add and the `npx sellbase add …` command.
 

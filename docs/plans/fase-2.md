@@ -97,14 +97,26 @@ El usuario pausó los evals. Antes se termina, en este orden:
      - Hooks.
      - e2e en el playground: colección, carrusel, variantes, página de carrito con descuento, regreso de pago con webhook firmado (pendiente → pagado), búsqueda de pedido, descarga, sitemap y JSON-LD.
      - Revisión de accesibilidad con axe.
-4. ✅ **Antes de 2g, bloqueo de webhooks a redes privadas** (`net-guard.ts`, ADR 0010):
+4. ✅ **2f-2. Universal: cualquier sitio o framework** (ADR 0012; pendiente: consentimiento exigido del lado del servidor, que requiere migración 0009) (principio 6 del SPEC; acordado 2026-09-27: "es parte de la esencia de Sellbase").
+   - **`@sellbase/web`:** Web Components sobre `@sellbase/sdk`, sin React, con Shadow DOM y tema por variables CSS, publicados como un solo archivo ESM/IIFE.
+     - Etiquetas: `sellbase-add-to-cart` (variantes, cantidad, agotado, citas), `sellbase-price`, `sellbase-product-grid`, `sellbase-cart-button`, `sellbase-cart-drawer`, `sellbase-checkout` (con casilla de confirmación configurable, p. ej. 18+), `sellbase-checkout-return`, `sellbase-order-lookup` y `sellbase-download`.
+     - Estado del carrito compartido con los componentes React (misma llave de `localStorage`). Configuración con `data-*` en el `<script>` o con `Sellbase.configure()`.
+   - **Admin estático:** `@sellbase/admin` también se compila como página independiente (`admin/index.html` + `config.js`). Usa rutas con hash para no necesitar reescrituras en el hosting.
+   - **`sellbase init` universal:**
+     - Next.js y Vite + React como hoy.
+     - Cualquier otro proyecto con `package.json` recibe `@sellbase/web` por npm.
+     - Un sitio sin `package.json` recibe `sellbase/sellbase.js`, `sellbase/config.js` y el admin en `admin/`.
+     - En todos los casos se escriben los archivos del agente e instrucciones para pegar las etiquetas en el diseño existente.
+   - **Pruebas:** unitarias de los componentes; e2e de un sitio HTML puro (carrito, pago, regreso con webhook firmado, admin con hash); aceptación "sitio estático limpio → init → agente → compra de prueba".
+   - **Primer caso real:** la landing estática de Mezcal 7 Deseos, en una rama `sellbase`.
+5. ✅ **Antes de 2g, bloqueo de webhooks a redes privadas** (`net-guard.ts`, ADR 0010):
    - Se valida al guardar y al enviar; se resuelve DNS y no se siguen redirecciones.
    - En local, `SELLBASE_WEBHOOKS_ALLOW_PRIVATE=true`; el doctor falla si esa variable queda activa en la nube.
-5. **2g. Instalación en un Supabase en la nube**: `sellbase init` contra un proyecto real (migraciones, functions, secretos, cron) y compra de prueba.
+6. **2g. Instalación en un Supabase en la nube**: `sellbase init` contra un proyecto real (migraciones, functions, secretos, cron) y compra de prueba.
    - **Acordado (2026-09-27):**
      - Proyecto de Supabase **nuevo** creado por el usuario solo para esta prueba.
      - La llave live de Stripe **no va en archivos**: el usuario la conecta desde el admin (Ajustes → Pagos), queda en Vault y se prueba el flujo real con la verificación live.
-6. **2h. Evals del agente**: se construyen después. **Solo corren cuando el usuario lo pide**; nada automático ni semanal en CI.
+7. **2h. Evals del agente**: se construyen después. **Solo corren cuando el usuario lo pide**; nada automático ni semanal en CI.
 
 Evals (cuando toque): `evals/` con 10+ escenarios (tienda física, curso digital, consultorio con citas, mixta, errores recuperables), agente real en un proyecto limpio, verificador vía `test_purchase` y `doctor`, métricas de éxito, tool calls y tiempo. Meta ≥ 80 %.
 

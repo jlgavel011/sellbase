@@ -68,6 +68,10 @@ jobs:
           echo "SUPABASE_SERVICE_ROLE_KEY=$(pnpm exec supabase status -o env | sed -nE 's/^SERVICE_ROLE_KEY="?([^"]*)"?/\1/p')" >> $GITHUB_ENV
       - run: pnpm --filter @sellbase/playground exec playwright install --with-deps chromium
       - run: pnpm test:e2e
+      - name: Install on a plain HTML site and on Vite (no framework / Vite acceptance)
+        run: |
+          node scripts/acceptance-static.mjs
+          node scripts/acceptance-vite.mjs
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

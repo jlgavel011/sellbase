@@ -758,11 +758,19 @@ export function createSellbaseMcpServer(sellbase: Sellbase, options: { version?:
     {
       title: 'Plan the storefront',
       description:
-        'Given what the owner wants to sell (e.g. "tienda de playeras", "agenda de citas para mi consultorio", "vender un curso"), returns which storefront components to add, the `npx sellbase add …` command, suggested pages and next steps. Run the command in the project, then follow the add-storefront skill.',
-      inputSchema: { intent: z.string().min(2).max(500) },
+        'Given what the owner wants to sell (e.g. "tienda de playeras", "agenda de citas para mi consultorio", "vender un curso"), returns which storefront components to add (React) or which <sellbase-*> elements to place (any other site, framework "web"), suggested pages and next steps. Run the command in the project, then follow the add-storefront skill.',
+      inputSchema: {
+        intent: z.string().min(2).max(500),
+        framework: z
+          .enum(['react', 'web'])
+          .default('react')
+          .describe(
+            'react: Next.js or Vite + React. web: any other site (plain HTML, WordPress, Vue, Astro…) using <sellbase-*> web components.',
+          ),
+      },
       annotations: { readOnlyHint: true },
     },
-    ({ intent }) => run(async () => scaffoldStorefront(intent)),
+    ({ intent, framework }) => run(async () => scaffoldStorefront(intent, framework)),
   );
 
   server.registerTool(

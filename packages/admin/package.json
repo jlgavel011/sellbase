@@ -12,13 +12,14 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./styles.css": "./dist/styles.css"
+    "./styles.css": "./dist/styles.css",
+    "./standalone/*": "./dist/standalone/*"
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && tailwindcss -i src/styles.css -o dist/styles.css --minify",
+    "build": "tsc -p tsconfig.build.json && tailwindcss -i src/styles.css -o dist/styles.css --minify && node build-standalone.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -36,6 +37,7 @@
     "@types/react-dom": "^19.3.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "tailwindcss": "^4.3.3"
+    "tailwindcss": "^4.3.3",
+    "esbuild": "^0.28.2"
   }
 }

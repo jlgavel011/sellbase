@@ -40,3 +40,11 @@ describe('storefront_scaffold', () => {
     expect(plan.pages).toContain('/products/[slug]');
   });
 });
+
+describe('storefront_scaffold for sites without React', () => {
+  it('returns web component tags and the script tags', () => {
+    const plan = scaffoldStorefront('landing para vender mezcal', 'web');
+    expect(plan.elements.join(' ')).toContain('<sellbase-add-to-cart');
+    expect(plan.head).toContain('/sellbase/sellbase.js');
+  });
+});

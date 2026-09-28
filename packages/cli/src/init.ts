@@ -227,6 +227,38 @@ async function writeFrontendFiles(cwd: string, project: ProjectInfo) {
   await trackFiles(cwd, written);
 }
 
+/**
+ * Any site without React (plain HTML, WordPress, Vue, Astro…): the web components bundle
+ * and the static admin, copied into the folder the site serves. config.js files hold only
+ * public values (URL and anon key) and are the owner's to edit.
+ */
+export async function writeWebFiles(
+  cwd: string,
+  project: ProjectInfo,
+  conn: { apiUrl: string; anonKey: string; sellbaseUrl: string },
+) {
+  const base = project.publicDir ? `${project.publicDir}/` : '';
+  const tracked: [string, string][] = [];
+  const copy = async (source: string, target: string) => {
+    await mkdir(dirname(join(cwd, target)), { recursive: true });
+    await cp(join(assetsDir, source), join(cwd, target));
+    tracked.push([target, source]);
+  };
+  await copy('web/sellbase.js', `${base}sellbase/sellbase.js`);
+  for (const file of ['index.html', 'admin.js', 'styles.css'])
+    await copy(`admin-standalone/${file}`, `${base}admin/${file}`);
+  await trackFiles(cwd, tracked);
+  await writeIfMissing(
+    join(cwd, `${base}sellbase/config.js`),
+    `// Sellbase for this site. Public values only (never the service role key).\nwindow.SellbaseConfig = {\n  url: ${JSON.stringify(conn.sellbaseUrl)},\n  anonKey: ${JSON.stringify(conn.anonKey)},\n  locale: 'es',\n  // productUrl: '/products/{slug}', checkoutUrl: '/checkout', successUrl: '/gracias',\n};\n`,
+  );
+  await writeIfMissing(
+    join(cwd, `${base}admin/config.js`),
+    `// Store admin. Public values only (never the service role key).\nwindow.SellbaseAdminConfig = {\n  supabaseUrl: ${JSON.stringify(conn.apiUrl)},\n  supabaseAnonKey: ${JSON.stringify(conn.anonKey)},\n  locale: 'es',\n  // theme: { primary: '#181b3c' },\n};\n`,
+  );
+  return base;
+}
+
 export async function init(cwd: string, options: InitOptions) {
   const started = Date.now();
   console.log(bold(`\n${BRAND.name} init\n`));
@@ -235,7 +267,9 @@ export async function init(cwd: string, options: InitOptions) {
   log.step(
     project.framework === 'vite-react'
       ? `Vite + React project (${project.packageManager})`
-      : `Next.js project (${project.appDir}/, ${project.packageManager})`,
+      : project.framework === 'web'
+        ? `Website without React (${project.publicDir ? `${project.publicDir}/` : 'root'} is served as-is)`
+        : `Next.js project (${project.appDir}/, ${project.packageManager})`,
   );
 
   const conn = await resolveSupabase(cwd, options);
@@ -296,31 +330,47 @@ export async function init(cwd: string, options: InitOptions) {
         '# Sellbase agent credentials (secret; used by `npx sellbase mcp`). Never commit this file.',
     },
   );
-  // Public values only: the browser gets the anon key, never the service role key.
-  const prefix = project.framework === 'vite-react' ? 'VITE_' : 'NEXT_PUBLIC_';
-  await upsertEnvFile(join(cwd, '.env.local'), {
-    [`${prefix}SUPABASE_URL`]: conn.apiUrl,
-    [`${prefix}SUPABASE_ANON_KEY`]: conn.anonKey,
-    [`${prefix}SELLBASE_URL`]: sellbaseUrl,
-  });
-  await ensureGitignore(cwd, ['.env.sellbase', '.env.local']);
-  log.step('Wrote .env.local (public keys) and .env.sellbase (agent token, gitignored)');
-
-  if (!options.skipInstall) {
-    await installPackages(cwd, project, options);
-    log.step('Installed @sellbase/react, @sellbase/admin and the sellbase CLI');
-  }
-
-  await writeFrontendFiles(cwd, project);
-  log.step(
-    project.framework === 'vite-react'
-      ? 'Added storefront components (src/components/sellbase) and the admin page (src/sellbase/admin-page.tsx)'
-      : 'Added storefront components (components/sellbase) and the admin (/admin)',
-  );
-  if (project.framework === 'vite-react')
-    log.info(
-      'Mount the admin at /admin: see the comment at the top of src/sellbase/admin-page.tsx (your agent can do it).',
+  if (project.framework === 'web') {
+    await ensureGitignore(cwd, ['.env.sellbase']);
+    log.step('Wrote .env.sellbase (agent token, gitignored)');
+    const where = await writeWebFiles(cwd, project, {
+      apiUrl: conn.apiUrl,
+      anonKey: conn.anonKey,
+      sellbaseUrl,
+    });
+    log.step(
+      `Added ${where}sellbase/ (web components + config.js) and ${where}admin/ (static admin)`,
     );
+    log.info(
+      `Add to every page's <head>: <script src="/sellbase/config.js"></script><script type="module" src="/sellbase/sellbase.js"></script>. Your agent can place the <sellbase-*> elements (skill add-storefront).`,
+    );
+  } else {
+    // Public values only: the browser gets the anon key, never the service role key.
+    const prefix = project.framework === 'vite-react' ? 'VITE_' : 'NEXT_PUBLIC_';
+    await upsertEnvFile(join(cwd, '.env.local'), {
+      [`${prefix}SUPABASE_URL`]: conn.apiUrl,
+      [`${prefix}SUPABASE_ANON_KEY`]: conn.anonKey,
+      [`${prefix}SELLBASE_URL`]: sellbaseUrl,
+    });
+    await ensureGitignore(cwd, ['.env.sellbase', '.env.local']);
+    log.step('Wrote .env.local (public keys) and .env.sellbase (agent token, gitignored)');
+
+    if (!options.skipInstall) {
+      await installPackages(cwd, project, options);
+      log.step('Installed @sellbase/react, @sellbase/admin and the sellbase CLI');
+    }
+
+    await writeFrontendFiles(cwd, project);
+    log.step(
+      project.framework === 'vite-react'
+        ? 'Added storefront components (src/components/sellbase) and the admin page (src/sellbase/admin-page.tsx)'
+        : 'Added storefront components (components/sellbase) and the admin (/admin)',
+    );
+    if (project.framework === 'vite-react')
+      log.info(
+        'Mount the admin at /admin: see the comment at the top of src/sellbase/admin-page.tsx (your agent can do it).',
+      );
+  }
 
   await writeAgentFiles(cwd);
   log.step(

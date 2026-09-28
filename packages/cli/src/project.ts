@@ -12,7 +12,7 @@ export interface SupabaseConnection {
   local: boolean;
 }
 
-export type Framework = 'next-app' | 'vite-react';
+export type Framework = 'next-app' | 'vite-react' | 'web';
 
 export interface ProjectInfo {
   framework: Framework;
@@ -20,6 +20,11 @@ export interface ProjectInfo {
   appDir: string;
   /** Prefix for copied storefront components: '' (components/sellbase) or 'src/'. */
   componentsBase: string;
+  /**
+   * Any other site (plain HTML, WordPress theme, Vue, Svelte, Astro, Angular…): the folder
+   * served as-is, where sellbase/ and admin/ are copied ('' = project root).
+   */
+  publicDir: string;
   packageManager: 'pnpm' | 'npm' | 'yarn' | 'bun';
 }
 
@@ -44,16 +49,33 @@ export async function detectProject(cwd: string): Promise<ProjectInfo> {
         'Sellbase needs the Next.js App Router (app/ or src/app/).',
       );
     }
-    return { framework: 'next-app', appDir, componentsBase: '', packageManager };
+    return {
+      framework: 'next-app',
+      appDir,
+      componentsBase: '',
+      publicDir: 'public',
+      packageManager,
+    };
   }
   if (deps.vite && deps.react) {
     // Lovable, Bolt and most AI app builders produce Vite + React projects.
-    return { framework: 'vite-react', appDir: 'src', componentsBase: 'src/', packageManager };
+    return {
+      framework: 'vite-react',
+      appDir: 'src',
+      componentsBase: 'src/',
+      publicDir: 'public',
+      packageManager,
+    };
   }
-  throw cliError(
-    'Sellbase supports Next.js (App Router) and Vite + React projects.',
-    'Run it in the root of one of those projects (the folder with package.json).',
-  );
+  // Everything else: web components + static admin, served from the public folder.
+  const publicDir = ['public', 'static'].find((d) => existsSync(join(cwd, d))) ?? '';
+  if (!existsSync(join(cwd, 'package.json')) && !existsSync(join(cwd, 'index.html'))) {
+    throw cliError(
+      'No website found in this folder.',
+      'Run it in the root of your site: the folder with index.html (plain HTML) or package.json.',
+    );
+  }
+  return { framework: 'web', appDir: '', componentsBase: '', publicDir, packageManager };
 }
 
 /**

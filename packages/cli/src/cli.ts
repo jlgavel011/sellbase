@@ -49,6 +49,11 @@ program
   .option('--overwrite', 'replace files you already have', false)
   .action(async (names: string[], opts: { overwrite: boolean }) => {
     const project = await detectProject(process.cwd()).catch(() => null);
+    if (project?.framework === 'web')
+      throw cliError(
+        'This site uses the Sellbase web components: every <sellbase-*> element is already in sellbase/sellbase.js.',
+        'Place the elements in your HTML (skill add-storefront). `sellbase add` copies React components.',
+      );
     await addComponents(process.cwd(), names, {
       overwrite: opts.overwrite,
       base: project?.componentsBase ?? '',

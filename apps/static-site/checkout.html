@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pagar</title>
+    <link rel="stylesheet" href="/site.css" />
+    <script src="/sellbase/config.js"></script>
+    <script type="module" src="/sellbase/sellbase.js"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Pagar</h1>
+      <sellbase-checkout
+        consent="Confirmo que soy mayor de 18 años"
+        success-url="/gracias.html"
+      ></sellbase-checkout>
+    </main>
+  </body>
+</html>

@@ -36,8 +36,8 @@ export async function createOwner() {
   return { email, password };
 }
 
-export async function signIn(page: Page, email: string, password: string) {
-  await page.goto('/admin');
+export async function signIn(page: Page, email: string, password: string, url = '/admin') {
+  await page.goto(url);
   await page.getByLabel('Correo').fill(email);
   await page.getByLabel('Contraseña').fill(password);
   await page.getByRole('button', { name: 'Entrar' }).click();

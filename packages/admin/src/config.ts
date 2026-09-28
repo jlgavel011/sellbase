@@ -14,6 +14,12 @@ export interface AdminConfig {
   apiUrl?: string;
   /** Where the admin is mounted. Default `/admin`. */
   basePath?: string;
+  /**
+   * 'path' (default): /admin/orders, needs the host to serve the admin for every
+   * /admin/* URL. 'hash': /admin/#/orders, works on any static host with no rewrites
+   * (the standalone admin uses it).
+   */
+  routing?: 'path' | 'hash';
   locale?: 'es' | 'en';
   /** Override any label, e.g. { nav: { orders: 'Ventas' } }. */
   texts?: DeepPartial<Texts>;

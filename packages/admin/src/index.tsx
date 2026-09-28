@@ -41,7 +41,7 @@ export function SellbaseAdmin({ config }: { config: AdminConfig }) {
   return (
     <div className="sb-admin" style={style}>
       <AdminProvider config={config}>
-        <Router basePath={config.basePath ?? '/admin'}>
+        <Router basePath={config.basePath ?? '/admin'} mode={config.routing ?? 'path'}>
           <Gate />
         </Router>
       </AdminProvider>

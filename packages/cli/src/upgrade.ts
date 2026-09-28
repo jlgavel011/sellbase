@@ -202,7 +202,7 @@ export async function upgrade(cwd: string, options: UpgradeOptions) {
     version: VERSION,
     files: { ...latest.files, ...manifest.files },
   });
-  if (!options.skipInstall) {
+  if (!options.skipInstall && project.framework !== 'web') {
     await installPackages(cwd, project, options);
     log.step('Updated @sellbase packages');
   }
