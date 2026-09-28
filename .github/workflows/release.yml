@@ -7,7 +7,7 @@ on:
 
 permissions:
   contents: write
-  id-token: write # npm provenance
+  id-token: write # npm provenance and the MCP registry login
 
 jobs:
   publish:
@@ -35,6 +35,14 @@ jobs:
         run: pnpm -r --filter "./packages/*" publish --access public --no-git-checks
         env:
           NPM_CONFIG_PROVENANCE: 'true'
+      - name: Publish to the MCP registry (io.github.jlgavel011/sellbase)
+        if: env.NODE_AUTH_TOKEN != ''
+        run: |
+          curl -sL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher login github-oidc
+          # The registry checks the npm package, which can take a moment to show up.
+          for i in 1 2 3 4 5; do ./mcp-publisher publish && exit 0; sleep 30; done
+          exit 1
       - name: GitHub release
         uses: softprops/action-gh-release@v2
         with:
