@@ -9,6 +9,7 @@
  * the public packages to npm (needs the NPM_TOKEN secret) and creates a GitHub release.
  */
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 
 const version = process.argv[2];
@@ -29,4 +30,5 @@ writeFileSync(
   versionFile,
   readFileSync(versionFile, 'utf8').replace(/VERSION = '[^']+'/, `VERSION = '${version}'`),
 );
+execFileSync('node', [join(repo, 'scripts/sync-plugin.mjs')], { stdio: 'inherit' });
 console.log(`\nNext: update CHANGELOG.md, then commit, tag v${version} and push --follow-tags.`);

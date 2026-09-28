@@ -1,6 +1,6 @@
 {
   "name": "@sellbase/core",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Sellbase core: Zod schemas, types, state machines and pricing. Pure, no IO.",
   "license": "MIT",
   "type": "module",

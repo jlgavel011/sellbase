@@ -8,3 +8,10 @@ CLAUDE.md
 **/next-env.d.ts
 supabase/functions/**/index.js
 packages/cli/assets
+
+# Written by scripts/sync-plugin.mjs
+plugins/sellbase/skills/
+plugins/sellbase/.claude-plugin/plugin.json
+.claude-plugin/marketplace.json
+server.json
+site-dist/

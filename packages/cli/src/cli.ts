@@ -210,7 +210,19 @@ program
   .description('Start the MCP server over stdio (configured in .mcp.json by init)')
   .action(async () => {
     const { runStdioServer } = await import('@sellbase/mcp');
-    const { url, token: apiToken, anonKey } = await readSellbaseEnv(process.cwd());
+    // Missing credentials are fine: the server starts and tells the agent how to install.
+    const {
+      url,
+      token: apiToken,
+      anonKey,
+    } = await readSellbaseEnv(
+      // Claude Code plugins run the server with the project folder in CLAUDE_PROJECT_DIR.
+      process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
+    ).catch(() => ({
+      url: undefined,
+      token: undefined,
+      anonKey: undefined,
+    }));
     await runStdioServer({
       url,
       token: apiToken,

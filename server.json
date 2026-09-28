@@ -1,0 +1,50 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.jlgavel011/sellbase",
+  "title": "Sellbase",
+  "description": "Open source commerce in your own Supabase: products, checkout, orders, inventory, discounts and bookings, run by your AI agent.",
+  "repository": {
+    "url": "https://github.com/jlgavel011/sellbase",
+    "source": "github"
+  },
+  "websiteUrl": "https://jlgavel011.github.io/sellbase/",
+  "version": "0.3.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "sellbase",
+      "version": "0.3.1",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "SELLBASE_URL",
+          "description": "Your store API: <SUPABASE_URL>/functions/v1/sellbase-api. `npx sellbase init` writes it to .env.sellbase, which the server also reads.",
+          "isRequired": true,
+          "isSecret": false
+        },
+        {
+          "name": "SELLBASE_API_TOKEN",
+          "description": "Agent token (sb_live_…) with the scopes the owner granted. Create one with `npx sellbase token create` or in Admin → Settings → AI agents.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "SUPABASE_ANON_KEY",
+          "description": "Supabase anon/publishable key (public). Needed for storefront tools on hosted projects.",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

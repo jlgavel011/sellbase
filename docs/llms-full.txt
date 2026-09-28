@@ -58,6 +58,16 @@ npx sellbase doctor         # checklist with the next step for anything missing
 npx sellbase upgrade        # new versions: dry run, backup, migrations, functions, components
 ```
 
+### With Claude Code
+
+```
+/plugin marketplace add jlgavel011/sellbase
+/plugin install sellbase@sellbase
+/sellbase:setup I sell handmade candles, $250 MXN each, shipping $120
+```
+
+The plugin brings the Sellbase skills and MCP server to every project. `/sellbase:setup` installs Sellbase, creates your products, connects Stripe in test mode and runs a test purchase. Any other MCP client can use `npx sellbase mcp` (listed in the MCP registry as `io.github.jlgavel011/sellbase`).
+
 Going live: [deploy guide](docs/guides/deploy.md) and [live payments with Stripe](docs/guides/stripe-live.md).
 
 ## Features

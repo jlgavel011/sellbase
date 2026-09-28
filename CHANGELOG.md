@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.3.1 — Agents find Sellbase
+
+- **Claude Code plugin:**
+  - install with `/plugin marketplace add jlgavel011/sellbase` and `/plugin install sellbase@sellbase`;
+  - brings every Sellbase skill, a new `add-ecommerce` skill and the MCP server;
+  - `/sellbase:setup <your business>` turns the project into a store end to end.
+- **MCP registry and Context7:**
+  - `server.json` and `mcpName` for the official MCP registry (`io.github.jlgavel011/sellbase`);
+  - `context7.json` with the rules agents should follow.
+- **The MCP server starts even when Sellbase is not installed yet:** docs tools work, and the other tools answer with the install command. It reads `CLAUDE_PROJECT_DIR` when present.
+- **Docs site with `llms.txt`:** https://jlgavel011.github.io/sellbase/
+
 - **Agents help improve Sellbase:**
   - new rule in `CLAUDE.md`/`AGENTS.md` and the Cursor rule;
   - skill `report-to-sellbase`;

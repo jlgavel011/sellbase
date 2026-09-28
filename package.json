@@ -22,7 +22,10 @@
     "docs:check": "node scripts/build-docs.mjs --check",
     "acceptance": "node scripts/acceptance.mjs",
     "acceptance:vite": "node scripts/acceptance-vite.mjs",
-    "acceptance:static": "node scripts/acceptance-static.mjs"
+    "acceptance:static": "node scripts/acceptance-static.mjs",
+    "plugin:sync": "node scripts/sync-plugin.mjs",
+    "plugin:check": "node scripts/sync-plugin.mjs --check",
+    "site:build": "pnpm docs:build && node scripts/build-site.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -32,6 +35,7 @@
     "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.12.0",
+    "marked": "^16.4.2",
     "postgres": "^3.4.9",
     "prettier": "^3.9.9",
     "supabase": "^2.118.0",

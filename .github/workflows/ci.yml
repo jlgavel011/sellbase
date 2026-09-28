@@ -23,6 +23,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
       - run: pnpm --filter @sellbase/core build && pnpm docs:check
+      - run: pnpm plugin:check
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "Sellbase",
+  "description": "Open source, AI-first commerce kit installed in your own project and Supabase: catalog, checkout (Stripe), orders, inventory, abandoned checkouts, discounts, bookings, an admin at /admin, a typed API/SDK, React components, web components for any site and an MCP server.",
+  "folders": [
+    "docs",
+    "skills",
+    "templates",
+    "packages/core/src",
+    "packages/sdk/src",
+    "packages/react/src",
+    "packages/web/src",
+    "packages/admin/src/config.ts",
+    "packages/registry/components"
+  ],
+  "excludeFolders": [
+    "docs/plans",
+    "docs/images",
+    "apps",
+    "supabase/tests",
+    "**/test",
+    "**/dist",
+    "node_modules"
+  ],
+  "excludeFiles": ["docs/llms-full.txt", "CHANGELOG.md"],
+  "rules": [
+    "Install with `npx sellbase init --yes` inside the user's project (Next.js, Vite + React or any website) on top of Supabase; never ask the user to create tables by hand.",
+    "Money is always an integer in minor units (19990 = $199.90) plus an ISO 4217 currency; display it with formatMoney.",
+    "Orders are created only by the payment webhook, or with order_create for sales made outside the site. Verify a store with test_purchase (Stripe test mode).",
+    "Never expose the Supabase service role key to the browser; storefronts use the anon key, the admin uses the staff session.",
+    "Extend data with `metadata` or tables in your own schema; never alter the `sellbase` schema or edit its migrations.",
+    "Ask the owner and send confirm: true for live Stripe keys, refunds, bulk price changes, paid manual orders and webhooks.",
+    "Plain HTML or non-React sites use the <sellbase-*> web components and the static admin at /admin/.",
+    "When you hit a Sellbase bug or build an extension other stores would need, draft a report with feedback_draft or `npx sellbase feedback` and share it only if the owner agrees."
+  ],
+  "previousVersions": [{ "tag": "v0.3.0" }]
+}
