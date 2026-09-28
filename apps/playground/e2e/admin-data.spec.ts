@@ -16,7 +16,7 @@ test('home metrics, discounts, collections and customers', async ({ page }) => {
   // Discounts: create a code, then edit it.
   const code = `E2E${Date.now().toString(36).toUpperCase()}`;
   await page.getByRole('link', { name: /Descuentos/ }).click();
-  await page.getByRole('button', { name: 'Nuevo descuento' }).click();
+  await page.getByRole('button', { name: 'Nuevo descuento' }).first().click();
   await page.getByRole('textbox', { name: 'Código' }).fill(code);
   await page.getByLabel('Porcentaje (%)').fill('15');
   await page.getByLabel(/Compra mínima/).fill('300');
@@ -43,7 +43,7 @@ test('home metrics, discounts, collections and customers', async ({ page }) => {
     .first()
     .click();
   await page.getByRole('link', { name: 'Colecciones' }).click();
-  await page.getByRole('button', { name: 'Nueva colección' }).click();
+  await page.getByRole('button', { name: 'Nueva colección' }).first().click();
   await page.getByLabel('Nombre').fill(title);
   const boxes = page.getByRole('checkbox');
   await boxes.nth(0).check();

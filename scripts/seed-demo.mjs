@@ -54,7 +54,17 @@ try {
   await sql`select sellbase.configure_jobs('http://kong:8000/functions/v1/sellbase-jobs', ${status.SERVICE_ROLE_KEY})`;
   const url = `${status.API_URL}/functions/v1/sellbase-api`;
   const sb = createSellbase({ url, token });
-  const existing = await sb.admin.products.search({ limit: 100 });
+  // The Edge Function can still be booting right after `supabase start` (HTTP 500/503).
+  let existing;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      existing = await sb.admin.products.search({ limit: 100 });
+      break;
+    } catch (error) {
+      if (attempt >= 15 || !/HTTP 5\d\d/.test(String(error?.message))) throw error;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
   const has = (title) => existing.data.some((p) => p.title === title);
 
   if (!has('Playera Sellbase')) {
