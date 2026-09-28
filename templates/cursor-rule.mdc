@@ -10,3 +10,4 @@ This project sells with Sellbase. Use the `sellbase` MCP server. Start with `sto
 - Storefront components live in `components/sellbase/`: edit them freely. Customize the admin only through its `config`.
 - Never expose the service role key or print `.env.sellbase`.
 - Ask the owner, then send `confirm: true`, for: live keys, refunds, bulk price changes, paid manual orders and webhooks.
+- Found a Sellbase bug, or built something other stores would need? Draft a report with `feedback_draft` (or `npx sellbase feedback`), show it to the owner and only share it if they agree. Never include customer data or secrets.

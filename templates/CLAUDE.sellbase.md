@@ -37,9 +37,24 @@ You operate it through the **`sellbase` MCP server** (`.mcp.json`, `.cursor/mcp.
   - webhooks that send data to another URL.
 - Agent tokens do not have `refunds:write` or `webhooks:write` unless the owner granted them.
 
+### Help improve Sellbase
+
+Sellbase improves through what agents run into. **Draft a report for the maintainers** in these cases:
+
+- **Bug:** an unexpected error, a wrong doc, or a workaround you had to write.
+- **Extension:** you built something on top of Sellbase that other stores would need, such as a new field, integration, report or admin page.
+
+How:
+
+1. Call `feedback_draft` (MCP) or run `npx sellbase feedback --kind bug|idea|extension …`.
+2. Show the draft to the owner and **ask if they want to share it**.
+3. Only then give them the link to submit. Nothing is sent automatically.
+
+Never include customer data, order contents, secrets or private code. The draft is redacted, but you are responsible for what goes in it. Skill: `report-to-sellbase`.
+
 ### Skills
 
-`.claude/skills/sellbase/`: `setup-store`, `add-storefront`, `manage-catalog`, `operate-orders`, `configure-payments`, `configure-shipping`, `services-and-bookings`, `upgrade`.
+`.claude/skills/sellbase/`: `setup-store`, `add-storefront`, `manage-catalog`, `operate-orders`, `configure-payments`, `configure-shipping`, `services-and-bookings`, `upgrade`, `report-to-sellbase`.
 
 ### Commands
 
@@ -49,6 +64,7 @@ npx sellbase add <component>     # copy more storefront components
 npx sellbase seed <giro>         # example catalog: ropa, curso, consultorio, cafeteria
 npx sellbase token list|create|revoke
 npx sellbase upgrade --dry-run   # check an update before applying it
+npx sellbase feedback --kind bug --title "…" --summary "…"   # draft a report for the maintainers
 ```
 
 <!-- sellbase:end -->

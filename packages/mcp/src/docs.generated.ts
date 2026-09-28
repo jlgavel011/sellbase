@@ -277,6 +277,26 @@ export const DOCS: DocSection[] = [
     text: '# Operate orders\n\n- "How is the store doing?": `report_summary` returns sales today, last 7 and 30 days (paid minus refunded; test purchases excluded), a daily series, best sellers, orders waiting to ship and today\'s appointments.\n- Customers: `customers_search` with `q` (email, name or phone) for totals; pass `id` for addresses, orders and appointments.\n\n- "What do I need to ship?": `orders_search` with `fulfillment_status: "unfulfilled"` (and `"partially_fulfilled"` for mixed orders).\n- A specific order: `orders_search` with `q: "#1001"` or the customer email, then `order_get` for items, payments and timeline.\n- Orders flagged `metadata.test_purchase: true` come from `test_purchase`; leave them out of sales reports.\n- Amounts are minor units; format them for the owner (19990 → $199.90).\n- Sales outside the store (in person, WhatsApp): `order_create`. With `payment.mode: "paid"` (cash, spei, card terminal) confirm the total with the owner and send `confirm: true`. With `payment.mode: "link"` you get a Stripe link to send; the order opens when it is paid. Orders filter by `channel` (e.g. `whatsapp`).',
   },
   {
+    source: 'skills/report-to-sellbase/SKILL.md',
+    title: 'Report to Sellbase',
+    text: '# Report to Sellbase\n\nSellbase is open source and improves through what agents run into. Every report helps the next store.',
+  },
+  {
+    source: 'skills/report-to-sellbase/SKILL.md',
+    title: 'Report to Sellbase › When to report',
+    text: "## When to report\n\n- **Bug:**\n  - an error that does not match the docs;\n  - a `hint` that does not work;\n  - `sellbase doctor` or `upgrade` failing;\n  - a component that breaks;\n  - a migration error;\n  - something you had to patch or work around.\n- **Idea:** something the owner asked for that Sellbase could do natively.\n- **Extension:** you built something on top of Sellbase for this store, such as a custom field in `metadata`, an integration (shipping, invoicing, WhatsApp), a report, or an admin page with `config.pages`. Describe it so the maintainers can consider shipping it for everyone.\n\nDo not report problems in the owner's own code, or questions that the docs answer (`docs_search`).",
+  },
+  {
+    source: 'skills/report-to-sellbase/SKILL.md',
+    title: 'Report to Sellbase › How',
+    text: '## How\n\n1. **Collect the facts:**\n   - what you did (tool or command);\n   - what you expected;\n   - what happened (error `code`, `message` and `hint`);\n   - the Sellbase version (`npx sellbase --version`);\n   - the project type.\n     For extensions: what the owner needed and a short outline of what you built.\n2. **Draft it** with the MCP tool `feedback_draft` or the CLI:\n\n   ```bash\n   npx sellbase feedback --kind bug \\\n     --title "product_upsert rejects …" \\\n     --summary "…" --steps "1. … 2. …" --expected "…" \\\n     --details-file ./error.txt --area api --agent "Claude Code"\n   ```\n\n   Secrets (API keys, tokens, connection strings) and personal data (emails, phones) are redacted automatically.\n\n3. **Ask the owner:** show the draft and ask _"¿Quieres compartir este reporte con el equipo de Sellbase para que lo mejoren?"_ / _"Do you want to share this report with the Sellbase team?"_\n4. **If they agree,** give them the link (`submit_url`). They review and submit the issue on GitHub. **Never submit it yourself and never send anything without their yes.**',
+  },
+  {
+    source: 'skills/report-to-sellbase/SKILL.md',
+    title: 'Report to Sellbase › Never include',
+    text: "## Never include\n\n- customer names, emails, phones or addresses;\n- order contents or amounts from real sales;\n- API keys, tokens, webhook secrets or database URLs;\n- the owner's private code beyond the few lines needed to reproduce the problem.\n\nWhen in doubt, leave it out and describe it in words.",
+  },
+  {
     source: 'skills/services-and-bookings/SKILL.md',
     title: 'Services and bookings',
     text: '# Services and bookings\n\n1. **The service**: `product_upsert` with `type: "service"` and, per variant, `service: { duration_min, location_type: "in_person" | "online", online_meeting_url?, capacity? (group classes), deposit_amount? (minor units), buffer_before_min?, buffer_after_min?, min_notice_min?, booking_window_days? }`. Price in minor units as usual. Set `status: "active"`.\n2. **Who and when**: `service_setup` with the resource name, its weekly `hours` (`weekday` 0 = Sunday … 6 = Saturday, `"09:00"`–`"18:00"`, local store time) and `service_product_ids`. Block vacations with `closed`.\n3. **Check**: `availability_get` with the variant id must list times. If it is empty, the resource has no hours or is not assigned to the service.\n4. **Storefront**: the product page shows `<BookingPicker>` automatically for services (from `product-detail`). Checkout offers "pay deposit / pay total" when the service has `deposit_amount`.\n5. **Verify**: `test_purchase` with the service `variant_ids` books the first free time end to end (payment, confirmation email with a calendar invitation) and frees it again.',

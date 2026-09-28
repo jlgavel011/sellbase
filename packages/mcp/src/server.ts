@@ -4,6 +4,7 @@ import {
   BRAND,
   collectionUpsertInput,
   discountUpsertInput,
+  feedbackIssue,
   fromZodError,
   manualOrderInput,
   productsBulkInput,
@@ -750,6 +751,55 @@ export function createSellbaseMcpServer(sellbase: Sellbase, options: { version?:
               results,
               hint: 'No match. Try other words, or read node_modules/sellbase/assets/docs/llms-full.txt.',
             };
+      }),
+  );
+
+  server.registerTool(
+    'feedback_draft',
+    {
+      title: 'Draft feedback for the Sellbase maintainers',
+      description:
+        'Use it when you find a Sellbase bug (unexpected error, wrong docs, a workaround you had to write), or when you build something on top of Sellbase that other stores would need (kind "extension"). Returns a redacted draft and a prefilled GitHub issue link. Nothing is sent: show the draft to the owner, ask if they want to share it, and give them the link to submit. Never include customer data, order contents, secrets or private code.',
+      inputSchema: {
+        kind: z.enum(['bug', 'idea', 'extension']),
+        title: z.string().min(5).max(200),
+        summary: z.string().min(10).max(4000).describe('What happened, or what the store needed.'),
+        steps: z.string().max(4000).optional(),
+        expected: z.string().max(2000).optional(),
+        workaround: z
+          .string()
+          .max(4000)
+          .optional()
+          .describe('For extensions and bugs: what you built or changed to get around it.'),
+        details: z
+          .string()
+          .max(6000)
+          .optional()
+          .describe(
+            'Error code/message/hint, tool output, doctor output (redacted automatically).',
+          ),
+        area: z
+          .enum(['admin', 'storefront', 'web-components', 'api', 'mcp', 'cli', 'database', 'docs'])
+          .optional(),
+        agent: z.string().max(80).optional().describe('Your name, e.g. "Claude Code".'),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    (input) =>
+      run(async () => {
+        const issue = feedbackIssue({
+          ...input,
+          context: {
+            version: options.version ?? 'unknown',
+            ...(input.agent ? { agent: input.agent } : {}),
+          },
+        });
+        return {
+          draft: { title: `[${input.kind}] ${issue.title}`, body: issue.body },
+          submit_url: issue.url,
+          next_step:
+            'Show the draft to the owner and ask whether to share it with the Sellbase maintainers. If they agree, give them submit_url (or run `npx sellbase feedback`) so they review and submit it on GitHub.',
+        };
       }),
   );
 

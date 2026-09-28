@@ -11,3 +11,4 @@ export * from './api/openapi.js';
 export * from './availability.js';
 export * from './ics.js';
 export * from './csv.js';
+export * from './feedback.js';

@@ -12,4 +12,6 @@ export const BRAND = {
   /** Agent/API tokens look like `sb_live_…`; only the hash is stored. */
   tokenPrefix: 'sb_live_',
   cli: 'sellbase',
+  /** GitHub repository (owner/name): issues, feedback from agents, docs links. */
+  repo: 'jlgavel011/sellbase',
 } as const;

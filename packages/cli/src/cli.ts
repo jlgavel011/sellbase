@@ -2,6 +2,7 @@
 import { API_SCOPES, BRAND, isSellbaseError, type ApiScope } from '@sellbase/core';
 import { Command } from 'commander';
 import { addComponents } from './add.js';
+import { feedback } from './feedback.js';
 import { printDoctor } from './doctor.js';
 import { init } from './init.js';
 import { PRESETS, seed } from './seed.js';
@@ -35,6 +36,23 @@ program
   .option('--packages-from <dir>', 'install Sellbase packages from local .tgz files (development)')
   .option('--seed <giro>', `example catalog: ${Object.keys(PRESETS).join(', ')}`)
   .action((opts) => init(process.cwd(), opts));
+
+program
+  .command('feedback')
+  .description(
+    'Draft a GitHub issue for the Sellbase maintainers (bug, idea or extension). Secrets and personal data are redacted; you review and submit it.',
+  )
+  .option('--kind <kind>', 'bug | idea | extension', 'bug')
+  .option('--title <title>', 'one line')
+  .option('--summary <text>', 'what happened, or what the store needed')
+  .option('--steps <text>', 'steps to reproduce')
+  .option('--expected <text>', 'what should have happened')
+  .option('--workaround <text>', 'what was built on top of Sellbase (kind extension)')
+  .option('--details-file <path>', 'error output, logs or doctor output to attach')
+  .option('--area <area>', 'admin, storefront, web components, api, mcp, cli, database, docs')
+  .option('--agent <name>', 'the agent drafting it, e.g. "Claude Code"')
+  .option('--no-open', 'print the link instead of opening the browser')
+  .action((opts) => feedback(process.cwd(), opts));
 
 program
   .command('doctor')

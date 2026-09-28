@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Agents help improve Sellbase:**
+  - new rule in `CLAUDE.md`/`AGENTS.md` and the Cursor rule;
+  - skill `report-to-sellbase`;
+  - MCP tool `feedback_draft`;
+  - `npx sellbase feedback`.
+    An agent that hits a Sellbase bug, or builds an extension other stores would need, drafts a redacted GitHub issue (keys, tokens, emails and phones removed), shows it to the owner and shares it only if they agree.
+- **Icons:** SVG icons instead of emoji in the storefront (web components and React) and in the admin.
+
 ## 0.3.0 — Admin v2 and open source release
 
 ### What your agent should review

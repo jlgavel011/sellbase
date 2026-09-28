@@ -16,6 +16,7 @@ Agents: connect the `sellbase` MCP server (`npx sellbase mcp`), start with `stor
 - [skills/configure-shipping/SKILL.md](skills/configure-shipping/SKILL.md): agent skill
 - [skills/manage-catalog/SKILL.md](skills/manage-catalog/SKILL.md): agent skill
 - [skills/operate-orders/SKILL.md](skills/operate-orders/SKILL.md): agent skill
+- [skills/report-to-sellbase/SKILL.md](skills/report-to-sellbase/SKILL.md): agent skill
 - [skills/services-and-bookings/SKILL.md](skills/services-and-bookings/SKILL.md): agent skill
 - [skills/setup-store/SKILL.md](skills/setup-store/SKILL.md): agent skill
 - [skills/upgrade/SKILL.md](skills/upgrade/SKILL.md): agent skill
