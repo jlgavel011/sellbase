@@ -365,9 +365,15 @@ export const REGISTRY: { name: string; description: string; dependencies: string
     dependencies: [],
   },
   {
+    name: 'icons',
+    description:
+      'Inline SVG icons (cart, close, calendar, truck, download, image) used by the other components.',
+    dependencies: [],
+  },
+  {
     name: 'product-card',
     description: 'One product tile with image, title and price.',
-    dependencies: ['theme'],
+    dependencies: ['theme', 'icons'],
   },
   {
     name: 'product-grid',
@@ -416,7 +422,7 @@ export const REGISTRY: { name: string; description: string; dependencies: string
     name: 'cart-drawer',
     description:
       'Cart button with count and a side panel with lines, discount code and totals (focus-trapped, Escape closes).',
-    dependencies: ['cart-lines', 'discount-input'],
+    dependencies: ['cart-lines', 'discount-input', 'icons'],
   },
   {
     name: 'cart-page',
@@ -433,7 +439,7 @@ export const REGISTRY: { name: string; description: string; dependencies: string
     name: 'order-status',
     description:
       'Return page after paying (confirming → paid, with the order summary) and "where is my order?" lookup.',
-    dependencies: ['theme'],
+    dependencies: ['theme', 'icons'],
   },
   {
     name: 'download-page',
