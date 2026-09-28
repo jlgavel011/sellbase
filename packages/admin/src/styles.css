@@ -84,6 +84,11 @@
     color: inherit;
     text-decoration: inherit;
   }
+  .sb-admin button {
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+  }
   .sb-admin button,
   .sb-admin input,
   .sb-admin select,

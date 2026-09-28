@@ -46,7 +46,13 @@ export function HomePage() {
       done: Boolean(store.data?.logo_url && store.data?.contact_email),
       to: '/settings/general',
     },
-    { id: 'payments', icon: 'card', done: ok('payments'), to: '/settings/payments' },
+    // Test mode counts as set up (the check only warns until live keys are connected).
+    {
+      id: 'payments',
+      icon: 'card',
+      done: Boolean(checks.get('payments')) && checks.get('payments')?.status !== 'fail',
+      to: '/settings/payments',
+    },
     {
       id: 'shipping',
       icon: 'truck',
