@@ -1,6 +1,6 @@
 {
   "name": "sellbase",
-  "version": "0.0.0",
+  "version": "0.3.0",
   "description": "Add commerce to any app your AI builds: `npx sellbase init`.",
   "license": "MIT",
   "type": "module",
@@ -28,5 +28,28 @@
     "@sellbase/api": "workspace:*",
     "@sellbase/web": "workspace:*",
     "@sellbase/admin": "workspace:*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jlgavel011/sellbase.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/jlgavel011/sellbase#readme",
+  "bugs": {
+    "url": "https://github.com/jlgavel011/sellbase/issues"
+  },
+  "keywords": [
+    "ecommerce",
+    "supabase",
+    "cli",
+    "ai",
+    "shopify-alternative"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

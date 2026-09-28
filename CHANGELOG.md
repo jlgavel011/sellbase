@@ -1,6 +1,58 @@
 # Changelog
 
-## Unreleased — Phase 2
+## Unreleased
+
+## 0.3.0 — Admin v2 and open source release
+
+### What your agent should review
+
+- Run `npx sellbase upgrade --dry-run`, then `npx sellbase upgrade`. Migrations 0003–0009 are additive (0009 adds `checkout_sessions.consents`, `recovery_sent_at` and a trigger that copies consents into orders).
+- If the storefront shows an age or terms checkbox, set it in Settings → Checkout (`settings.checkout.required_consent`). The server now requires it, and `<sellbase-checkout>` shows it automatically.
+- Set Settings → Checkout → store URL (`settings.site_url`) so abandoned checkout emails can link back to the cart.
+- Custom pages or slots that used `PageTitle` still work; new ones should use `Page` and `Layout` from the admin package.
+
+### Admin v2
+
+- **Design:** Sellbase's own design system:
+  - SVG icons;
+  - top bar with global search (press `/`) and an account menu;
+  - side menu with subsections;
+  - contextual "unsaved changes" bar, toasts and modals;
+  - copy written for store owners.
+- **Home:** setup guide with progress, sales metrics, best sellers and "things to do today".
+- **Products:**
+  - list with status tabs, thumbnails and stock summary;
+  - CSV export;
+  - editor with drag and drop photos (even before the first save), reordering, alt text, options and variant matrix, compare-at price, inventory, weight, SEO preview, collections and tags;
+  - duplicate and archive.
+- **Inventory page:** inline stock adjustments, low and out of stock filters (`GET /inventory`).
+- **Orders:**
+  - tabs (to fulfill, unpaid, open, closed) and more filters;
+  - order page with items and thumbnails, payment summary, customer, shipping address, consents, timeline with comments;
+  - refunds, cancellation and printable packing slip.
+- **Abandoned checkouts:** list, recovery email (manual or automatic) and a link that restores the cart (`GET /checkouts/abandoned`, `POST /checkouts/:id/recovery-email`, `?sellbase_cart=`).
+- **Settings in sections:**
+  - General, with logo upload (`POST /store/logo`);
+  - Payments, Shipping and Taxes;
+  - Checkout: store URL, required consent, downloads page, automatic recovery emails;
+  - Notifications: Resend and a test email (`POST /notifications/test`);
+  - Team, AI agents, Webhooks and Integrations.
+- **Other pages redesigned:** customers, discounts, collections, manual orders and appointments.
+- **API additions:**
+  - `PATCH /products/:id/media` and `DELETE /products/:id/media/:media_id`;
+  - `seo` and `collection_ids` in `product_upsert`;
+  - `GET /storefront/store`;
+  - the order detail now includes item images.
+- `sellbase init` creates the owner on a local stack, with the password saved in `.env.sellbase`. `sellbase upgrade` also refreshes the static admin and web components on sites without React.
+- `test_purchase` only uses active products.
+- **Open source:**
+  - README with screenshots;
+  - deploy and admin customization guides;
+  - CONTRIBUTING, SECURITY and code of conduct;
+  - issue and PR templates;
+  - npm metadata and a lockstep release workflow (`scripts/release.mjs`, `.github/workflows/release.yml`).
+
+## 0.2.0 — Phase 2
 
 ### What your agent should review
 

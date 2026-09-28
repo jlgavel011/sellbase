@@ -3,8 +3,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useAdmin } from '../context.js';
 import { Link } from '../router.js';
-import { PageTitle } from '../shell.js';
-import { Alert, Button, Card, ErrorAlert, Field, Input, Select, Textarea } from '../ui.js';
+import { Page } from '../shell.js';
+import {
+  Alert,
+  Button,
+  Card,
+  ErrorAlert,
+  Field,
+  Input,
+  Select,
+  Textarea,
+  buttonClass,
+} from '../ui.js';
 
 interface Line {
   variant_id: string;
@@ -103,8 +113,7 @@ export function ManualOrderPage() {
   if (create.data) {
     const { order, payment_url } = create.data;
     return (
-      <>
-        <PageTitle>{m.title}</PageTitle>
+      <Page title={m.title} backTo="/orders" backLabel={t.orders.title} width="narrow">
         <Card>
           <div className="sb:flex sb:flex-col sb:gap-4" data-testid="manual-order-done">
             <Alert tone="green">
@@ -117,10 +126,7 @@ export function ManualOrderPage() {
               </div>
             )}
             <div className="sb:flex sb:gap-2">
-              <Link
-                to={`/orders/${order.id}`}
-                className="sb:rounded-[var(--sba-radius)] sb:bg-[var(--sba-primary)] sb:px-4 sb:py-2 sb:text-sm sb:font-medium sb:text-[var(--sba-primary-fg)]"
-              >
+              <Link to={`/orders/${order.id}`} className={buttonClass('primary')}>
                 {m.view}
               </Link>
               <Button
@@ -143,18 +149,19 @@ export function ManualOrderPage() {
             </div>
           </div>
         </Card>
-      </>
+      </Page>
     );
   }
 
   return (
-    <>
-      <Link to="/orders" className="sb:text-sm sb:text-zinc-500 sb:hover:underline">
-        {t.orders.back}
-      </Link>
-      <PageTitle>{m.title}</PageTitle>
-      <p className="sb:-mt-4 sb:mb-6 sb:text-sm sb:text-zinc-500">{m.intro}</p>
-      <form onSubmit={submit} className="sb:flex sb:flex-col sb:gap-6" aria-label={m.title}>
+    <Page
+      title={m.title}
+      subtitle={m.intro}
+      backTo="/orders"
+      backLabel={t.orders.title}
+      width="narrow"
+    >
+      <form onSubmit={submit} className="sb:flex sb:flex-col sb:gap-4" aria-label={m.title}>
         <Card title={m.customer}>
           <div className="sb:grid sb:gap-4 sb:md:grid-cols-2">
             <Field label={m.email}>
@@ -196,7 +203,7 @@ export function ManualOrderPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
             {q && products.data && (
-              <ul className="sb:mt-2 sb:divide-y sb:divide-zinc-100 sb:rounded-[var(--sba-radius)] sb:border sb:border-zinc-200 sb:text-sm">
+              <ul className="sb:mt-2 sb:divide-y sb:divide-[var(--sba-border)] sb:rounded-[var(--sba-radius)] sb:border sb:border-[var(--sba-border)] sb:text-sm">
                 {products.data.data.flatMap((p) =>
                   p.type === 'service'
                     ? []
@@ -214,7 +221,7 @@ export function ManualOrderPage() {
                             >
                               <span>
                                 {title}
-                                <span className="sb:block sb:text-xs sb:text-zinc-500">
+                                <span className="sb:block sb:text-xs sb:text-[var(--sba-text-subdued)]">
                                   {formatMoney(v.price_amount, v.currency)}
                                   {stock !== null ? ` · stock ${stock}` : ''}
                                 </span>
@@ -255,7 +262,7 @@ export function ManualOrderPage() {
             )}
           </div>
           {lines.length === 0 ? (
-            <p className="sb:text-sm sb:text-zinc-500">{m.noItems}</p>
+            <p className="sb:text-[var(--sba-text-subdued)]">{m.noItems}</p>
           ) : (
             <ul className="sb:flex sb:flex-col sb:gap-3">
               {lines.map((l, i) => (
@@ -312,7 +319,7 @@ export function ManualOrderPage() {
             </Field>
           </div>
           <p className="sb:mt-4 sb:flex sb:justify-between sb:text-sm">
-            <span className="sb:text-zinc-500">{m.estimateHint}</span>
+            <span className="sb:text-[var(--sba-text-subdued)]">{m.estimateHint}</span>
             <span className="sb:font-semibold" data-testid="manual-order-subtotal">
               {m.estimated}: {formatMoney(subtotal, currency)}
             </span>
@@ -329,6 +336,7 @@ export function ManualOrderPage() {
               <label className="sb:flex sb:items-center sb:gap-2">
                 <input
                   type="radio"
+                  className="sba-checkbox"
                   name="mode"
                   checked={mode === 'paid'}
                   onChange={() => setMode('paid')}
@@ -338,6 +346,7 @@ export function ManualOrderPage() {
               <label className="sb:flex sb:items-center sb:gap-2">
                 <input
                   type="radio"
+                  className="sba-checkbox"
                   name="mode"
                   checked={mode === 'link'}
                   onChange={() => {
@@ -370,6 +379,7 @@ export function ManualOrderPage() {
             <label className="sb:flex sb:items-center sb:gap-2 sb:text-sm">
               <input
                 type="checkbox"
+                className="sba-checkbox"
                 checked={notify}
                 onChange={(e) => setNotify(e.target.checked)}
               />
@@ -384,7 +394,7 @@ export function ManualOrderPage() {
             {m.confirmPaid(formatMoney(subtotal, currency), m.methods[method] ?? method)}
           </Alert>
         )}
-        <div className="sb:flex sb:gap-2">
+        <div className="sb:flex sb:flex-row-reverse sb:justify-start sb:gap-2">
           <Button type="submit" disabled={!email || lines.length === 0 || create.isPending}>
             {confirming ? m.confirm : m.create}
           </Button>
@@ -395,6 +405,6 @@ export function ManualOrderPage() {
           )}
         </div>
       </form>
-    </>
+    </Page>
   );
 }

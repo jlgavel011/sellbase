@@ -1,0 +1,38 @@
+name: Release
+
+# Publishes the public packages to npm when a version tag is pushed (see scripts/release.mjs).
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  id-token: write # npm provenance
+
+jobs:
+  publish:
+    name: Build, test and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - name: Tag matches the package versions
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          node -e "const v=require('./packages/cli/package.json').version; if (v !== '$tag') { console.error('Tag v$tag but packages are ' + v); process.exit(1) }"
+      - run: pnpm build
+      - run: pnpm lint && pnpm typecheck && pnpm test
+      - name: Publish to npm
+        run: pnpm -r --filter "./packages/*" publish --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true

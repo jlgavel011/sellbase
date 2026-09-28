@@ -1,6 +1,6 @@
 {
   "name": "@sellbase/core",
-  "version": "0.0.0",
+  "version": "0.3.0",
   "description": "Sellbase core: Zod schemas, types, state machines and pricing. Pure, no IO.",
   "license": "MIT",
   "type": "module",
@@ -21,5 +21,27 @@
   },
   "dependencies": {
     "zod": "^4.6.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jlgavel011/sellbase.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/jlgavel011/sellbase#readme",
+  "bugs": {
+    "url": "https://github.com/jlgavel011/sellbase/issues"
+  },
+  "keywords": [
+    "ecommerce",
+    "commerce",
+    "zod",
+    "schemas"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

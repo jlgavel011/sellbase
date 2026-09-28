@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useAdmin } from '../context.js';
 import { Link } from '../router.js';
-import { PageTitle } from '../shell.js';
+import { Page } from '../shell.js';
 import {
   Alert,
   Badge,
@@ -16,6 +16,7 @@ import {
   Select,
   Spinner,
   type Tone,
+  buttonClass,
 } from '../ui.js';
 
 type Booking = Awaited<ReturnType<Sellbase['admin']['bookings']['search']>>['data'][number];
@@ -72,20 +73,16 @@ export function AgendaPage() {
   }, [bookings.data, locale]);
 
   return (
-    <>
-      <PageTitle
-        actions={
-          <Link
-            to="/agenda/resources"
-            className="sb:rounded-[var(--sba-radius)] sb:border sb:border-zinc-300 sb:bg-white sb:px-4 sb:py-2 sb:text-sm"
-          >
-            {t.agenda.resources}
-          </Link>
-        }
-      >
-        {t.agenda.title}
-      </PageTitle>
-      <div className="sb:mb-4 sb:flex sb:flex-wrap sb:items-center sb:gap-2">
+    <Page
+      title={t.agenda.title}
+      width="wide"
+      actions={
+        <Link to="/agenda/resources" className={buttonClass('secondary')}>
+          {t.agenda.resources}
+        </Link>
+      }
+    >
+      <div className="sb:flex sb:flex-wrap sb:items-center sb:gap-2">
         <Button variant="outline" onClick={() => setStart(new Date(start.getTime() - 7 * DAY))}>
           {t.agenda.previous}
         </Button>
@@ -95,7 +92,7 @@ export function AgendaPage() {
         <Button variant="outline" onClick={() => setStart(new Date(start.getTime() + 7 * DAY))}>
           {t.agenda.next}
         </Button>
-        <span className="sb:text-sm sb:text-zinc-500">
+        <span className="sb:text-[var(--sba-text-subdued)]">
           {new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(start)} –{' '}
           {new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(
             new Date(end.getTime() - DAY),
@@ -138,7 +135,7 @@ export function AgendaPage() {
             key={day}
             title={<span className="sb:inline-block sb:first-letter:uppercase">{day}</span>}
           >
-            <ul className="sb:divide-y sb:divide-zinc-100">
+            <ul className="sb:divide-y sb:divide-[var(--sba-border)]">
               {list.map((b) => (
                 <BookingRow key={b.id} booking={b} locale={locale} />
               ))}
@@ -146,7 +143,7 @@ export function AgendaPage() {
           </Card>
         ))}
       </div>
-    </>
+    </Page>
   );
 }
 
@@ -201,7 +198,7 @@ function BookingRow({ booking, locale }: { booking: Booking; locale: string }) {
         </span>
         <span className="sb:flex-1">
           {booking.product?.title ?? '—'} · {booking.resource.name}
-          <span className="sb:block sb:text-sm sb:text-zinc-500">
+          <span className="sb:block sb:text-[var(--sba-text-subdued)]">
             {booking.email ?? ''}
             {booking.order && (
               <>
@@ -257,7 +254,7 @@ function BookingRow({ booking, locale }: { booking: Booking; locale: string }) {
           <p className="sb:text-sm sb:font-medium">{t.agenda.pickTime}</p>
           {slots.isLoading && <Spinner label={t.common.loading} />}
           {slots.data && slots.data.slots.length === 0 && (
-            <p className="sb:text-sm sb:text-zinc-500">{t.agenda.noSlots}</p>
+            <p className="sb:text-[var(--sba-text-subdued)]">{t.agenda.noSlots}</p>
           )}
           <div className="sb:flex sb:flex-wrap sb:gap-2">
             {slots.data?.slots.slice(0, 24).map((s) => (
@@ -289,6 +286,7 @@ function BookingRow({ booking, locale }: { booking: Booking; locale: string }) {
             <label className="sb:flex sb:items-center sb:gap-2 sb:text-sm">
               <input
                 type="checkbox"
+                className="sba-checkbox"
                 checked={refund}
                 onChange={(e) => setRefund(e.target.checked)}
               />

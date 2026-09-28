@@ -72,6 +72,33 @@ describe('test_purchase', () => {
     expect(order.body.metadata).toMatchObject({ test_purchase: true });
   });
 
+  it('skips archived and draft products', async () => {
+    const old = await s.request('POST', '/products', {
+      token,
+      body: {
+        type: 'physical',
+        title: 'Playera Archivada',
+        status: 'active',
+        variants: [{ price_amount: 10000, inventory: { on_hand: 5 } }],
+      },
+    });
+    await s.request('DELETE', `/products/${old.body.id}`, { token });
+    await s.request('POST', '/products', {
+      token,
+      body: {
+        type: 'digital',
+        title: 'Borrador',
+        status: 'draft',
+        variants: [{ price_amount: 500 }],
+      },
+    });
+    const res = await s.request('POST', '/test-purchase', { token, body: {} });
+    expect(res.body.ok, JSON.stringify(res.body.steps, null, 2)).toBe(true);
+    const cart = res.body.steps.find((st: { step: string }) => st.step === 'cart');
+    expect(cart.detail).not.toContain('Archivada');
+    expect(cart.detail).not.toContain('Borrador');
+  });
+
   it('requires the orders:write scope', async () => {
     const readOnly = await s.token(['orders:read']);
     const res = await s.request('POST', '/test-purchase', { token: readOnly, body: {} });

@@ -4,6 +4,7 @@
  */
 
 export const esV2 = {
+  discounts2: { scheduled: 'Programado', expired: 'Vencido' },
   shell: {
     search: 'Buscar',
     searchLabel: 'Buscar productos, pedidos y clientes',
@@ -465,6 +466,7 @@ export const esV2 = {
 export type TextsV2 = typeof esV2;
 
 export const enV2: TextsV2 = {
+  discounts2: { scheduled: 'Scheduled', expired: 'Expired' },
   shell: {
     search: 'Search',
     searchLabel: 'Search products, orders and customers',

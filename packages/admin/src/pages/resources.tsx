@@ -2,8 +2,7 @@ import type { Sellbase } from '@sellbase/sdk';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useAdmin } from '../context.js';
-import { Link } from '../router.js';
-import { PageTitle } from '../shell.js';
+import { Page } from '../shell.js';
 import { Alert, Button, Card, ErrorAlert, Field, Input, Select, Spinner } from '../ui.js';
 
 type Resource = Awaited<ReturnType<Sellbase['admin']['resources']['list']>>['data'][number];
@@ -31,26 +30,29 @@ export function ResourcesPage() {
   }, [first, selected]);
 
   return (
-    <>
-      <Link to="/agenda" className="sb:text-sm sb:text-zinc-500 sb:hover:underline">
-        {t.resources.back}
-      </Link>
-      <PageTitle actions={<Button onClick={() => setSelected('new')}>{t.resources.new}</Button>}>
-        {t.resources.title}
-      </PageTitle>
+    <Page
+      title={t.resources.title}
+      backTo="/agenda"
+      backLabel={t.agenda.title}
+      width="wide"
+      actions={<Button onClick={() => setSelected('new')}>{t.resources.new}</Button>}
+    >
       {resources.isLoading && <Spinner label={t.common.loading} />}
       <ErrorAlert error={resources.error} />
-      <div className="sb:grid sb:gap-6 sb:md:grid-cols-[14rem_1fr]">
-        <nav className="sb:flex sb:flex-col sb:gap-1" aria-label={t.resources.title}>
+      <div className="sb:grid sb:items-start sb:gap-4 sb:md:grid-cols-[15rem_minmax(0,1fr)]">
+        <nav
+          className="sba-card sb:flex sb:flex-col sb:gap-0.5 sb:p-1.5"
+          aria-label={t.resources.title}
+        >
           {resources.data?.data.map((r) => (
             <button
               key={r.id}
               type="button"
               onClick={() => setSelected(r.id)}
-              className={`sb:rounded-[var(--sba-radius)] sb:px-3 sb:py-2 sb:text-left sb:text-sm ${selected === r.id ? 'sb:bg-white sb:font-medium sb:shadow-sm' : 'sb:hover:bg-white'} ${r.active ? '' : 'sb:text-zinc-400'}`}
+              className={`sb:rounded-lg sb:px-2.5 sb:py-2 sb:text-left sb:font-semibold sb:hover:bg-[var(--sba-surface-hover)] ${selected === r.id ? 'sb:bg-[var(--sba-surface-selected)]' : ''} ${r.active ? 'sb:text-[var(--sba-text-strong)]' : 'sb:text-[var(--sba-text-subdued)]'}`}
             >
               {r.name}
-              <span className="sb:block sb:text-xs sb:text-zinc-500">
+              <span className="sb:block sb:text-xs sb:text-[var(--sba-text-subdued)]">
                 {t.resources.kinds[r.kind] ?? r.kind}
               </span>
             </button>
@@ -64,7 +66,7 @@ export function ResourcesPage() {
           />
         )}
       </div>
-    </>
+    </Page>
   );
 }
 
@@ -176,6 +178,7 @@ function ResourceForm({
               <span>{t.resources.weekdays[i]}</span>
               <input
                 type="checkbox"
+                className="sba-checkbox"
                 aria-label={t.resources.weekdays[i]}
                 checked={d.open}
                 onChange={(e) => setDay(i, { open: e.target.checked })}
@@ -196,7 +199,9 @@ function ResourceForm({
                   />
                 </>
               ) : (
-                <span className="sb:col-span-2 sb:text-zinc-400">{t.resources.closed}</span>
+                <span className="sb:col-span-2 sb:text-[var(--sba-text-subdued)]">
+                  {t.resources.closed}
+                </span>
               )}
             </div>
           ))}
@@ -205,13 +210,14 @@ function ResourceForm({
 
       <Card title={t.resources.services}>
         {services.data && services.data.data.length === 0 && (
-          <p className="sb:text-sm sb:text-zinc-500">{t.resources.noServices}</p>
+          <p className="sb:text-[var(--sba-text-subdued)]">{t.resources.noServices}</p>
         )}
         <div className="sb:flex sb:flex-col sb:gap-2">
           {services.data?.data.map((p) => (
             <label key={p.id} className="sb:flex sb:items-center sb:gap-2 sb:text-sm">
               <input
                 type="checkbox"
+                className="sba-checkbox"
                 checked={productIds.includes(p.id)}
                 onChange={(e) =>
                   setProductIds(
@@ -235,7 +241,9 @@ function ResourceForm({
 
       {resource && (
         <Card title={t.resources.exceptions}>
-          <p className="sb:mb-3 sb:text-xs sb:text-zinc-500">{t.resources.exceptionHint}</p>
+          <p className="sb:mb-3 sb:text-xs sb:text-[var(--sba-text-subdued)]">
+            {t.resources.exceptionHint}
+          </p>
           <ul className="sb:mb-4 sb:flex sb:flex-col sb:gap-2 sb:text-sm">
             {resource.exceptions.map((x) => (
               <li key={x.id} className="sb:flex sb:items-center sb:justify-between sb:gap-2">

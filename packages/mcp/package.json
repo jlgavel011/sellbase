@@ -1,6 +1,6 @@
 {
   "name": "@sellbase/mcp",
-  "version": "0.0.0",
+  "version": "0.3.0",
   "description": "Sellbase MCP server: lets AI agents set up and run the store.",
   "license": "MIT",
   "type": "module",
@@ -23,5 +23,27 @@
     "@sellbase/core": "workspace:*",
     "@sellbase/sdk": "workspace:*",
     "zod": "^4.6.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jlgavel011/sellbase.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://github.com/jlgavel011/sellbase#readme",
+  "bugs": {
+    "url": "https://github.com/jlgavel011/sellbase/issues"
+  },
+  "keywords": [
+    "mcp",
+    "ai-agents",
+    "ecommerce",
+    "model-context-protocol"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

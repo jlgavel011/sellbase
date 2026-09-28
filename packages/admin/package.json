@@ -1,6 +1,6 @@
 {
   "name": "@sellbase/admin",
-  "version": "0.0.0",
+  "version": "0.3.0",
   "description": "Sellbase admin SPA. Mount it at /admin in any React app; customize with config, slots and pages.",
   "license": "MIT",
   "type": "module",
@@ -39,5 +39,28 @@
     "react-dom": "^19.3.0",
     "tailwindcss": "^4.3.3",
     "esbuild": "^0.28.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jlgavel011/sellbase.git",
+    "directory": "packages/admin"
+  },
+  "homepage": "https://github.com/jlgavel011/sellbase#readme",
+  "bugs": {
+    "url": "https://github.com/jlgavel011/sellbase/issues"
+  },
+  "keywords": [
+    "ecommerce",
+    "admin",
+    "react",
+    "dashboard",
+    "shopify-alternative"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

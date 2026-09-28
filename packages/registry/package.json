@@ -1,6 +1,6 @@
 {
   "name": "@sellbase/registry",
-  "version": "0.0.0",
+  "version": "0.3.0",
   "description": "Storefront components that `sellbase add` copies into your project (shadcn style).",
   "license": "MIT",
   "private": true,

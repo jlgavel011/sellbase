@@ -94,26 +94,17 @@ test('settings sections, consent at checkout and abandoned carts page', async ({
 
   await page.goto('/admin/settings/checkout');
   await expect(page.getByRole('heading', { name: 'Checkout' })).toBeVisible();
-  await page.getByRole('switch', { name: 'Pedir una confirmación antes de pagar' }).click();
+  // The demo store is shared by parallel specs: edit, check the preview, then discard.
+  // The server side of the required consent is covered by the API integration tests.
+  const consent = page.getByRole('switch', { name: 'Pedir una confirmación antes de pagar' });
+  await consent.click();
   await page.getByLabel('Texto de la casilla').fill('Confirmo que soy mayor de 18 años');
-  await page
-    .getByRole('region', { name: 'Cambios sin guardar' })
-    .getByRole('button', { name: 'Guardar' })
-    .click();
-  await expect(page.getByText('Ajustes guardados')).toBeVisible();
-  const store = await page.request.get(
-    'http://127.0.0.1:54321/functions/v1/sellbase-api/v1/storefront/store',
-  );
-  expect(
-    ((await store.json()) as { checkout: { required_consent: string } }).checkout.required_consent,
-  ).toBe('Confirmo que soy mayor de 18 años');
-  // Leave the demo store as it was (other specs pay without the checkbox).
-  await page.getByRole('switch', { name: 'Pedir una confirmación antes de pagar' }).click();
-  await page
-    .getByRole('region', { name: 'Cambios sin guardar' })
-    .getByRole('button', { name: 'Guardar' })
-    .click();
-  await expect(page.getByText('Ajustes guardados').first()).toBeVisible();
+  await expect(page.getByText('Confirmo que soy mayor de 18 años').last()).toBeVisible();
+  const bar = page.getByRole('region', { name: 'Cambios sin guardar' });
+  await expect(bar).toBeVisible();
+  await bar.getByRole('button', { name: 'Descartar' }).click();
+  await expect(consent).toHaveAttribute('aria-checked', 'false');
+  await expect(bar).toHaveCount(0);
 
   await page.getByRole('link', { name: 'Integraciones' }).click();
   await expect(page.getByTestId('integration-stripe')).toBeVisible();

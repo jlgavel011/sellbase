@@ -78,7 +78,7 @@ export function registerTestPurchase(app: Hono, deps: Deps, options: AppOptions)
               select v.id, p.type as product_type, v.position, p.created_at
                 from sellbase.storefront_variants v join sellbase.products p on p.id = v.product_id
                where v.store_id = ${storeId} and v.available and v.currency = ${store.default_currency}
-                 and p.type in ('physical', 'digital', 'service')
+                 and p.status = 'active' and p.type in ('physical', 'digital', 'service')
             ) sv order by sv.product_type, sv.created_at, sv.position`
         ).map((r) => r.id);
     if (variantIds.length === 0) {

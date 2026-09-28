@@ -7,6 +7,8 @@ Agents: connect the `sellbase` MCP server (`npx sellbase mcp`), start with `stor
 ## Docs
 
 - [README](README.md): guide
+- [docs/guides/customize-admin.md](guides/customize-admin.md): guide
+- [docs/guides/deploy.md](guides/deploy.md): guide
 - [docs/guides/getting-started.md](guides/getting-started.md): guide
 - [docs/guides/stripe-live.md](guides/stripe-live.md): guide
 - [skills/add-storefront/SKILL.md](skills/add-storefront/SKILL.md): agent skill

@@ -3,21 +3,24 @@ import { formatMoney, toDecimalString, toMinorUnits } from '@sellbase/sdk';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { useAdmin } from '../context.js';
-import { PageTitle } from '../shell.js';
+import { Page, useStore } from '../shell.js';
 import {
-  Alert,
   Badge,
   Button,
   Card,
+  Checkbox,
   EmptyState,
   ErrorAlert,
   Field,
   Input,
+  InputGroup,
+  Modal,
   Select,
-  Spinner,
   Table,
   td,
+  useToast,
 } from '../ui.js';
+import { TableSkeleton } from './products.js';
 
 type Discount = Awaited<ReturnType<Sellbase['admin']['discounts']['list']>>['data'][number];
 type Kind = Discount['kind'];
@@ -36,13 +39,10 @@ export function DiscountsPage() {
     queryKey: ['sellbase-admin', 'discounts'],
     queryFn: () => sellbase.admin.discounts.list(),
   });
-  const store = useQuery({
-    queryKey: ['sellbase-admin', 'store'],
-    queryFn: () => sellbase.admin.store.get(),
-  });
+  const store = useStore();
+  const toast = useToast();
   const currency = store.data?.default_currency ?? 'MXN';
   const [editing, setEditing] = useState<Discount | 'new' | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   const describe = (d: Discount) =>
     d.kind === 'percent'
@@ -51,79 +51,94 @@ export function DiscountsPage() {
         ? formatMoney(d.value, currency, locale)
         : t.discounts.kinds.free_shipping;
 
+  const rows = discounts.data?.data ?? [];
+  const active = (d: Discount) => {
+    const now = Date.now();
+    if (d.status !== 'active') return 'paused';
+    if (d.starts_at && new Date(d.starts_at).getTime() > now) return 'scheduled';
+    if (d.ends_at && new Date(d.ends_at).getTime() < now) return 'expired';
+    return 'active';
+  };
+
   return (
-    <>
-      <PageTitle
-        actions={
-          <Button
-            onClick={() => {
-              setNotice(null);
-              setEditing('new');
-            }}
-          >
-            {t.discounts.new}
-          </Button>
-        }
-      >
-        {t.discounts.title}
-      </PageTitle>
-      <div className="sb:flex sb:flex-col sb:gap-6">
-        {notice && <Alert tone="green">{notice}</Alert>}
-        {editing && (
-          <DiscountForm
-            key={editing === 'new' ? 'new' : editing.id}
-            discount={editing === 'new' ? null : editing}
-            currency={currency}
-            onDone={(message) => {
-              setEditing(null);
-              setNotice(message);
-            }}
-          />
-        )}
+    <Page
+      title={t.discounts.title}
+      width="wide"
+      actions={<Button onClick={() => setEditing('new')}>{t.discounts.new}</Button>}
+    >
+      {editing && (
+        <DiscountForm
+          key={editing === 'new' ? 'new' : editing.id}
+          discount={editing === 'new' ? null : editing}
+          currency={currency}
+          onDone={(message) => {
+            setEditing(null);
+            if (message) toast(message);
+          }}
+        />
+      )}
+      {discounts.data && rows.length === 0 ? (
         <Card>
-          {discounts.isLoading && <Spinner label={t.common.loading} />}
+          <EmptyState
+            icon="discounts"
+            title={t.discounts.empty}
+            prompt={t.discounts.emptyPrompt}
+            askAi={t.home.askAi}
+            copy={t.home.copy}
+            copied={t.home.copied}
+            action={<Button onClick={() => setEditing('new')}>{t.discounts.new}</Button>}
+          />
+        </Card>
+      ) : (
+        <Card padded={false}>
+          {discounts.isLoading && <TableSkeleton />}
           <ErrorAlert error={discounts.error} />
-          {discounts.data?.data.length === 0 && !editing && (
-            <EmptyState
-              title={t.discounts.empty}
-              prompt={t.discounts.emptyPrompt}
-              askAi={t.home.askAi}
-              copy={t.home.copy}
-              copied={t.home.copied}
-            />
-          )}
-          {(discounts.data?.data.length ?? 0) > 0 && (
+          {rows.length > 0 && (
             <Table head={[t.discounts.code, t.discounts.kind, t.discounts.status, '', '']}>
-              {discounts.data?.data.map((d) => (
+              {rows.map((d) => (
                 <tr key={d.id} data-testid="discount-row">
-                  <td className={`${td} sb:font-mono sb:font-medium`}>
-                    {d.code ?? <span className="sb:font-sans">{t.discounts.automatic}</span>}
+                  <td className={td}>
+                    {d.code ? (
+                      <span className="sb:rounded-md sb:bg-[var(--sba-surface-subdued)] sb:px-1.5 sb:py-0.5 sb:font-mono sb:font-semibold sb:text-[var(--sba-text-strong)]">
+                        {d.code}
+                      </span>
+                    ) : (
+                      <span className="sb:font-semibold">{t.discounts.automatic}</span>
+                    )}
                   </td>
                   <td className={td}>
                     {describe(d)}
                     {d.min_subtotal_amount ? (
-                      <span className="sb:block sb:text-xs sb:text-zinc-500">
+                      <span className="sb:block sb:text-xs sb:text-[var(--sba-text-subdued)]">
                         {t.discounts.minSubtotal}:{' '}
                         {formatMoney(d.min_subtotal_amount, currency, locale)}
                       </span>
                     ) : null}
                   </td>
                   <td className={td}>
-                    <Badge tone={d.status === 'active' ? 'green' : 'neutral'}>
-                      {t.discounts.statuses[d.status] ?? d.status}
+                    <Badge
+                      tone={
+                        active(d) === 'active'
+                          ? 'green'
+                          : active(d) === 'scheduled'
+                            ? 'blue'
+                            : 'neutral'
+                      }
+                    >
+                      {active(d) === 'active' || active(d) === 'paused'
+                        ? (t.discounts.statuses[d.status] ?? d.status)
+                        : t.discounts2[active(d) as 'scheduled' | 'expired']}
                     </Badge>
                   </td>
-                  <td className={`${td} sb:text-zinc-500`}>
+                  <td className={`${td} sb:text-[var(--sba-text-subdued)]`}>
                     {t.discounts.uses(d.usage_count, d.usage_limit)}
                   </td>
                   <td className={`${td} sb:text-right`}>
                     <Button
-                      variant="ghost"
-                      className="sb:px-2 sb:py-1"
-                      onClick={() => {
-                        setNotice(null);
-                        setEditing(d);
-                      }}
+                      variant="tertiary"
+                      size="sm"
+                      icon="pencil"
+                      onClick={() => setEditing(d)}
                     >
                       {t.discounts.edit}
                     </Button>
@@ -133,8 +148,8 @@ export function DiscountsPage() {
             </Table>
           )}
         </Card>
-      </div>
-    </>
+      )}
+    </Page>
   );
 }
 
@@ -224,13 +239,11 @@ function DiscountForm({
   };
 
   return (
-    <Card
+    <Modal
+      open
+      size="lg"
+      onClose={() => onDone(null)}
       title={discount ? (discount.code ?? t.discounts.automatic) : t.discounts.new}
-      actions={
-        <Button variant="ghost" onClick={() => onDone(null)}>
-          {t.discounts.close}
-        </Button>
-      }
     >
       <form onSubmit={submit} className="sb:flex sb:flex-col sb:gap-4" aria-label={t.discounts.new}>
         <div className="sb:grid sb:gap-4 sb:md:grid-cols-3">
@@ -244,14 +257,12 @@ function DiscountForm({
               className="sb:font-mono"
             />
           </Field>
-          <label className="sb:flex sb:items-center sb:gap-2 sb:self-end sb:pb-2 sb:text-sm">
-            <input
-              type="checkbox"
-              checked={automatic}
-              onChange={(e) => setAutomatic(e.target.checked)}
-            />
-            {t.discounts.automatic}
-          </label>
+          <Checkbox
+            className="sb:self-end sb:pb-2"
+            label={t.discounts.automatic}
+            checked={automatic}
+            onChange={(e) => setAutomatic(e.target.checked)}
+          />
           <Field label={t.discounts.status}>
             <Select value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
               <option value="active">{t.discounts.statuses.active}</option>
@@ -283,9 +294,7 @@ function DiscountForm({
           )}
           <Field label={t.discounts.appliesTo}>
             {productScope ? (
-              <p className="sb:py-2 sb:text-sm">
-                {t.discounts.someProducts(productScope.product_ids.length)}
-              </p>
+              <p className="sb:py-2">{t.discounts.someProducts(productScope.product_ids.length)}</p>
             ) : (
               <Select value={scope} onChange={(e) => setScope(e.target.value as typeof scope)}>
                 <option value="all">{t.discounts.allProducts}</option>
@@ -299,26 +308,27 @@ function DiscountForm({
         {scope === 'collections' && !productScope && (
           <div className="sb:flex sb:flex-wrap sb:gap-3">
             {collections.data?.data.map((c) => (
-              <label key={c.id} className="sb:flex sb:items-center sb:gap-2 sb:text-sm">
-                <input
-                  type="checkbox"
-                  checked={collectionIds.includes(c.id)}
-                  onChange={(e) =>
-                    setCollectionIds(
-                      e.target.checked
-                        ? [...collectionIds, c.id]
-                        : collectionIds.filter((x) => x !== c.id),
-                    )
-                  }
-                />
-                {c.title}
-              </label>
+              <Checkbox
+                key={c.id}
+                label={c.title}
+                checked={collectionIds.includes(c.id)}
+                onChange={(e) =>
+                  setCollectionIds(
+                    e.target.checked
+                      ? [...collectionIds, c.id]
+                      : collectionIds.filter((x) => x !== c.id),
+                  )
+                }
+              />
             ))}
           </div>
         )}
         <div className="sb:grid sb:gap-4 sb:md:grid-cols-3">
           <Field label={`${t.discounts.minSubtotal} (${t.discounts.optional})`}>
-            <Input
+            <InputGroup
+              prefix="$"
+              suffix={currency}
+              aria-label={`${t.discounts.minSubtotal} (${t.discounts.optional})`}
               inputMode="decimal"
               value={minSubtotal}
               onChange={(e) => setMinSubtotal(e.target.value)}
@@ -356,8 +366,8 @@ function DiscountForm({
           </Field>
         </div>
         <ErrorAlert error={save.error ?? remove.error} />
-        <div className="sb:flex sb:flex-wrap sb:gap-2">
-          <Button type="submit" disabled={save.isPending}>
+        <div className="sb:flex sb:flex-row-reverse sb:flex-wrap sb:justify-between sb:gap-2 sb:border-t sb:border-[var(--sba-border)] sb:pt-4">
+          <Button type="submit" loading={save.isPending}>
             {t.discounts.save}
           </Button>
           {discount &&
@@ -372,9 +382,10 @@ function DiscountForm({
               </Button>
             ) : (
               <Button
-                variant="ghost"
+                variant="tertiary"
                 type="button"
-                className="sb:text-red-700"
+                icon="trash"
+                className="sb:text-[var(--sba-critical)]"
                 onClick={() => setConfirming(true)}
               >
                 {t.discounts.remove}
@@ -382,6 +393,6 @@ function DiscountForm({
             ))}
         </div>
       </form>
-    </Card>
+    </Modal>
   );
 }

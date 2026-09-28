@@ -1,0 +1,52 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what you got. Paste error `code`, `message` and `hint` if there is one.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. npx sellbase init --yes\n2. …"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        [
+          Admin,
+          Storefront (React),
+          Web components,
+          API,
+          MCP / agent,
+          CLI (init,
+          upgrade,
+          doctor),
+          Database / migrations,
+          Docs,
+        ]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Sellbase version
+      description: Run `npx sellbase --version`, or give the commit.
+  - type: dropdown
+    id: stack
+    attributes:
+      label: Project type
+      options: [Next.js, Vite + React, Plain HTML / other, Not sure]
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `npx sellbase doctor`
+      render: text

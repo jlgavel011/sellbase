@@ -48,7 +48,7 @@ test('home metrics, discounts, collections and customers', async ({ page }) => {
   const boxes = page.getByRole('checkbox');
   await boxes.nth(0).check();
   await boxes.nth(1).check();
-  await page.getByRole('button', { name: '↓' }).first().click();
+  await page.getByRole('button', { name: 'Mover después' }).first().click();
   await page.getByRole('button', { name: 'Guardar' }).click();
   await expect(page.getByText('Colección guardada.')).toBeVisible();
   await expect(page.getByRole('button', { name: new RegExp(title) })).toContainText('2 productos');

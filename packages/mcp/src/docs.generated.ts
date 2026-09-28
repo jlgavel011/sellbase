@@ -9,22 +9,112 @@ export const DOCS: DocSection[] = [
   {
     source: 'README.md',
     title: 'README',
-    text: '# Sellbase\n\n**The way your AI adds sales to any app.** Open source, AI-first commerce kit that installs inside your project (your repo + your Supabase): catalog, checkout, orders, fulfillment, discounts, notifications, an admin at `/admin`, an API and an MCP server so your agent can set up and run the store.\n\n> **Status:** Phase 1 (working demo). Not published to npm yet. See [`SPEC.md`](SPEC.md) for the design and roadmap.\n\n**ES:** Kit de comercio open source y AI-first que vive dentro de tu proyecto (tu repo + tu Supabase). Tu agente de IA configura y opera la tienda vía MCP.',
+    text: '<div align="center">\n\n# Sellbase\n\n**Open source commerce that lives inside your project, run by your AI agent.**\n\nCatalog, checkout, orders, inventory, abandoned carts, discounts, appointments, emails, a complete admin, an API and an MCP server, all installed in **your repo** and **your Supabase** with one command.\n\n[Quick start](#quick-start) · [Features](#features) · [Docs](#documentation) · [Deploy](docs/guides/deploy.md) · [Contributing](CONTRIBUTING.md) · [Español](#en-español)\n\n![Sellbase admin](docs/images/admin-home.png)\n\n</div>',
   },
   {
     source: 'README.md',
-    title: 'README › Quick start (any site + Supabase)',
-    text: '## Quick start (any site + Supabase)\n\nWorks with Next.js and Vite + React (React components) and with **any other site**: plain HTML, WordPress, Vue, Svelte, Astro, Angular (`<sellbase-*>` web components, one `<script>`, static admin).\n\n```bash\nnpx supabase start              # or use a hosted project with --supabase-url/--anon-key/--service-role-key/--db-url\nnpx sellbase init --yes         # schema, Edge Functions, store, agent token, components, /admin, CLAUDE.md + AGENTS.md, skills, MCP config\n```\n\nThen open your agent in the project and say: **"Configura mi tienda con Sellbase"**. It uses the `sellbase` MCP tools (`store_status`, `product_upsert`, `integration_connect`, `test_purchase`, …) until a test purchase succeeds.\n\n- Admin: `/admin` (customize with `config`: theme, texts, slots, pages).\n- Storefront: `components/sellbase/*` (copied into your repo; edit freely) on top of `@sellbase/react`.\n- Checklist: `npx sellbase doctor`.\n- Docs for agents: [`docs/llms.txt`](docs/llms.txt), [`docs/llms-full.txt`](docs/llms-full.txt), [API reference](docs/reference/api.md). Guides: [primeros pasos](docs/guides/getting-started.md), [Stripe real](docs/guides/stripe-live.md).',
+    title: 'README › Why Sellbase',
+    text: '## Why Sellbase\n\n- **Yours, end to end.** Your data lives in your Postgres, your money goes to your Stripe account and your code stays in your repo. There is no platform fee, no lock-in and no Sellbase servers in between. MIT licensed.\n- **AI-first.** `sellbase init` writes `CLAUDE.md`/`AGENTS.md`, skills and an MCP server. Tell your agent "set up my store" and it creates products, connects payments and runs a test purchase. Money and destructive actions always ask the owner first, and everything is logged.\n- **Works on any site.**\n  - **Next.js and Vite + React:** React components.\n  - **Plain HTML, WordPress, Webflow, Vue, Svelte, Astro, Angular:** `<sellbase-*>` web components (13 KB gzipped) and a static admin.\n- **A real admin.** Products with drag and drop photos and variants, inventory, orders with packing slips and refunds, abandoned cart recovery, customers, discounts and settings for every connection. It is built for store owners, not developers.\n- **Safe by default.**\n  - Money stored as integers.\n  - RLS on every table, with tests.\n  - Orders only come from verified payment webhooks.\n  - Idempotent writes.\n  - Third-party secrets in Supabase Vault.\n  - Signed outbound webhooks that never reach private networks.',
+  },
+  {
+    source: 'README.md',
+    title: 'README › Quick start',
+    text: '## Quick start\n\nRequirements: Node 20+ and a Supabase project (or the local stack with Docker).\n\n```bash\nnpx supabase start          # local stack (or pass --supabase-url … for a hosted project)\nnpx sellbase init --yes     # schema, Edge Functions, store, owner, admin, components, agent files\n```\n\nThen:\n\n- **Admin:** open `/admin` and sign in. Locally, the owner\'s email and password are in `.env.sellbase`.\n- **Setup:** follow the setup guide on Home.\n- **Or let your agent do it:** open it in the project and say **"Configura mi tienda con Sellbase"** / **"Set up my store with Sellbase"**. It uses the `sellbase` MCP tools until a test purchase succeeds.\n\n```bash\nnpx sellbase doctor         # checklist with the next step for anything missing\nnpx sellbase upgrade        # new versions: dry run, backup, migrations, functions, components\n```\n\nGoing live: [deploy guide](docs/guides/deploy.md) and [live payments with Stripe](docs/guides/stripe-live.md).',
+  },
+  {
+    source: 'README.md',
+    title: 'README › Features',
+    text: '## Features\n\n|                                             |                                                         |\n| ------------------------------------------- | ------------------------------------------------------- |\n| ![Products](docs/images/admin-products.png) | ![Product editor](docs/images/admin-product-editor.png) |\n| ![Orders](docs/images/admin-orders.png)     | ![Order](docs/images/admin-order.png)                   |\n\n**Catalog:**\n\n- physical products, digital downloads and services with appointments;\n- up to 3 options per product (size, color…) with a variant matrix, compare-at prices and SEO;\n- collections, tags and stock per variant;\n- CSV import (including Shopify exports) and export;\n- bulk price changes with a preview.\n\n**Checkout:**\n\n- Stripe Checkout (cards, Apple Pay, Google Pay; test and live mode);\n- shipping rates, free shipping thresholds and local pickup;\n- inclusive or exclusive taxes;\n- discount codes and automatic discounts;\n- deposits for services;\n- a required consent checkbox (e.g. 18+ for alcohol) enforced by the server and stored with the order.\n\n**Orders:**\n\n- payment and fulfillment statuses;\n- shipping with carrier and tracking;\n- full or partial refunds;\n- cancellations with restock;\n- a timeline with comments;\n- printable packing slips;\n- manual orders (cash, transfer, WhatsApp) and payment links.\n\n**Growth:**\n\n- abandoned checkouts with one-click or automatic recovery emails that restore the cart;\n- customers with their history;\n- sales metrics and best sellers.\n\n**Services:**\n\n- resources with weekly hours and exceptions;\n- availability;\n- bookings with reminders (24 h and 2 h before) and calendar invites.\n\n**Emails (Resend):** order confirmation with download links, shipping updates, refunds, cancellations, appointment notices and cart recovery. All of them carry your logo and brand color.\n\n**Team and AI:**\n\n- staff roles and invitations;\n- API tokens with scopes for agents (money and data export scopes are opt-in);\n- an activity log;\n- signed outbound webhooks with retries for your ERP, spreadsheets or Zapier.\n\n**Storefront:**\n\n- React components copied into your repo (edit freely);\n- headless hooks;\n- web components for any site;\n- SEO helpers (JSON-LD, sitemap);\n- order lookup and download pages;\n- accessible markup (checked with axe).\n\n![Storefront](docs/images/storefront.jpg)',
+  },
+  {
+    source: 'README.md',
+    title: 'README › How it works',
+    text: '## How it works\n\n```\nyour site ──(@sellbase/react or <sellbase-*> web components)──┐\n/admin (@sellbase/admin) ─────────────────────────────────────┤\nyour AI agent ──(sellbase MCP server)─────────────────────────┤\n                                                              ▼\n                    Supabase: Edge Functions (sellbase-api, -webhooks, -jobs)\n                              Postgres schema `sellbase` (RLS) · Vault · Storage · pg_cron\n                                                              │\n                                   Stripe · Resend · your webhooks\n```\n\n- **One API contract.** Every route is declared once with Zod in `@sellbase/core`. The Hono server validates with it, the OpenAPI spec and the typed SDK come from it, and the MCP tools reuse it.\n- **Snapshots.** Orders keep a copy of prices, titles and addresses, so later catalog changes never alter past orders.\n- **The outbox.** Business events are written in the same transaction as the change; jobs deliver emails and webhooks from it.\n\n| Package                             | What it is                                                      |\n| ----------------------------------- | --------------------------------------------------------------- |\n| [`sellbase`](packages/cli)          | CLI: `init`, `doctor`, `upgrade`, `add`, `seed`, `token`, `mcp` |\n| [`@sellbase/admin`](packages/admin) | The admin (React), also shipped as a static page                |\n| [`@sellbase/react`](packages/react) | Provider and hooks for storefronts                              |\n| [`@sellbase/web`](packages/web)     | Web components for any site                                     |\n| [`@sellbase/sdk`](packages/sdk)     | Typed API client and SEO helpers                                |\n| [`@sellbase/mcp`](packages/mcp)     | MCP server for AI agents                                        |\n| [`@sellbase/core`](packages/core)   | Schemas, API contracts, pricing, state machines                 |',
+  },
+  {
+    source: 'README.md',
+    title: 'README › Documentation',
+    text: '## Documentation\n\n- [Getting started (español)](docs/guides/getting-started.md)\n- [Deploy to production](docs/guides/deploy.md)\n- [Customize the admin](docs/guides/customize-admin.md)\n- [Live payments with Stripe (español)](docs/guides/stripe-live.md)\n- [API reference](docs/reference/api.md), plus [`llms.txt`](docs/llms.txt) and [`llms-full.txt`](docs/llms-full.txt) for agents\n- [Specification](SPEC.md) and [architecture decisions](docs/decisions/)\n- [Changelog](CHANGELOG.md)',
   },
   {
     source: 'README.md',
     title: 'README › Development',
-    text: '## Development\n\n```bash\npnpm i            # install\npnpm dev          # playground on http://localhost:3100\npnpm test         # unit (Vitest)\npnpm test:db      # pgTAP (needs `pnpm exec supabase start` and Docker)\npnpm test:integration  # API against the local database\npnpm test:e2e     # Playwright (seed first: node scripts/seed-demo.mjs)\nnode scripts/acceptance.mjs   # Phase 1 acceptance: clean Next.js + init + agent over MCP + test purchase\npnpm lint && pnpm typecheck\n```\n\nLayout: `packages/core` (schemas, state machines, pricing, API contracts), `api` (Edge Functions), `adapters` (Stripe, Resend, shipping), `emails`, `sdk`, `react`, `registry` (storefront components), `admin`, `mcp`, `cli` (`sellbase`), `apps/playground`, `supabase/` (migrations + pgTAP), `skills/` and `templates/` (installed into user projects), `docs/plans` and `docs/decisions` (ADRs).',
+    text: '## Development\n\n```bash\npnpm i\npnpm exec supabase start && node scripts/seed-demo.mjs\npnpm dev                    # playground on http://localhost:3100 (admin at /admin)\npnpm lint && pnpm typecheck && pnpm test\npnpm test:db                # pgTAP\npnpm test:integration       # API against the local database\npnpm test:e2e               # Playwright\nnode scripts/acceptance.mjs # clean project → init → agent over MCP → test purchase\n```\n\nSee [CONTRIBUTING.md](CONTRIBUTING.md). Security issues: [SECURITY.md](SECURITY.md).',
+  },
+  {
+    source: 'README.md',
+    title: 'README › Status',
+    text: '## Status\n\nSellbase is **0.3**, young but complete. The full flow is covered by CI on every commit:\n\n- pgTAP;\n- API integration;\n- Playwright end to end;\n- a clean-install acceptance test with a real agent over MCP.\n\nNext on the roadmap:\n\n- an installation guide per hosting provider;\n- more payment providers (Mercado Pago, OXXO via Stripe);\n- shipping label integrations;\n- invoicing (CFDI).',
+  },
+  {
+    source: 'README.md',
+    title: 'README › En español',
+    text: '## En español\n\nSellbase es un kit de comercio open source que se instala **dentro de tu proyecto** (tu repo y tu Supabase) y que tu agente de IA puede configurar y operar.\n\n**Qué incluye:**\n\n- catálogo con fotos y variantes;\n- checkout con Stripe;\n- pedidos, inventario y carritos abandonados;\n- descuentos, citas y correos;\n- un admin completo en `/admin`;\n- una API y un servidor MCP.\n\nFunciona en Next.js, Vite + React y en cualquier sitio (HTML puro, WordPress, Webflow…) con componentes web.\n\n```bash\nnpx supabase start\nnpx sellbase init --yes\n```\n\nDespués entra a `/admin` (en local, el usuario y la contraseña quedan en `.env.sellbase`) o dile a tu agente: **"Configura mi tienda con Sellbase"**.\n\nGuías: [primeros pasos](docs/guides/getting-started.md), [cobrar de verdad con Stripe](docs/guides/stripe-live.md) y [despliegue](docs/guides/deploy.md).',
   },
   {
     source: 'README.md',
     title: 'README › License',
-    text: '## License\n\nMIT',
+    text: '## License\n\n[MIT](LICENSE)',
+  },
+  {
+    source: 'docs/guides/customize-admin.md',
+    title: 'Customize the admin',
+    text: "# Customize the admin\n\nThe admin is a package (`@sellbase/admin`), not code copied into your project, so updates never overwrite your changes. Customize it through its `config`: theme, logo, texts, named slots and extra pages.\n\n```tsx\n// app/admin/[[...path]]/page.tsx (Next.js) or src/sellbase/admin-page.tsx (Vite)\n<SellbaseAdmin\n  config={{\n    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,\n    supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,\n    locale: 'es', // or 'en'\n    theme: { primary: '#7c3aed', radius: '0.625rem', fontFamily: 'Inter, sans-serif' },\n    logo: { src: '/logo.svg', alt: 'My store' }, // defaults to the logo from Settings → General\n    texts: { nav: { orders: 'Ventas' } }, // override any label\n    slots: {\n      'home.top': ({ sellbase }) => <MyAnnouncement />,\n      'order.detail.sidebar': ({ orderId }) => <InvoiceButton orderId={orderId} />,\n    },\n    pages: [{ path: 'reportes', label: 'Reportes', icon: 'chart', render: () => <MyReports /> }],\n  }}\n/>\n```\n\nOn sites without React, the same options go in `admin/config.js` (`window.SellbaseAdminConfig`). Only values can be set there: no slots or pages.",
+  },
+  {
+    source: 'docs/guides/customize-admin.md',
+    title: 'Customize the admin › Slots',
+    text: '## Slots\n\n| Slot                      | Where                                              |\n| ------------------------- | -------------------------------------------------- |\n| `home.top`, `home.bottom` | Home, above and below the setup guide and metrics  |\n| `orders.list.top`         | Orders list                                        |\n| `order.detail.sidebar`    | Order page, right column (receives `orderId`)      |\n| `products.list.top`       | Products list                                      |\n| `product.form.bottom`     | Product editor (receives `productId` when editing) |\n| `settings.bottom`         | Settings → General                                 |\n| `sidebar.bottom`          | Side menu, above Settings                          |\n\nEvery slot receives `sellbase` (the typed API client with the signed-in staff session) and `navigate(path)`.',
+  },
+  {
+    source: 'docs/guides/customize-admin.md',
+    title: 'Customize the admin › Extra pages',
+    text: '## Extra pages\n\nEach entry in `pages` adds an item to the side menu and a route under the admin.\n\n- `icon`: one of the admin icon names (`chart`, `store`, `mail`, `users`, `tag`, `file`, …) or a short text.\n- `render`: receives the same context as slots.',
+  },
+  {
+    source: 'docs/guides/customize-admin.md',
+    title: 'Customize the admin › Theme',
+    text: "## Theme\n\n- `theme.primary` colors the primary buttons.\n- The rest of the admin uses Sellbase's neutral design tokens, so any brand color looks right.\n- The admin's styles are scoped to `.sb-admin` and never touch your site's CSS.",
+  },
+  {
+    source: 'docs/guides/customize-admin.md',
+    title: 'Customize the admin › Going further',
+    text: '## Going further\n\nSellbase is open source (MIT). If you need something the config cannot do, open an issue or a pull request, since other stores probably need it too. Forking `@sellbase/admin` works, but you lose automatic updates.',
+  },
+  {
+    source: 'docs/guides/deploy.md',
+    title: 'Deploy to production',
+    text: '# Deploy to production\n\nSellbase has no servers of its own. In production it runs in **your** Supabase project (database, Auth, Storage, Edge Functions, cron) and your site runs wherever it runs today (Vercel, Netlify, Cloudflare Pages, a VPS, WordPress hosting…).',
+  },
+  {
+    source: 'docs/guides/deploy.md',
+    title: 'Deploy to production › 1. Create the Supabase project',
+    text: '## 1. Create the Supabase project\n\n1. Create a project at [supabase.com](https://supabase.com/dashboard).\n2. From **Project Settings → API**, copy the project URL, the anon key and the service role key. From **Database → Connect**, copy the connection string (session pooler).\n3. Link your repo to it:\n\n   ```bash\n   npx supabase login\n   npx supabase link --project-ref <your-project-ref>\n   ```',
+  },
+  {
+    source: 'docs/guides/deploy.md',
+    title: 'Deploy to production › 2. Install Sellbase against it',
+    text: '## 2. Install Sellbase against it\n\n```bash\nnpx sellbase init --yes \\\n  --store-name "My store" --currency MXN --country MX \\\n  --owner-email you@yourstore.com \\\n  --supabase-url https://<ref>.supabase.co \\\n  --anon-key <anon key> \\\n  --service-role-key <service role key> \\\n  --db-url "postgresql://…"\n```\n\nWhat `init` does:\n\n- **Migrations:** applies them with `supabase db push`.\n- **Edge Functions:** deploys `sellbase-api`, `sellbase-webhooks` and `sellbase-jobs`.\n- **Store and jobs:** creates the store and schedules the jobs (pg_cron, every minute).\n- **Owner:** emails the owner an invitation to set their password.\n- **Project files:** writes the public config (`.env.local`, or `sellbase/config.js` for sites without React) and the agent files.\n\nThe service role key is used only during `init`. It is not written to any file.',
+  },
+  {
+    source: 'docs/guides/deploy.md',
+    title: 'Deploy to production › 3. Deploy your site',
+    text: '## 3. Deploy your site\n\n- **Next.js / Vite:** set the public variables from `.env.local` in your hosting (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SELLBASE_URL`, or the `VITE_` versions) and deploy as usual. The admin lives at `/admin`.\n- **Plain HTML, WordPress or any other site:** upload the `sellbase/` and `admin/` folders with the rest of the site. The admin works at `/admin/` with no server rewrites (it uses `#/` routes).',
+  },
+  {
+    source: 'docs/guides/deploy.md',
+    title: 'Deploy to production › 4. Finish setup in the admin',
+    text: '## 4. Finish setup in the admin\n\nSign in at `/admin` and follow the **setup guide** on Home. Every step can also be done by your AI agent over MCP.\n\n1. **Settings → General:** logo, brand color, contact email.\n2. **Settings → Payments:** paste your Stripe secret key. It is stored in Supabase Vault. On a deployed project the Stripe webhook is created for you. Start with `sk_test_…`; switch to live keys when you are ready ([live payments guide](stripe-live.md)).\n3. **Settings → Notifications:** connect Resend with a verified domain so customers get order, shipping and download emails. Send yourself a test email.\n4. **Settings → Checkout:**\n   - your store URL (used by abandoned checkout emails and payment links);\n   - a required checkbox if you sell age-restricted products;\n   - automatic recovery emails.\n5. **Settings → Shipping and Taxes.**\n6. Make a test purchase and check that the order appears in **Orders**.',
+  },
+  {
+    source: 'docs/guides/deploy.md',
+    title: 'Deploy to production › 5. Check and keep it healthy',
+    text: '## 5. Check and keep it healthy\n\n```bash\nnpx sellbase doctor     # every check with the next step when something is missing\nnpx sellbase upgrade    # new versions: dry run, backup, migrations, functions, components\n```\n\nThe doctor fails if `SELLBASE_WEBHOOKS_ALLOW_PRIVATE` is on in a deployed project (it is only for the local stack).\n\n**Backups:** Supabase takes daily backups on paid plans. `sellbase upgrade` also dumps the `sellbase` schema before applying migrations.',
+  },
+  {
+    source: 'docs/guides/deploy.md',
+    title: 'Deploy to production › Checklist before selling',
+    text: '## Checklist before selling\n\n- [ ] Stripe live keys connected and the live check passed (Settings → Payments)\n- [ ] Resend connected with your domain; test email received\n- [ ] Store URL, contact email, shipping and taxes set\n- [ ] A real purchase with your own card, then refunded from the order page\n- [ ] Team members invited with the right role (Settings → Team)\n- [ ] AI agent tokens only have the scopes they need (Settings → AI agents)',
   },
   {
     source: 'docs/guides/getting-started.md',

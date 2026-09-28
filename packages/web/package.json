@@ -1,6 +1,6 @@
 {
   "name": "@sellbase/web",
-  "version": "0.0.0",
+  "version": "0.3.0",
   "description": "Sellbase storefront as Web Components: works in any site (HTML, WordPress, Vue, Svelte, Astro, Angular…).",
   "license": "MIT",
   "type": "module",
@@ -11,6 +11,8 @@
     },
     "./sellbase.js": "./dist/sellbase.js"
   },
+  "unpkg": "./dist/sellbase.js",
+  "jsdelivr": "./dist/sellbase.js",
   "files": [
     "dist"
   ],
@@ -23,5 +25,28 @@
     "@sellbase/sdk": "workspace:*",
     "esbuild": "^0.28.2",
     "jsdom": "^30.1.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jlgavel011/sellbase.git",
+    "directory": "packages/web"
+  },
+  "homepage": "https://github.com/jlgavel011/sellbase#readme",
+  "bugs": {
+    "url": "https://github.com/jlgavel011/sellbase/issues"
+  },
+  "keywords": [
+    "ecommerce",
+    "web-components",
+    "storefront",
+    "cart",
+    "checkout"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

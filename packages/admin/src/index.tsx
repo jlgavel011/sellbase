@@ -76,22 +76,22 @@ function Routes() {
 
   if (match('/', path)) return <HomePage />;
   if (match('/orders', path)) return <OrdersPage />;
-  if (match('/orders/new', path)) return legacy(<ManualOrderPage />);
+  if (match('/orders/new', path)) return <ManualOrderPage />;
   if (match('/orders/abandoned', path)) return <AbandonedPage />;
   if ((params = match('/orders/:id', path)))
     return <OrderDetailPage key={params.id} id={params.id ?? ''} />;
-  if (match('/agenda', path)) return legacy(<AgendaPage />);
-  if (match('/agenda/resources', path)) return legacy(<ResourcesPage />);
+  if (match('/agenda', path)) return <AgendaPage />;
+  if (match('/agenda/resources', path)) return <ResourcesPage />;
   if (match('/products', path)) return <ProductsPage />;
-  if (match('/products/collections', path)) return legacy(<CollectionsPage />);
+  if (match('/products/collections', path)) return <CollectionsPage />;
   if (match('/products/inventory', path)) return <InventoryPage />;
   if (match('/products/new', path)) return <ProductFormPage key="new" />;
   if ((params = match('/products/:id', path)))
     return <ProductFormPage key={params.id} id={params.id ?? ''} />;
-  if (match('/customers', path)) return legacy(<CustomersPage />);
+  if (match('/customers', path)) return <CustomersPage />;
   if ((params = match('/customers/:id', path)))
-    return legacy(<CustomerDetailPage key={params.id} id={params.id ?? ''} />);
-  if (match('/discounts', path)) return legacy(<DiscountsPage />);
+    return <CustomerDetailPage key={params.id} id={params.id ?? ''} />;
+  if (match('/discounts', path)) return <DiscountsPage />;
   if (match('/settings', path)) return <SettingsPage />;
   if ((params = match('/settings/:section', path)))
     return <SettingsPage key={params.section} section={params.section ?? 'general'} />;

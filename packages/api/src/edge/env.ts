@@ -105,6 +105,6 @@ export function edgeDeps(adapters: {
     allowPrivateWebhooks: Deno.env.get('SELLBASE_WEBHOOKS_ALLOW_PRIVATE') === 'true',
     now: () => new Date(),
     publicApiUrl: `${publicUrl}/functions/v1/sellbase-api`,
-    version: '0.1.0',
+    version: '0.3.0',
   };
 }

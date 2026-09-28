@@ -1,0 +1,20 @@
+name: Feature request
+description: Suggest something Sellbase should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What do you (or your store) need?
+      description: Describe the problem first. What are you trying to sell or run?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How could it work?
+      description: For the admin, the storefront and for an AI agent (MCP), if it applies.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What do you do today instead?

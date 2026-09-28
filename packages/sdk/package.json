@@ -1,6 +1,6 @@
 {
   "name": "@sellbase/sdk",
-  "version": "0.0.0",
+  "version": "0.3.0",
   "description": "Typed client for the Sellbase API (browser and server).",
   "license": "MIT",
   "type": "module",
@@ -22,5 +22,26 @@
   "dependencies": {
     "@sellbase/core": "workspace:*",
     "zod": "^4.6.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jlgavel011/sellbase.git",
+    "directory": "packages/sdk"
+  },
+  "homepage": "https://github.com/jlgavel011/sellbase#readme",
+  "bugs": {
+    "url": "https://github.com/jlgavel011/sellbase/issues"
+  },
+  "keywords": [
+    "ecommerce",
+    "sdk",
+    "api-client"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
