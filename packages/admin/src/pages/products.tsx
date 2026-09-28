@@ -274,7 +274,7 @@ export function ProductsPage() {
                       <ProductStatusBadge status={p.status} />
                     </td>
                     <td
-                      className={`${td} ${inv.tone === 'critical' ? 'sb:text-[var(--sba-critical)]' : 'sb:text-[var(--sba-text-subdued)]'}`}
+                      className={`${td} sb:whitespace-nowrap ${inv.tone === 'critical' ? 'sb:text-[var(--sba-critical)]' : 'sb:text-[var(--sba-text-subdued)]'}`}
                     >
                       {inv.text}
                     </td>
