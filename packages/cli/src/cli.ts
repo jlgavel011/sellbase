@@ -16,7 +16,9 @@ const program = new Command(BRAND.cli)
 
 program
   .command('init')
-  .description('Install Sellbase into this project (Next.js, Vite + React, or any website) with Supabase')
+  .description(
+    'Install Sellbase into this project (Next.js, Vite + React, or any website) with Supabase',
+  )
   .option('-y, --yes', 'non-interactive, accept defaults (for agents)', false)
   .option('--store-name <name>', 'store name', 'Mi tienda')
   .option('--currency <code>', 'ISO 4217 currency', 'MXN')

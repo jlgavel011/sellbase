@@ -1,10 +1,10 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { createOwner, SERVICE_KEY, signIn } from './admin-helpers';
 
 test.skip(!SERVICE_KEY, 'SUPABASE_SERVICE_ROLE_KEY is required to create the staff user');
 
 /** A PNG made in the page (no fixture files), dropped on the media area like a real file. */
-async function dropImage(page: import('@playwright/test').Page, name: string) {
+async function dropImage(page: Page, name: string) {
   await page.evaluate(async (fileName) => {
     const canvas = document.createElement('canvas');
     canvas.width = 120;
