@@ -1,6 +1,6 @@
 # @sellbase/web
 
-Sellbase web components for any site: plain HTML, WordPress, Webflow, Vue, Svelte, Astro or Angular. Shadow DOM, themed with CSS variables, 13 KB gzipped.
+Sell from any site without paying a store platform: Sellbase web components add products, a cart and Stripe checkout to plain HTML, WordPress, Webflow, Vue, Svelte, Astro or Angular, with an admin and your own Supabase behind them. Shadow DOM, themed with CSS variables, 13 KB gzipped.
 
 ```html
 <script>

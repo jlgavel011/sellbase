@@ -195,11 +195,11 @@ const features = [
 ];
 write(
   'index.html',
-  `${head('Sellbase: open source commerce your AI can run', 'Turn any project into a store in minutes. Open source commerce on your own Supabase: catalog, Stripe checkout, orders, a beautiful admin, an API and an MCP server for your AI agent.')}${nav}
+  `${head('Sellbase: open source Shopify alternative for your Next.js, React or HTML site', 'Drop products, a cart, Stripe checkout and an admin into the site you already have, on your own Supabase, with one command. Open source, no platform fees, run by your AI agent over MCP.')}${nav}
 <header class="hero">
   <span class="pill">Open source · MIT · v${version}</span>
   <h1>Commerce your <span class="grad">AI agent</span> can install and run.</h1>
-  <p class="lead">Turn any project into a store: catalog, Stripe checkout, orders, inventory and a beautiful admin, on your own Supabase. No platform fees. No lock-in.</p>
+  <p class="lead">An open source Shopify alternative you drop into the site you already have: catalog, Stripe checkout, orders, inventory and a beautiful admin, on your own Supabase, with one command. No Sellbase fees of any kind: you pay only Stripe and your hosting. No lock-in.</p>
   <div class="cta"><a class="btn btn-primary" href="${SITE}/guides/getting-started.html">Get started</a><a class="btn btn-ghost" href="${REPO}">Star on GitHub</a></div>
   <div class="term"><div class="term-bar"><i></i><i></i><i></i></div><pre><span class="c"># in your project</span>
 npx supabase start

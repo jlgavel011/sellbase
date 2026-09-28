@@ -1,7 +1,7 @@
 {
   "name": "sellbase",
   "version": "0.3.3",
-  "description": "Add commerce to any app your AI builds: `npx sellbase init`.",
+  "description": "Open source Shopify alternative: add products, cart, Stripe checkout and an admin to your Next.js, React or HTML site on your own Supabase, run by your AI agent.",
   "mcpName": "io.github.jlgavel011/sellbase",
   "license": "MIT",
   "type": "module",

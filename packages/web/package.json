@@ -1,7 +1,7 @@
 {
   "name": "@sellbase/web",
   "version": "0.3.3",
-  "description": "Sellbase storefront as Web Components: works in any site (HTML, WordPress, Vue, Svelte, Astro, Angular…).",
+  "description": "Add products, a cart and Stripe checkout to any site (HTML, WordPress, Webflow, Astro, Vue, Svelte) with web components. Open source, no platform fees.",
   "license": "MIT",
   "type": "module",
   "exports": {

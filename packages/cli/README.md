@@ -1,6 +1,6 @@
 # sellbase
 
-The Sellbase CLI installs and maintains Sellbase in your project, whether it is Next.js, Vite + React or any website, on top of your Supabase.
+Sellbase is an open source Shopify alternative you drop into your existing project: products, cart, Stripe checkout and an admin for Next.js, Vite + React or any website, on your own Supabase. This CLI installs and maintains it.
 
 ```bash
 npx supabase start                 # or pass --supabase-url/--anon-key/--service-role-key/--db-url for a hosted project

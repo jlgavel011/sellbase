@@ -4,9 +4,9 @@
 
 # Sellbase
 
-**Open source commerce that lives inside your project, run by your AI agent.**
+**An open source Shopify alternative you drop into your existing project, run by your AI agent.**
 
-Catalog, checkout, orders, inventory, abandoned carts, discounts, appointments, emails, a complete admin, an API and an MCP server, all installed in **your repo** and **your Supabase** with one command.
+Add products, a cart, Stripe checkout and an admin to the Next.js, React or plain HTML site you already have, on the Supabase you already use, with one command: `npx sellbase init`. Also included: orders, inventory, abandoned carts, discounts, appointments, emails, an API and an MCP server.
 
 [Quick start](#quick-start) · [Features](#features) · [Docs](#documentation) · [Deploy](docs/guides/deploy.md) · [Contributing](CONTRIBUTING.md) · [Español](#en-español)
 
@@ -32,6 +32,22 @@ Catalog, checkout, orders, inventory, abandoned carts, discounts, appointments, 
   - Idempotent writes.
   - Third-party secrets in Supabase Vault.
   - Signed outbound webhooks that never reach private networks.
+
+## Sellbase or build it yourself?
+
+The usual way to add a store to a Next.js + Supabase app is to write it by hand: a `products` table, a cart, a Server Action for Stripe Checkout and a webhook route. It works for the first sale. Sellbase is that same stack (your Supabase and your Stripe) with the rest already built and tested.
+
+|                                                                  | By hand (Supabase + Stripe)         | Sellbase                                                              |
+| ---------------------------------------------------------------- | ----------------------------------- | --------------------------------------------------------------------- |
+| Setup                                                            | 5–6 files to write and keep correct | `npx sellbase init`                                                   |
+| Runs in your existing app and Supabase                           | Yes                                 | Yes: its own `sellbase` schema, no extra server                       |
+| Admin for the owner                                              | Supabase dashboard, or build one    | `/admin`: products, photos, variants, orders, refunds, discounts      |
+| Inventory, variants, shipping rates, taxes, discounts            | Build each one                      | Included                                                              |
+| Orders created only by the verified webhook, idempotent          | Up to you                           | Built in, with tests                                                  |
+| Emails, abandoned cart recovery, refunds                         | Build each one                      | Included                                                              |
+| Your AI agent can run the store (create products, check orders…) | No                                  | MCP server with 31 tools; money and destructive actions ask the owner |
+
+Unlike engines such as Medusa, Vendure or Saleor, Sellbase needs no separate backend server. It runs on Supabase Edge Functions next to your app, and the storefront components are copied into your repo for you to edit.
 
 ## Quick start
 
